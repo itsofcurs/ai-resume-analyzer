@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import type { FormEvent, MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
-import { FileText, Plus, Trash2, Sparkles, BrainCircuit, ChevronRight, X, Briefcase, CheckCircle, AlertCircle, ShieldAlert, Award, Star } from 'lucide-react';
+import { Plus, Trash2, Sparkles, BrainCircuit, X, Briefcase } from 'lucide-react';
 import axios from 'axios';
 import type { RootState } from '../store';
 
@@ -38,7 +39,7 @@ export const Jobs = () => {
   const [newSkills, setNewSkills] = useState('');
 
   // Matching Analysis state
-  const [matchingCandidates, setMatchingCandidates] = useState<any[]>([]);
+  
   const [analyzingFitMap, setAnalyzingFitMap] = useState<Record<string, boolean>>({});
   const [fitAnalysisResults, setFitAnalysisResults] = useState<Record<string, any>>({});
 
@@ -69,7 +70,7 @@ export const Jobs = () => {
     fetchData();
   }, [token]);
 
-  const handleCreateJob = async (e: React.FormEvent) => {
+  const handleCreateJob = async (e: FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newDesc) return;
     try {
@@ -99,7 +100,7 @@ export const Jobs = () => {
     setNewSkills(template.requiredSkills);
   };
 
-  const handleDeleteJob = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteJob = async (id: string, e: MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this job role?")) return;
     try {

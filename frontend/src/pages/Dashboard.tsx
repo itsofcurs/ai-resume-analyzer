@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { FormEvent, DragEvent, ChangeEvent } from 'react';
 import { UploadCloud, FileText, CheckCircle, Users, TrendingUp, BrainCircuit, ChevronRight, X, Sparkles, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
@@ -67,7 +68,7 @@ export const Dashboard = () => {
     }
   };
 
-  const handleSemanticSearch = async (e: React.FormEvent) => {
+  const handleSemanticSearch = async (e: FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
       setSearchResults(null);
@@ -87,7 +88,7 @@ export const Dashboard = () => {
     }
   };
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = (e: DragEvent) => {
     e.preventDefault(); 
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -95,7 +96,7 @@ export const Dashboard = () => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       handleFileUpload(e.target.files[0]);
     }

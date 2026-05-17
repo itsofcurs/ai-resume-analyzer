@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
 import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit } from 'lucide-react';
 import axios from 'axios';
@@ -39,7 +40,7 @@ export const Candidates = () => {
     fetchCandidates();
   }, [token]);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this candidate?")) return;
     try {

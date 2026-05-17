@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
 import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut } from 'lucide-react';
-import { useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
