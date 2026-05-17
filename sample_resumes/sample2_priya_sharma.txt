@@ -1,0 +1,63 @@
+Priya Sharma
+priya.sharma@gmail.com | +91-8765432109 | linkedin.com/in/priyasharma | github.com/priya-sharma
+
+CAREER OBJECTIVE
+Motivated Data Scientist with 3 years of experience in machine learning, deep learning, and data analytics. Looking to leverage my expertise in building intelligent systems that drive business decisions.
+
+EDUCATION
+Master of Science in Data Science
+Indian Statistical Institute, Kolkata
+2019 - 2021
+
+Bachelor of Science in Mathematics
+Delhi University, Delhi
+2016 - 2019
+
+TECHNICAL SKILLS
+Programming: Python, R, SQL, Bash
+ML Frameworks: TensorFlow, PyTorch, Keras, scikit-learn, XGBoost, LightGBM
+NLP: NLTK, spaCy, Hugging Face Transformers, BERT, GPT
+Data Analysis: Pandas, NumPy, SciPy, Matplotlib, Seaborn, Plotly
+Databases: MySQL, PostgreSQL, MongoDB, Snowflake, BigQuery
+Cloud: Google Cloud Platform (GCP), AWS S3, Azure ML
+Tools: Jupyter Notebook, Google Colab, Git, Docker, Airflow, MLflow
+Visualization: Tableau, Power BI, Looker
+
+Soft Skills: Critical Thinking, Attention to Detail, Communication, Research, Mentoring
+
+WORK EXPERIENCE
+Data Scientist
+Amazon India
+Sept 2021 - Present
+- Built recommendation engine using collaborative filtering improving click-through rate by 25%
+- Deployed NLP model for customer review analysis processing 500K+ reviews/month
+- Developed churn prediction model with 91% accuracy using gradient boosting
+
+Data Analyst Intern
+Flipkart
+June 2020 - August 2020
+- Performed cohort analysis and A/B testing for pricing experiments
+- Built dashboards in Tableau for supply chain KPIs
+- Automated data pipeline using Python and Apache Airflow
+
+PROJECTS
+Fake News Detection System
+- Fine-tuned BERT model on LIAR dataset achieving 89% F1-score
+- Technologies: Python, Hugging Face, PyTorch, Flask
+
+Customer Sentiment Analysis
+- Built end-to-end pipeline with NLTK, spaCy, and Streamlit dashboard
+- Technologies: Python, NLTK, spaCy, Streamlit, PostgreSQL
+
+COVID-19 Data Visualization
+- Interactive dashboard tracking state-wise spread
+- Technologies: Python, Plotly, Dash, Pandas
+
+CERTIFICATIONS
+- IBM Data Science Professional Certificate (2021)
+- TensorFlow Developer Certificate by Google (2022)
+- Tableau Desktop Specialist (2022)
+
+ACHIEVEMENTS
+- Winner, Smart India Hackathon 2020 (Data Analytics track)
+- Published research paper: "Comparative Study of NLP Models for Sentiment Analysis" - IJCAI 2022

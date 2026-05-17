@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Resume Skill Extractor | NLP Dashboard</title>
+  <meta name="description" content="AI-powered resume parser that extracts skills, education, experience, and contact info using NLP and Named Entity Recognition." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ===== CSS VARIABLES & DESIGN TOKENS ===== */
+    :root {
+      --bg-primary: #070b14;
+      --bg-secondary: #0d1526;
+      --bg-card: rgba(255, 255, 255, 0.04);
+      --bg-card-hover: rgba(255, 255, 255, 0.07);
+      --bg-glass: rgba(13, 21, 38, 0.8);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(99, 102, 241, 0.4);
+      --accent-primary: #6366f1;
+      --accent-secondary: #8b5cf6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #475569;
+      --gradient-main: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+      --gradient-card: linear-gradient(145deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%);
+      --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ===== BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== ANIMATED BACKGROUND ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(6,182,212,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .content-wrap { position: relative; z-index: 1; }
+
+    /* ===== NAVBAR ===== */
+    .navbar-custom {
+      background: rgba(7, 11, 20, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.9rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .navbar-brand-text {
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-badge {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== HERO ===== */
+    .hero-section {
+      padding: 5rem 0 3rem;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 50px;
+      padding: 0.35rem 1rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #a5b4fc;
+      letter-spacing: 0.5px;
+      margin-bottom: 1.5rem;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .hero-title .gradient-text {
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+    }
+    .hero-stat {
+      text-align: center;
+    }
+    .hero-stat-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ===== GLASS CARDS ===== */
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: var(--transition);
+    }
+    .glass-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+
+    /* ===== UPLOAD ZONE ===== */
+    .upload-section { padding: 2rem 0; }
+    .upload-zone {
+      border: 2px dashed rgba(99,102,241,0.4);
+      border-radius: var(--radius-xl);
+      padding: 3.5rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: rgba(99,102,241,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gradient-main);
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent-primary);
+      background: rgba(99,102,241,0.08);
+      transform: scale(1.01);
+    }
+    .upload-zone:hover::before, .upload-zone.drag-over::before { opacity: 0.03; }
+    .upload-icon-wrap {
+      width: 80px; height: 80px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.1));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+      font-size: 2rem;
+      color: var(--accent-primary);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .upload-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .upload-sub { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .upload-formats {
+      display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .format-badge {
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: var(--radius-sm);
+      padding: 0.3rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #a5b4fc;
+      font-family: 'Fira Code', monospace;
+    }
+    #fileInput { display: none; }
+
+    /* ===== BUTTONS ===== */
+    .btn-primary-custom {
+      background: var(--gradient-main);
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 0.75rem 2rem;
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+      font-size: 0.95rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary-custom::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: var(--transition);
+    }
+    .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+    .btn-primary-custom:hover::after { background: rgba(255,255,255,0.08); }
+    .btn-primary-custom:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-glass {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-weight: 500;
+      padding: 0.55rem 1.2rem;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      font-size: 0.85rem;
+    }
+    .btn-glass:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(99,102,241,0.4);
+      color: white;
+    }
+    .btn-danger-glass {
+      background: rgba(244,63,94,0.1);
+      border: 1px solid rgba(244,63,94,0.25);
+      color: #fb7185;
+    }
+    .btn-danger-glass:hover {
+      background: rgba(244,63,94,0.2);
+      border-color: rgba(244,63,94,0.5);
+      color: #f43f5e;
+    }
+
+    /* ===== FILE LIST ===== */
+    .file-list-section { margin-top: 1.5rem; }
+    .file-item {
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.6rem;
+      transition: var(--transition);
+    }
+    .file-item:hover { border-color: var(--border-accent); background: rgba(255,255,255,0.05); }
+    .file-icon {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .file-icon-pdf { background: rgba(244,63,94,0.15); color: #f43f5e; }
+    .file-icon-docx { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .file-icon-txt { background: rgba(16,185,129,0.15); color: #34d399; }
+    .file-name { font-weight: 500; font-size: 0.9rem; flex: 1; }
+    .file-size { color: var(--text-muted); font-size: 0.78rem; }
+    .file-status { font-size: 0.8rem; font-weight: 600; }
+    .file-status.processing { color: var(--accent-amber); }
+    .file-status.done { color: var(--accent-emerald); }
+    .file-status.error { color: var(--accent-rose); }
+
+    /* ===== PROGRESS ===== */
+    .progress-wrap {
+      background: rgba(255,255,255,0.05);
+      border-radius: 50px;
+      height: 6px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+    .progress-bar-custom {
+      height: 100%;
+      background: var(--gradient-main);
+      border-radius: 50px;
+      transition: width 0.4s ease;
+      position: relative;
+    }
+    .progress-bar-custom::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 60px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { from { transform: translateX(-60px); } to { transform: translateX(100px); } }
+
+    /* ===== RESULTS SECTION ===== */
+    .results-section { padding: 2rem 0; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .section-title {
+      font-size: 1.4rem; font-weight: 700;
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+    .section-title .icon-bg {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem;
+    }
+
+    /* ===== CANDIDATE CARDS ===== */
+    .candidate-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: var(--transition);
+      margin-bottom: 1.5rem;
+    }
+    .candidate-card:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .candidate-card-header {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.06) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.25rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--gradient-main);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+    .candidate-name { font-size: 1.15rem; font-weight: 700; }
+    .candidate-file { font-size: 0.78rem; color: var(--text-muted); }
+    .match-badge {
+      margin-left: auto;
+      padding: 0.4rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .match-high { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .match-mid { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .match-low { background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.3); }
+    .candidate-card-body { padding: 1.5rem; }
+
+    /* ===== INFO ROWS ===== */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .info-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1rem;
+      display: flex; align-items: flex-start; gap: 0.75rem;
+    }
+    .info-icon {
+      width: 34px; height: 34px; flex-shrink: 0;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+    }
+    .info-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-value { font-size: 0.88rem; font-weight: 500; color: var(--text-primary); word-break: break-all; margin-top: 2px; }
+
+    /* ===== SKILLS DISPLAY ===== */
+    .skills-section-card { margin-bottom: 1.5rem; }
+    .skills-category-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted);
+      margin-bottom: 0.6rem; margin-top: 1rem;
+    }
+    .skills-category-title:first-child { margin-top: 0; }
+    .skills-wrap { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .skill-tag {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 50px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: var(--transition);
+      cursor: default;
+      font-family: 'Fira Code', monospace;
+    }
+    .skill-tag:hover { transform: scale(1.05); }
+    .skill-tag-prog { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .skill-tag-web { background: rgba(6,182,212,0.15); color: #67e8f9; border: 1px solid rgba(6,182,212,0.25); }
+    .skill-tag-db { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+    .skill-tag-cloud { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); }
+    .skill-tag-ml { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
+    .skill-tag-soft { background: rgba(244,63,94,0.12); color: #fda4af; border: 1px solid rgba(244,63,94,0.2); }
+    .skill-tag-other { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+    /* ===== EDUCATION / EXPERIENCE TABLES ===== */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted);
+      padding: 0.6rem 1rem; text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .data-table td {
+      padding: 0.75rem 1rem; font-size: 0.87rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text-primary);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .table-wrap {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    /* ===== TABS ===== */
+    .tab-nav {
+      display: flex; gap: 0.25rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.3rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      flex: 1; min-width: 100px;
+      padding: 0.6rem 1rem;
+      background: none; border: none;
+      color: var(--text-secondary);
+      font-size: 0.85rem; font-weight: 600;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    }
+    .tab-btn.active {
+      background: var(--gradient-main);
+      color: white;
+      box-shadow: 0 2px 12px rgba(99,102,241,0.3);
+    }
+    .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ===== RANKING SECTION ===== */
+    .ranking-section { padding: 2rem 0; }
+    .rank-input-area {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .rank-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: white;
+      font-size: 0.9rem;
+      padding: 0.8rem 1.2rem;
+      width: 100%;
+      transition: var(--transition);
+    }
+    .rank-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+      background: rgba(255,255,255,0.08);
+    }
+    .rank-input::placeholder { color: var(--text-muted); }
+    .rank-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 1.25rem;
+      transition: var(--transition);
+    }
+    .rank-card:hover { border-color: var(--border-accent); background: var(--bg-card-hover); }
+    .rank-number {
+      width: 42px; height: 42px; flex-shrink: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 800;
+    }
+    .rank-1 { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #1a100a; }
+    .rank-2 { background: linear-gradient(135deg, #94a3b8, #cbd5e1); color: #0f172a; }
+    .rank-3 { background: linear-gradient(135deg, #cd7c2c, #d97706); color: #1a1008; }
+    .rank-other { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+    .rank-score-bar-wrap {
+      flex: 1;
+    }
+    .rank-name { font-weight: 700; font-size: 0.95rem; }
+    .rank-score-text { font-size: 0.78rem; color: var(--text-secondary); }
+    .rank-bar-outer {
+      height: 6px; background: rgba(255,255,255,0.06);
+      border-radius: 50px; margin-top: 0.5rem; overflow: hidden;
+    }
+    .rank-bar-inner {
+      height: 100%; border-radius: 50px;
+      background: var(--gradient-main);
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .rank-score-badge {
+      font-size: 1.1rem; font-weight: 800;
+      padding: 0.4rem 0.9rem;
+      border-radius: var(--radius-md);
+    }
+
+    /* ===== CHARTS SECTION ===== */
+    .charts-section { padding: 2rem 0; }
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .chart-title {
+      font-size: 0.95rem; font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .chart-title span { color: var(--text-secondary); font-weight: 400; font-size: 0.82rem; }
+    canvas { max-height: 280px; }
+
+    /* ===== NLP STATS ===== */
+    .stat-pill {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 50px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.78rem; font-weight: 600; color: #a5b4fc;
+    }
+
+    /* ===== ENTITY TAGS ===== */
+    .entity-tag {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0.7rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem; font-weight: 600; margin: 0.2rem;
+    }
+    .entity-PERSON { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
+    .entity-ORG { background: rgba(6,182,212,0.15); color: #67e8f9; border: 1px solid rgba(6,182,212,0.25); }
+    .entity-GPE { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); }
+    .entity-DATE { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+    .entity-other { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+    /* ===== LOADING / TOAST ===== */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(7,11,20,0.85);
+      backdrop-filter: blur(8px);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1rem;
+    }
+    .loading-spinner {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, var(--accent-primary), var(--accent-secondary), var(--accent-cyan), var(--accent-primary));
+      animation: spin 1s linear infinite;
+      position: relative;
+    }
+    .loading-spinner::after {
+      content: ''; position: absolute;
+      inset: 6px; background: var(--bg-primary);
+      border-radius: 50%;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
+    .loading-steps { font-size: 0.82rem; color: var(--text-muted); font-family: 'Fira Code', monospace; }
+
+    .toast-container-custom {
+      position: fixed; top: 80px; right: 1.5rem;
+      z-index: 9999; display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    .toast-custom {
+      background: rgba(13,21,38,0.95);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1.25rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      backdrop-filter: blur(12px);
+      min-width: 280px;
+      animation: slideInRight 0.3s ease;
+      box-shadow: var(--shadow-card);
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast-custom.success { border-left: 3px solid var(--accent-emerald); }
+    .toast-custom.error { border-left: 3px solid var(--accent-rose); }
+    .toast-custom.info { border-left: 3px solid var(--accent-primary); }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center; padding: 4rem 2rem;
+      color: var(--text-muted);
+    }
+    .empty-state-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.4; }
+    .empty-state-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary); }
+
+    /* ===== COMPARE SECTION ===== */
+    .compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .compare-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      transition: var(--transition);
+    }
+    .compare-card:hover { border-color: var(--border-accent); }
+    .compare-name { font-weight: 700; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .compare-stat { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
+    .compare-stat-label { font-size: 0.78rem; color: var(--text-muted); }
+    .compare-stat-value { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      border-top: 1px solid var(--border-color);
+      padding: 1.5rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 4rem;
+    }
+    .footer span { color: var(--accent-primary); font-weight: 600; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .hero-section { padding: 3rem 0 2rem; }
+      .hero-stats { gap: 1.5rem; }
+      .upload-zone { padding: 2.5rem 1.5rem; }
+      .info-grid { grid-template-columns: 1fr; }
+      .tab-btn { font-size: 0.78rem; padding: 0.5rem 0.7rem; }
+    }
+
+    /* ===== SCROLL BAR ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.7); }
+
+    /* ===== COLLAPSE ICON ===== */
+    .collapse-toggle { cursor: pointer; }
+    .collapse-toggle .chevron { transition: transform 0.25s; }
+    .collapse-toggle.collapsed .chevron { transform: rotate(-90deg); }
+
+    /* ===== NLP PIPELINE BADGE ===== */
+    .pipeline-steps {
+      display: flex; align-items: center; gap: 0.5rem;
+      flex-wrap: wrap; margin: 1rem 0;
+    }
+    .pipeline-step {
+      display: flex; align-items: center; gap: 0.3rem;
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: var(--radius-sm);
+      padding: 0.3rem 0.7rem;
+      font-size: 0.73rem; font-weight: 600; color: #a5b4fc;
+    }
+    .pipeline-arrow { color: var(--text-muted); font-size: 0.8rem; }
+
+    /* Download buttons group */
+    .download-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<div class="content-wrap">
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div class="toast-container-custom" id="toastContainer"></div>
+
+  <!-- ===== LOADING OVERLAY ===== -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Analyzing Resumes...</div>
+    <div class="loading-steps" id="loadingStep">→ Extracting text</div>
+  </div>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar-custom">
+    <div class="container-xl">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-cpu-fill" style="color:#6366f1;font-size:1.3rem;"></i>
+          <span class="navbar-brand-text">ResumeIQ</span>
+          <span class="nav-badge ms-1">NLP</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="stat-pill" id="navResumesProcessed" style="display:none;">
+            <i class="bi bi-check-circle-fill"></i>
+            <span id="navCount">0</span> processed
+          </span>
+          <a href="https://github.com" target="_blank" class="btn-glass btn">
+            <i class="bi bi-github me-1"></i>GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero-section">
+    <div class="container-xl text-center">
+      <div class="hero-eyebrow">
+        <i class="bi bi-lightning-charge-fill"></i>
+        Powered by spaCy NLP Pipeline
+      </div>
+      <h1 class="hero-title">
+        Smart Resume<br />
+        <span class="gradient-text">Skill Extractor</span>
+      </h1>
+      <p class="hero-sub">
+        Upload resumes and instantly extract structured data — skills, education, experience, contacts — using an advanced NLP pipeline with Named Entity Recognition.
+      </p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value">500+</div>
+          <div class="hero-stat-label">Skills Detected</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">NER</div>
+          <div class="hero-stat-label">Entity Recognition</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">3</div>
+          <div class="hero-stat-label">File Formats</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">AI</div>
+          <div class="hero-stat-label">Powered</div>
+        </div>
+      </div>
+
+      <!-- NLP Pipeline Visualization -->
+      <div class="d-flex justify-content-center">
+        <div class="pipeline-steps">
+          <div class="pipeline-step"><i class="bi bi-file-earmark-text"></i> Text Extract</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step"><i class="bi bi-scissors"></i> Tokenize</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step"><i class="bi bi-tags"></i> POS Tag</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step"><i class="bi bi-person-badge"></i> NER</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step"><i class="bi bi-search"></i> Skill Match</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step"><i class="bi bi-table"></i> Structure</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="container-xl">
+
+    <!-- ===== UPLOAD ZONE ===== -->
+    <section class="upload-section">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon-wrap">
+          <i class="bi bi-cloud-arrow-up"></i>
+        </div>
+        <div class="upload-title">Drop Resumes Here</div>
+        <div class="upload-sub">Drag & drop or click to browse files</div>
+        <div class="upload-formats">
+          <span class="format-badge">.pdf</span>
+          <span class="format-badge">.docx</span>
+          <span class="format-badge">.txt</span>
+        </div>
+        <p class="mt-2" style="font-size:0.75rem;color:var(--text-muted);">Max 10MB per file · Multiple files supported</p>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.txt" />
+
+      <!-- File list -->
+      <div class="file-list-section" id="fileListSection" style="display:none;">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);">
+            Selected Files <span id="fileCount" class="ms-1" style="color:var(--accent-primary);"></span>
+          </span>
+          <button class="btn-glass btn btn-sm" onclick="clearFiles()">
+            <i class="bi bi-trash me-1"></i>Clear All
+          </button>
+        </div>
+        <div id="fileList"></div>
+        <div class="progress-wrap" id="progressWrap" style="display:none;">
+          <div class="progress-bar-custom" id="progressBar" style="width:0%"></div>
+        </div>
+        <p class="mt-1 mb-3" style="font-size:0.78rem;color:var(--text-muted);display:none;" id="progressText"></p>
+        <div class="text-center mt-3">
+          <button class="btn-primary-custom btn" id="processBtn" onclick="processResumes()">
+            <i class="bi bi-play-circle me-2"></i>Process Resumes with NLP
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RESULTS SECTION ===== -->
+    <section class="results-section" id="resultsSection" style="display:none;">
+
+      <!-- Section header with actions -->
+      <div class="section-header">
+        <div class="section-title">
+          <div class="icon-bg" style="background:rgba(99,102,241,0.15);color:var(--accent-primary);">
+            <i class="bi bi-person-lines-fill"></i>
+          </div>
+          Extraction Results
+          <span id="resultCount" style="font-size:0.82rem;font-weight:400;color:var(--text-muted);"></span>
+        </div>
+        <div class="download-group">
+          <button class="btn-glass btn btn-sm" onclick="downloadAllJSON()" id="dlJsonBtn">
+            <i class="bi bi-download me-1"></i>JSON
+          </button>
+          <button class="btn-glass btn btn-sm" onclick="downloadCSV()" id="dlCsvBtn">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Tabs -->
+      <div class="tab-nav" id="mainTabNav">
+        <button class="tab-btn active" onclick="switchTab('candidates')" data-tab="candidates">
+          <i class="bi bi-people"></i>Candidates
+        </button>
+        <button class="tab-btn" onclick="switchTab('ranking')" data-tab="ranking">
+          <i class="bi bi-trophy"></i>Ranking
+        </button>
+        <button class="tab-btn" onclick="switchTab('charts')" data-tab="charts">
+          <i class="bi bi-bar-chart"></i>Analytics
+        </button>
+        <button class="tab-btn" onclick="switchTab('compare')" data-tab="compare">
+          <i class="bi bi-columns-gap"></i>Compare
+        </button>
+        <button class="tab-btn" onclick="switchTab('nlp')" data-tab="nlp">
+          <i class="bi bi-braces"></i>NLP Data
+        </button>
+      </div>
+
+      <!-- ===== TAB: CANDIDATES ===== -->
+      <div class="tab-pane active" id="tab-candidates">
+        <div id="candidatesContainer"></div>
+      </div>
+
+      <!-- ===== TAB: RANKING ===== -->
+      <div class="tab-pane" id="tab-ranking">
+        <div class="rank-input-area">
+          <h5 style="font-weight:700;margin-bottom:0.5rem;">
+            <i class="bi bi-funnel me-2" style="color:var(--accent-primary);"></i>
+            Candidate Ranking by Required Skills
+          </h5>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.25rem;">
+            Enter the skills you need. Candidates are ranked by match percentage.
+          </p>
+          <div class="row g-2 align-items-end">
+            <div class="col">
+              <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;" class="mb-1 d-block">
+                Required Skills (comma separated)
+              </label>
+              <input type="text" class="rank-input" id="requiredSkillsInput"
+                     placeholder="e.g. python, react, machine learning, docker, sql" />
+            </div>
+            <div class="col-auto">
+              <button class="btn-primary-custom btn" onclick="rankCandidates()">
+                <i class="bi bi-sort-down me-1"></i>Rank Now
+              </button>
+            </div>
+          </div>
+          <div class="mt-2">
+            <span style="font-size:0.75rem;color:var(--text-muted);">Quick fill: </span>
+            <button class="btn btn-sm btn-glass me-1 mt-1" onclick="fillSkills('python, machine learning, sql, tensorflow, docker')">ML Engineer</button>
+            <button class="btn btn-sm btn-glass me-1 mt-1" onclick="fillSkills('react, javascript, node.js, css, mongodb')">Full Stack Dev</button>
+            <button class="btn btn-sm btn-glass mt-1" onclick="fillSkills('java, spring boot, aws, microservices, kubernetes')">Backend Dev</button>
+          </div>
+        </div>
+        <div id="rankingResults"></div>
+      </div>
+
+      <!-- ===== TAB: CHARTS ===== -->
+      <div class="tab-pane" id="tab-charts">
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="chart-card">
+              <div class="chart-title">
+                <i class="bi bi-bar-chart-fill" style="color:var(--accent-primary);"></i>
+                Skill Frequency
+                <span>Top skills across all resumes</span>
+              </div>
+              <canvas id="skillFreqChart"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="chart-card">
+              <div class="chart-title">
+                <i class="bi bi-pie-chart-fill" style="color:var(--accent-secondary);"></i>
+                Skill Distribution
+                <span>By category</span>
+              </div>
+              <canvas id="skillDistChart"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="chart-card">
+              <div class="chart-title">
+                <i class="bi bi-person-fill" style="color:var(--accent-cyan);"></i>
+                Skills per Candidate
+                <span>Total unique skills count</span>
+              </div>
+              <canvas id="candidateSkillChart"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="chart-card">
+              <div class="chart-title">
+                <i class="bi bi-donut" style="color:var(--accent-emerald);"></i>
+                Category Breakdown
+                <span>Tech vs Soft vs Tools</span>
+              </div>
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB: COMPARE ===== -->
+      <div class="tab-pane" id="tab-compare">
+        <div class="compare-grid" id="compareContainer"></div>
+      </div>
+
+      <!-- ===== TAB: NLP DATA ===== -->
+      <div class="tab-pane" id="tab-nlp">
+        <div id="nlpDataContainer"></div>
+      </div>
+
+    </section>
+
+    <!-- ===== EMPTY STATE ===== -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon"><i class="bi bi-file-earmark-person"></i></div>
+      <div class="empty-state-title">No Resumes Processed Yet</div>
+      <p style="font-size:0.85rem;">Upload PDF, DOCX, or TXT resumes above to get started.</p>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">
+        Try the sample resumes in the <code style="color:#a5b4fc;">sample_resumes/</code> folder.
+      </p>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <span>ResumeIQ</span> · Smart Resume Skill Extractor · NLP Project ·
+    Built with <span>spaCy</span>, <span>Flask</span> &amp; ❤️
+  </footer>
+
+</div><!-- /content-wrap -->
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+/* =========================================================
+   Smart Resume Skill Extractor — Frontend JS
+   ========================================================= */
+
+// ---- State ----
+let selectedFiles = [];
+let processedResults = [];
+let sessionId = null;
+let charts = {};
+
+// ---- Skill tag color map ----
+const SKILL_COLORS = {
+  "Programming Languages": "skill-tag-prog",
+  "Web Technologies": "skill-tag-web",
+  "Databases": "skill-tag-db",
+  "Cloud & DevOps": "skill-tag-cloud",
+  "Data Science & ML": "skill-tag-ml",
+  "Soft Skills": "skill-tag-soft",
+  "Mobile Development": "skill-tag-cloud",
+  "Testing & QA": "skill-tag-web",
+  "Security": "skill-tag-ml",
+  "Other Technical": "skill-tag-other",
+  "Tools & Platforms": "skill-tag-db",
+  "Other": "skill-tag-other",
+};
+
+// ===== DRAG & DROP =====
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  addFiles(files);
+});
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  addFiles(Array.from(e.target.files));
+  e.target.value = ''; // reset so same file can be re-added
+});
+
+function addFiles(files) {
+  const allowed = ['pdf', 'docx', 'doc', 'txt'];
+  files.forEach(f => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+      showToast(`${f.name}: Unsupported format`, 'error');
+      return;
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      showToast(`${f.name}: File too large (max 10MB)`, 'error');
+      return;
+    }
+    if (!selectedFiles.find(sf => sf.name === f.name && sf.size === f.size)) {
+      selectedFiles.push(f);
+    }
+  });
+  renderFileList();
+}
+
+function clearFiles() {
+  selectedFiles = [];
+  renderFileList();
+}
+
+function removeFile(index) {
+  selectedFiles.splice(index, 1);
+  renderFileList();
+}
+
+function renderFileList() {
+  const section = document.getElementById('fileListSection');
+  const listEl = document.getElementById('fileList');
+  const countEl = document.getElementById('fileCount');
+
+  if (selectedFiles.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  countEl.textContent = `(${selectedFiles.length})`;
+
+  listEl.innerHTML = selectedFiles.map((f, i) => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    const iconClass = ext === 'pdf' ? 'file-icon-pdf' : ext.startsWith('doc') ? 'file-icon-docx' : 'file-icon-txt';
+    const iconName = ext === 'pdf' ? 'bi-file-earmark-pdf' : ext.startsWith('doc') ? 'bi-file-earmark-word' : 'bi-file-earmark-text';
+    const size = f.size < 1024 ? `${f.size}B` : f.size < 1024*1024 ? `${(f.size/1024).toFixed(1)}KB` : `${(f.size/1024/1024).toFixed(1)}MB`;
+    return `
+      <div class="file-item" id="file-item-${i}">
+        <div class="file-icon ${iconClass}"><i class="bi ${iconName}"></i></div>
+        <div class="flex-1">
+          <div class="file-name">${escapeHtml(f.name)}</div>
+          <div class="file-size">${size}</div>
+        </div>
+        <span class="file-status" id="file-status-${i}">Ready</span>
+        <button class="btn btn-sm btn-danger-glass btn-glass ms-2" onclick="removeFile(${i})">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>`;
+  }).join('');
+}
+
+// ===== PROCESS RESUMES =====
+async function processResumes() {
+  if (selectedFiles.length === 0) { showToast('Please select files first.', 'error'); return; }
+
+  const btn = document.getElementById('processBtn');
+  btn.disabled = true;
+
+  showLoading(true);
+  setLoadingStep('→ Uploading files to server...');
+
+  const formData = new FormData();
+  selectedFiles.forEach(f => formData.append('resumes', f));
+
+  // Update status to processing
+  selectedFiles.forEach((_, i) => setFileStatus(i, 'processing', 'Processing...'));
+
+  try {
+    setLoadingStep('→ Extracting text from documents...');
+    await delay(400);
+    setLoadingStep('→ Running NLP pipeline (tokenization, POS, NER)...');
+
+    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (!resp.ok) throw new Error(data.error || 'Server error');
+
+    sessionId = data.session_id;
+    processedResults = data.results || [];
+
+    // Update statuses
+    processedResults.forEach((r, i) => setFileStatus(i, 'done', `✓ ${r.data.skills?.length || 0} skills found`));
+    data.errors?.forEach(e => {
+      const idx = selectedFiles.findIndex(f => f.name === e.filename);
+      if (idx >= 0) setFileStatus(idx, 'error', '✗ Failed');
+      showToast(`${e.filename}: ${e.error}`, 'error');
+    });
+
+    setLoadingStep('→ Building visualizations...');
+    await delay(300);
+
+    renderResults();
+    showToast(`${processedResults.length} resume(s) processed successfully!`, 'success');
+
+    // Update navbar
+    document.getElementById('navResumesProcessed').style.display = 'flex';
+    document.getElementById('navCount').textContent = processedResults.length;
+
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+    selectedFiles.forEach((_, i) => setFileStatus(i, 'error', '✗ Error'));
+  } finally {
+    showLoading(false);
+    btn.disabled = false;
+  }
+}
+
+// ===== RENDER RESULTS =====
+function renderResults() {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('resultCount').textContent = `(${processedResults.length} candidate${processedResults.length !== 1 ? 's' : ''})`;
+
+  renderCandidates();
+  renderCompare();
+  renderNLPData();
+  // Charts will render when tab is clicked (lazy)
+  renderCharts();
+}
+
+// ===== CANDIDATES TAB =====
+function renderCandidates() {
+  const container = document.getElementById('candidatesContainer');
+  if (!processedResults.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><i class="bi bi-inbox"></i></div><div class="empty-state-title">No results yet</div></div>';
+    return;
+  }
+
+  container.innerHTML = processedResults.map((result, idx) => {
+    const d = result.data;
+    const initials = d.name && d.name !== 'Not Found'
+      ? d.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
+      : '?';
+
+    const skillsHtml = renderSkillsByCategory(d.skill_categories || {}, d.skills || []);
+    const eduHtml = renderEdTable(d.education || []);
+    const expHtml = renderExpTable(d.experience || []);
+
+    return `
+    <div class="candidate-card" id="candidate-${result.id}">
+      <div class="candidate-card-header">
+        <div class="avatar">${initials}</div>
+        <div>
+          <div class="candidate-name">${escapeHtml(d.name)}</div>
+          <div class="candidate-file">
+            <i class="bi bi-file-earmark me-1"></i>${escapeHtml(result.filename)}
+            &nbsp;·&nbsp;
+            <i class="bi bi-clock me-1"></i>${new Date(result.processed_at).toLocaleTimeString()}
+          </div>
+        </div>
+        <div class="ms-auto d-flex gap-2 align-items-center flex-wrap">
+          <span class="stat-pill"><i class="bi bi-star"></i>${d.skills?.length || 0} skills</span>
+          <div class="download-group">
+            <button class="btn btn-sm btn-glass" onclick="downloadOneJSON('${result.id}')">
+              <i class="bi bi-download me-1"></i>JSON
+            </button>
+            <button class="btn btn-sm btn-glass" onclick="downloadOneCSV('${result.id}')">
+              <i class="bi bi-file-spreadsheet me-1"></i>CSV
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="candidate-card-body">
+
+        <!-- Contact Info Grid -->
+        <div class="info-grid mb-3">
+          <div class="info-item">
+            <div class="info-icon" style="background:rgba(99,102,241,0.1);color:#a5b4fc;">
+              <i class="bi bi-envelope"></i>
+            </div>
+            <div>
+              <div class="info-label">Email</div>
+              <div class="info-value">${escapeHtml(d.email || 'Not Found')}</div>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-icon" style="background:rgba(16,185,129,0.1);color:#34d399;">
+              <i class="bi bi-telephone"></i>
+            </div>
+            <div>
+              <div class="info-label">Phone</div>
+              <div class="info-value">${escapeHtml(d.phone || 'Not Found')}</div>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-icon" style="background:rgba(6,182,212,0.1);color:#67e8f9;">
+              <i class="bi bi-linkedin"></i>
+            </div>
+            <div>
+              <div class="info-label">LinkedIn</div>
+              <div class="info-value">
+                ${d.linkedin && d.linkedin !== 'Not Found'
+                  ? `<a href="${escapeHtml(d.linkedin)}" target="_blank" style="color:#67e8f9;">${escapeHtml(d.linkedin)}</a>`
+                  : 'Not Found'}
+              </div>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-icon" style="background:rgba(255,255,255,0.08);color:#94a3b8;">
+              <i class="bi bi-github"></i>
+            </div>
+            <div>
+              <div class="info-label">GitHub</div>
+              <div class="info-value">
+                ${d.github && d.github !== 'Not Found'
+                  ? `<a href="${escapeHtml(d.github)}" target="_blank" style="color:#a5b4fc;">${escapeHtml(d.github)}</a>`
+                  : 'Not Found'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${d.summary ? `
+        <div class="mb-3 p-3" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.12);border-radius:var(--radius-md);">
+          <div class="info-label mb-1"><i class="bi bi-person-circle me-1"></i>Summary</div>
+          <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;line-height:1.7;">${escapeHtml(d.summary)}</p>
+        </div>` : ''}
+
+        <!-- Skills -->
+        <div class="mb-3">
+          <div class="collapse-toggle d-flex align-items-center gap-2 mb-2" onclick="toggleCollapse('skills-${idx}', this)">
+            <div class="info-label" style="margin:0;cursor:pointer;">
+              <i class="bi bi-code-slash me-1"></i>Skills Extracted (${d.skills?.length || 0})
+            </div>
+            <i class="bi bi-chevron-down chevron ms-auto" style="color:var(--text-muted);font-size:0.8rem;"></i>
+          </div>
+          <div id="skills-${idx}">
+            ${skillsHtml}
+          </div>
+        </div>
+
+        <!-- Education -->
+        <div class="mb-3">
+          <div class="collapse-toggle d-flex align-items-center gap-2 mb-2" onclick="toggleCollapse('edu-${idx}', this)">
+            <div class="info-label" style="margin:0;cursor:pointer;">
+              <i class="bi bi-mortarboard me-1"></i>Education
+            </div>
+            <i class="bi bi-chevron-down chevron ms-auto" style="color:var(--text-muted);font-size:0.8rem;"></i>
+          </div>
+          <div id="edu-${idx}">
+            <div class="table-wrap">${eduHtml}</div>
+          </div>
+        </div>
+
+        <!-- Experience -->
+        <div class="mb-1">
+          <div class="collapse-toggle d-flex align-items-center gap-2 mb-2" onclick="toggleCollapse('exp-${idx}', this)">
+            <div class="info-label" style="margin:0;cursor:pointer;">
+              <i class="bi bi-briefcase me-1"></i>Experience
+            </div>
+            <i class="bi bi-chevron-down chevron ms-auto" style="color:var(--text-muted);font-size:0.8rem;"></i>
+          </div>
+          <div id="exp-${idx}">
+            <div class="table-wrap">${expHtml}</div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSkillsByCategory(categories, allSkills) {
+  if (allSkills.length === 0) return '<p style="font-size:0.85rem;color:var(--text-muted);">No skills detected.</p>';
+
+  // If categories exist, render by category
+  if (Object.keys(categories).length > 0) {
+    return Object.entries(categories).map(([cat, skills]) => `
+      <div class="skills-category-title">${cat}</div>
+      <div class="skills-wrap mb-2">
+        ${skills.map(s => `<span class="skill-tag ${SKILL_COLORS[cat] || 'skill-tag-other'}">${escapeHtml(s)}</span>`).join('')}
+      </div>
+    `).join('');
+  }
+
+  // Fallback: flat list
+  return `<div class="skills-wrap">
+    ${allSkills.map(s => `<span class="skill-tag skill-tag-other">${escapeHtml(s.skill || s)}</span>`).join('')}
+  </div>`;
+}
+
+function renderEdTable(education) {
+  if (!education.length || (education.length === 1 && education[0].degree === 'Not Found')) {
+    return '<p style="font-size:0.85rem;color:var(--text-muted);padding:1rem;">No education data found.</p>';
+  }
+  return `<table class="data-table">
+    <thead><tr>
+      <th>Degree</th><th>Institution</th><th>Year</th>
+    </tr></thead>
+    <tbody>
+      ${education.map(e => `
+        <tr>
+          <td>${escapeHtml(e.degree || '-')}</td>
+          <td>${escapeHtml(e.institution || '-')}</td>
+          <td>${escapeHtml(e.year || '-')}</td>
+        </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderExpTable(experience) {
+  if (!experience.length || (experience.length === 1 && experience[0].company === 'Not Found')) {
+    return '<p style="font-size:0.85rem;color:var(--text-muted);padding:1rem;">No experience data found.</p>';
+  }
+  return `<table class="data-table">
+    <thead><tr>
+      <th>Role</th><th>Company</th><th>Duration</th>
+    </tr></thead>
+    <tbody>
+      ${experience.map(e => `
+        <tr>
+          <td>${escapeHtml(e.role || '-')}</td>
+          <td>${escapeHtml(e.company || '-')}</td>
+          <td>${escapeHtml(e.duration || '-')}</td>
+        </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+// ===== RANKING =====
+function fillSkills(skills) {
+  document.getElementById('requiredSkillsInput').value = skills;
+}
+
+async function rankCandidates() {
+  const input = document.getElementById('requiredSkillsInput').value.trim();
+  if (!input) { showToast('Enter required skills first.', 'error'); return; }
+  if (!sessionId) { showToast('Process resumes first.', 'error'); return; }
+
+  const skills = input.split(',').map(s => s.trim()).filter(Boolean);
+
+  try {
+    const resp = await fetch('/api/rank', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, required_skills: skills }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+
+    renderRanking(data.ranked_candidates, data.required_skills);
+    showToast('Candidates ranked!', 'success');
+  } catch (err) {
+    showToast(`Ranking failed: ${err.message}`, 'error');
+  }
+}
+
+function renderRanking(ranked, requiredSkills) {
+  const container = document.getElementById('rankingResults');
+  if (!ranked.length) { container.innerHTML = '<p style="color:var(--text-muted);">No candidates to rank.</p>'; return; }
+
+  const rankColors = ['rank-1', 'rank-2', 'rank-3'];
+
+  container.innerHTML = `
+    <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+      <span style="font-size:0.8rem;color:var(--text-muted);">Matching against:</span>
+      ${requiredSkills.map(s => `<span class="skill-tag skill-tag-prog">${escapeHtml(s)}</span>`).join('')}
+    </div>
+    ${ranked.map((r, i) => {
+      const d = r.data || {};
+      const score = r.match_score;
+      const colorClass = i < 3 ? rankColors[i] : 'rank-other';
+      const badgeColor = score >= 70 ? 'match-high' : score >= 40 ? 'match-mid' : 'match-low';
+      return `
+        <div class="rank-card">
+          <div class="rank-number ${colorClass}">${i + 1}</div>
+          <div class="rank-score-bar-wrap">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="rank-name">${escapeHtml(d.name || r.filename)}</div>
+              <div class="rank-score-text">${r.matched_skills.length}/${requiredSkills.length} skills matched</div>
+            </div>
+            <div class="rank-bar-outer">
+              <div class="rank-bar-inner" style="width:${score}%"></div>
+            </div>
+            <div class="d-flex gap-1 mt-1 flex-wrap">
+              ${r.matched_skills.map(s => `<span class="entity-tag entity-GPE" style="font-size:0.68rem;">✓ ${escapeHtml(s)}</span>`).join('')}
+              ${r.missing_skills.slice(0,5).map(s => `<span class="entity-tag entity-other" style="font-size:0.68rem;">✗ ${escapeHtml(s)}</span>`).join('')}
+            </div>
+          </div>
+          <div class="rank-score-badge ${badgeColor}">${score}%</div>
+        </div>`;
+    }).join('')}`;
+}
+
+// ===== CHARTS =====
+function renderCharts() {
+  const allSkills = {};
+  const categoryCount = {};
+  const candidateSkillCounts = [];
+  const candidateNames = [];
+
+  processedResults.forEach(r => {
+    const d = r.data;
+    candidateNames.push(d.name !== 'Not Found' ? d.name : r.filename);
+    candidateSkillCounts.push(d.skills?.length || 0);
+
+    (d.skills || []).forEach(s => {
+      const name = s.skill;
+      allSkills[name] = (allSkills[name] || 0) + 1;
+      const cat = s.category || 'Other';
+      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+    });
+  });
+
+  // Chart colors
+  const palette = [
+    '#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b',
+    '#f43f5e','#3b82f6','#ec4899','#14b8a6','#a855f7'
+  ];
+
+  // Skill frequency (top 12)
+  const sortedSkills = Object.entries(allSkills).sort((a,b) => b[1]-a[1]).slice(0, 12);
+  destroyChart('skillFreqChart');
+  charts['skillFreqChart'] = new Chart(document.getElementById('skillFreqChart'), {
+    type: 'bar',
+    data: {
+      labels: sortedSkills.map(s => s[0]),
+      datasets: [{
+        label: 'Frequency',
+        data: sortedSkills.map(s => s[1]),
+        backgroundColor: palette.map(c => c + 'cc'),
+        borderColor: palette,
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: chartOptions(''),
+  });
+
+  // Skill Distribution pie
+  const catEntries = Object.entries(categoryCount).sort((a,b) => b[1]-a[1]);
+  destroyChart('skillDistChart');
+  charts['skillDistChart'] = new Chart(document.getElementById('skillDistChart'), {
+    type: 'doughnut',
+    data: {
+      labels: catEntries.map(e => e[0]),
+      datasets: [{ data: catEntries.map(e => e[1]), backgroundColor: palette.map(c => c + 'bb'), borderWidth: 2, borderColor: '#070b14' }]
+    },
+    options: { ...chartOptions(''), cutout: '60%' },
+  });
+
+  // Skills per candidate
+  destroyChart('candidateSkillChart');
+  charts['candidateSkillChart'] = new Chart(document.getElementById('candidateSkillChart'), {
+    type: 'bar',
+    data: {
+      labels: candidateNames,
+      datasets: [{
+        label: 'Skills Found',
+        data: candidateSkillCounts,
+        backgroundColor: '#6366f1bb',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: chartOptions(''),
+  });
+
+  // Category breakdown (Tech vs Soft vs Tools)
+  const techCats = ['Programming Languages','Web Technologies','Databases','Cloud & DevOps','Data Science & ML','Mobile Development'];
+  const softCats = ['Soft Skills'];
+  const toolCats = ['Tools & Platforms','Testing & QA','Security','Other Technical'];
+  const techCount = Object.entries(categoryCount).filter(([k]) => techCats.includes(k)).reduce((a,[,v]) => a+v, 0);
+  const softCount = Object.entries(categoryCount).filter(([k]) => softCats.includes(k)).reduce((a,[,v]) => a+v, 0);
+  const toolCount = Object.entries(categoryCount).filter(([k]) => toolCats.includes(k)).reduce((a,[,v]) => a+v, 0);
+  destroyChart('categoryChart');
+  charts['categoryChart'] = new Chart(document.getElementById('categoryChart'), {
+    type: 'pie',
+    data: {
+      labels: ['Technical', 'Soft Skills', 'Tools & Others'],
+      datasets: [{ data: [techCount, softCount, toolCount], backgroundColor: ['#6366f1bb','#10b981bb','#f59e0bbb'], borderWidth: 2, borderColor: '#070b14' }]
+    },
+    options: { ...chartOptions('') },
+  });
+}
+
+function chartOptions(title) {
+  return {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 12 } },
+      title: title ? { display: true, text: title, color: '#f1f5f9' } : { display: false },
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+    },
+  };
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ===== COMPARE TAB =====
+function renderCompare() {
+  const container = document.getElementById('compareContainer');
+  container.innerHTML = processedResults.map(r => {
+    const d = r.data;
+    const topSkills = (d.skills || []).slice(0, 6).map(s => s.skill);
+    const cats = Object.keys(d.skill_categories || {});
+    return `
+      <div class="compare-card">
+        <div class="compare-name">
+          <i class="bi bi-person-circle me-1" style="color:var(--accent-primary);"></i>
+          ${escapeHtml(d.name !== 'Not Found' ? d.name : r.filename)}
+        </div>
+        <div class="compare-stat">
+          <span class="compare-stat-label">Total Skills</span>
+          <span class="compare-stat-value">${d.skills?.length || 0}</span>
+        </div>
+        <div class="compare-stat">
+          <span class="compare-stat-label">Education</span>
+          <span class="compare-stat-value">${d.education?.length || 0} entry/entries</span>
+        </div>
+        <div class="compare-stat">
+          <span class="compare-stat-label">Experience</span>
+          <span class="compare-stat-value">${d.experience?.length || 0} role(s)</span>
+        </div>
+        <div class="compare-stat">
+          <span class="compare-stat-label">Word Count</span>
+          <span class="compare-stat-value">${d.word_count || 0}</span>
+        </div>
+        <div class="compare-stat">
+          <span class="compare-stat-label">Categories</span>
+          <span class="compare-stat-value">${cats.length}</span>
+        </div>
+        <div class="mt-2">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;">TOP SKILLS</div>
+          <div class="skills-wrap">
+            ${topSkills.map(s => `<span class="skill-tag skill-tag-prog" style="font-size:0.7rem;">${escapeHtml(s)}</span>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===== NLP DATA TAB =====
+function renderNLPData() {
+  const container = document.getElementById('nlpDataContainer');
+  container.innerHTML = processedResults.map((r, idx) => {
+    const d = r.data;
+    const entities = d.entities || [];
+    const posSample = d.pos_sample || [];
+
+    const entityHtml = entities.length
+      ? entities.slice(0, 30).map(e => {
+          const cls = ['PERSON','ORG','GPE','DATE'].includes(e.label)
+            ? `entity-${e.label}` : 'entity-other';
+          return `<span class="entity-tag ${cls}">
+            ${escapeHtml(e.text)} <small style="opacity:0.7;">${e.label}</small>
+          </span>`;
+        }).join('')
+      : '<span style="color:var(--text-muted);font-size:0.85rem;">No entities detected.</span>';
+
+    const posHtml = posSample.length
+      ? `<div style="font-family:'Fira Code',monospace;font-size:0.75rem;color:var(--text-secondary);line-height:1.8;">
+          ${posSample.map(t =>
+            `<span style="margin-right:0.75rem;">
+              <span style="color:var(--text-primary);">${escapeHtml(t.token)}</span>
+              <span style="color:var(--text-muted);">/</span>
+              <span style="color:#a5b4fc;">${t.pos}</span>
+            </span>`
+          ).join('')}
+        </div>`
+      : '<span style="color:var(--text-muted);font-size:0.85rem;">No POS data.</span>';
+
+    return `
+      <div class="glass-card mb-3 p-3">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-braces" style="color:var(--accent-primary);"></i>
+          <span style="font-weight:700;">${escapeHtml(d.name !== 'Not Found' ? d.name : r.filename)}</span>
+          <div class="d-flex gap-2 ms-auto flex-wrap">
+            <span class="stat-pill"><i class="bi bi-hash"></i>${d.word_count || 0} words</span>
+            <span class="stat-pill"><i class="bi bi-dash"></i>${d.sentence_count || 0} sentences</span>
+            <span class="stat-pill"><i class="bi bi-cpu"></i>${d.filtered_tokens_count || 0} filtered tokens</span>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="info-label mb-2"><i class="bi bi-person-badge me-1"></i>Named Entities (NER)</div>
+          <div>${entityHtml}</div>
+        </div>
+        <div>
+          <div class="info-label mb-2"><i class="bi bi-tags me-1"></i>POS Tags Sample</div>
+          ${posHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===== TABS =====
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+}
+
+// ===== COLLAPSE TOGGLE =====
+function toggleCollapse(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isCollapsed = el.style.display === 'none';
+  el.style.display = isCollapsed ? '' : 'none';
+  btn.classList.toggle('collapsed', !isCollapsed);
+}
+
+// ===== DOWNLOAD =====
+function downloadOneJSON(resultId) {
+  window.open(`/api/download/json/${resultId}?session_id=${sessionId}`, '_blank');
+}
+function downloadOneCSV(resultId) {
+  window.open(`/api/download/csv/${resultId}?session_id=${sessionId}`, '_blank');
+}
+function downloadAllJSON() {
+  if (!sessionId) { showToast('No results to download.', 'error'); return; }
+  window.open(`/api/download/json-all?session_id=${sessionId}`, '_blank');
+}
+function downloadCSV() {
+  if (!sessionId) { showToast('No results to download.', 'error'); return; }
+  window.open(`/api/download/csv?session_id=${sessionId}`, '_blank');
+}
+
+// ===== UTILS =====
+function showLoading(show) {
+  document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+}
+function setLoadingStep(text) {
+  document.getElementById('loadingStep').textContent = text;
+}
+function setFileStatus(idx, type, text) {
+  const el = document.getElementById(`file-status-${idx}`);
+  if (el) { el.className = `file-status ${type}`; el.textContent = text; }
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimeout = {};
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const id = 'toast-' + Date.now();
+  const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+  const colors = { success: '#34d399', error: '#f43f5e', info: '#a5b4fc' };
+  const icon = icons[type] || icons.info;
+  const color = colors[type] || colors.info;
+
+  const el = document.createElement('div');
+  el.className = `toast-custom ${type}`;
+  el.id = id;
+  el.innerHTML = `
+    <i class="bi ${icon}" style="color:${color};font-size:1.1rem;flex-shrink:0;"></i>
+    <span style="font-size:0.85rem;flex:1;">${escapeHtml(message)}</span>
+    <button onclick="document.getElementById('${id}').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 0.5rem;">
+      <i class="bi bi-x"></i>
+    </button>`;
+  container.appendChild(el);
+
+  toastTimeout[id] = setTimeout(() => { el.remove(); }, 4500);
+}
+
+// ===== PROGRESS SIMULATION =====
+function simulateProgress() {
+  const bar = document.getElementById('progressBar');
+  const wrap = document.getElementById('progressWrap');
+  const text = document.getElementById('progressText');
+  if (!bar || !wrap) return;
+  wrap.style.display = 'block';
+  text.style.display = 'block';
+  let p = 0;
+  const interval = setInterval(() => {
+    p = Math.min(p + Math.random() * 15, 90);
+    bar.style.width = p + '%';
+    text.textContent = `Processing... ${Math.round(p)}%`;
+    if (p >= 90) clearInterval(interval);
+  }, 300);
+  return interval;
+}
+</script>
+
+</body>
+</html>

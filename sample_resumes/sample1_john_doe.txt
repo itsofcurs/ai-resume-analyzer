@@ -1,0 +1,54 @@
+John Doe
+Email: johndoe@email.com | Phone: +91-9876543210 | LinkedIn: linkedin.com/in/johndoe | GitHub: github.com/johndoe
+
+SUMMARY
+Dynamic and results-driven Software Engineer with 4+ years of experience building scalable web applications and machine learning pipelines. Passionate about open-source, clean code, and continuous learning.
+
+EDUCATION
+B.Tech in Computer Science and Engineering
+Indian Institute of Technology, Bombay
+2016 - 2020
+
+SKILLS
+Technical Skills: Python, Java, JavaScript, TypeScript, React, Node.js, Django, Flask, FastAPI, REST APIs, GraphQL
+Databases: PostgreSQL, MongoDB, Redis, MySQL
+Cloud & DevOps: AWS, Docker, Kubernetes, GitHub Actions, CI/CD, Terraform
+Data Science: Machine Learning, TensorFlow, scikit-learn, Pandas, NumPy, Natural Language Processing
+Tools: Git, Linux, Postman, Jira, Figma, VS Code
+
+Soft Skills: Leadership, Problem Solving, Team Collaboration, Agile, Scrum, Communication
+
+WORK EXPERIENCE
+Senior Software Engineer
+Google India Pvt. Ltd.
+July 2022 - Present
+- Led a team of 6 engineers to build a real-time analytics dashboard using React and FastAPI
+- Designed and deployed microservices on AWS EKS reducing latency by 40%
+- Implemented NLP-based search using spaCy and Elasticsearch
+
+Software Engineer
+Infosys Technologies
+August 2020 - June 2022
+- Built RESTful APIs using Django REST Framework serving 1M+ requests/day
+- Migrated legacy monolith to microservices using Docker and Kubernetes
+- Improved CI/CD pipelines using Jenkins and GitHub Actions
+
+Intern - Machine Learning
+Wipro AI Labs
+May 2019 - July 2019
+- Built sentiment analysis model using NLTK and scikit-learn (84% accuracy)
+- Created automated data preprocessing pipeline in Python
+
+PROJECTS
+Resume Parser System
+- Built an NLP pipeline using spaCy and Flask to extract structured information from resumes
+- Technologies: Python, spaCy, PyMuPDF, Flask, React
+
+Stock Price Predictor
+- Trained LSTM model on historical market data for 5-day price prediction
+- Technologies: Python, TensorFlow, Pandas, Matplotlib
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect - Associate (2023)
+- Google Professional Data Engineer (2022)
+- Deep Learning Specialization - Coursera (2021)

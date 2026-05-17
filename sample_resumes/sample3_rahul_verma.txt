@@ -1,0 +1,58 @@
+Rahul Verma
+rahul.verma@outlook.com | +91-7654321098 | LinkedIn: linkedin.com/in/rahulverma | GitHub: github.com/rahul-verma-dev
+
+PROFILE
+Full-Stack Developer with 2 years of experience specializing in React, Node.js, and cloud deployments. Passionate about building beautiful, performant web applications and contributing to open-source projects.
+
+EDUCATION
+B.Tech - Information Technology
+National Institute of Technology, Surathkal
+2018 - 2022
+
+SKILLS
+Frontend: React, Next.js, Vue.js, Angular, HTML5, CSS3, JavaScript, TypeScript, Bootstrap, Tailwind CSS, Redux, GraphQL
+Backend: Node.js, Express.js, Python, Flask, REST APIs, WebSocket
+Databases: MongoDB, MySQL, PostgreSQL, Redis, Firebase
+Mobile: React Native, Flutter
+DevOps: Docker, AWS EC2, S3, Heroku, Vercel, Netlify, GitHub Actions, CI/CD, Linux, Nginx
+Testing: Jest, Cypress, Selenium, Postman, Unit Testing
+Tools: Git, GitHub, Jira, Figma, Adobe XD, VS Code, Webpack, Babel
+
+Soft Skills: Teamwork, Adaptability, Time Management, Creative Problem Solving, Client Management
+
+EXPERIENCE
+Software Developer
+Zoho Corporation
+July 2022 - Present
+- Built and maintained 3 SaaS modules using React 18 and Node.js backend
+- Implemented real-time collaboration features using WebSocket and Redis pub/sub
+- Reduced page load time by 60% through code splitting and lazy loading
+- Integrated payment gateway (Razorpay) and OAuth 2.0 authentication
+
+Junior Web Developer
+Startup Hub Bangalore
+Jan 2022 - June 2022
+- Developed e-commerce frontend using Next.js and Tailwind CSS
+- Integrated third-party APIs (Stripe, Twilio, SendGrid)
+- Built RESTful APIs with Node.js and MongoDB
+
+PROJECTS
+Portfolio website Builder (Open Source)
+- Drag-and-drop portfolio builder with 1,200+ GitHub stars
+- Tech Stack: React, Node.js, MongoDB, AWS S3, Docker
+
+Real-Time Chat Application
+- Multi-room chat with WebSocket, JWT auth, and message encryption
+- Tech Stack: React, Node.js, Socket.io, Redis, MongoDB
+
+Recipe Finder App
+- Mobile app with AI-powered ingredient recognition using OpenCV
+- Tech Stack: React Native, Python, Flask, OpenCV, Firebase
+
+CERTIFICATIONS
+- Meta Front-End Developer Certificate (Coursera, 2022)
+- AWS Cloud Practitioner (2023)
+- MongoDB Developer Certification (2023)
+
+LANGUAGES
+- English (Fluent), Hindi (Native), Kannada (Conversational)
