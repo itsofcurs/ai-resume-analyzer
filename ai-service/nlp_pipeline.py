@@ -1,3 +1,21 @@
+"""
+nlp_pipeline.py
+----------------
+LEGACY NLP pipeline module — preserved for full backward compatibility.
+
+This module continues to own:
+  - download_and_extract_text()  → Cloudinary download + PyMuPDF / text decode
+  - analyze_resume_unified()     → direct Gemini SDK call (legacy path)
+  - extract_basic_info()         → thin wrapper (legacy compatibility)
+  - analyze_authenticity()       → thin wrapper (legacy compatibility)
+
+As of v2.0.0, the primary processing path routes through:
+  workflows/resume_workflow.py → agents/resume_parser.py → services/gemini_service.py
+
+This file is retained as a fallback and for any direct callers that have
+not yet migrated to the new workflow layer.
+"""
+
 import io
 import re
 import spacy
@@ -7,6 +25,9 @@ import logging
 import os
 import json
 import google.generativeai as genai
+
+# Shared text utilities — single source of truth for text processing
+from utils.parser_utils import sanitize_name, truncate_text, clean_json_str
 
 logger = logging.getLogger(__name__)
 
@@ -88,18 +109,16 @@ def analyze_resume_unified(text: str) -> dict:
         }}
 
         Resume text:
-        {text[:6000]}
+        {truncate_text(text)}
         """
         response = model.generate_content(prompt)
-        response_text = response.text.replace('```json', '').replace('```', '').strip()
+        # Use shared utility to strip markdown fences reliably
+        response_text = clean_json_str(response.text)
         parsed = json.loads(response_text)
         
-        # Double safety check for bad names
-        extracted_name = parsed.get("name", "").strip()
-        invalid_names = ['redis', 'machine learning', 'machinelearning', 'unknown', 'unknown candidate', 'resume', 'skills', 'curriculum vitae']
-        if not extracted_name or any(bad in extracted_name.lower() for bad in invalid_names):
-            parsed["name"] = "Unknown Candidate"
-            
+        # Use shared sanitize_name utility — single source of truth for name validation
+        parsed["name"] = sanitize_name(parsed.get("name", ""))
+
         return parsed
     except Exception as e:
         logger.error(f"Unified analysis failed: {e}")

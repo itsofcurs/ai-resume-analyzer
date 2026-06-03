@@ -1,12 +1,12 @@
-import os
 import chromadb
 from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
 
-load_dotenv()
+from core.config import get_settings
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/talentdb")
-CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./chroma_data")
+settings = get_settings()
+
+MONGODB_URI = settings.mongodb_uri
+CHROMA_DB_PATH = settings.chroma_db_path
 
 # MongoDB Setup
 mongo_client = AsyncIOMotorClient(MONGODB_URI)
@@ -26,3 +26,15 @@ def get_mongo_collection():
 
 def get_chroma_collection():
     return collection
+
+
+async def mongo_health_check() -> bool:
+    try:
+        await mongo_client.admin.command("ping")
+        return True
+    except Exception:
+        return False
+
+
+def chroma_health_check() -> bool:
+    return collection is not None
