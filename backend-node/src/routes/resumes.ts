@@ -51,6 +51,7 @@ router.post('/upload', (req: AuthRequest, res: any) => {
     }
     
     const localUrl = `${baseUrl}/uploads/${req.file.filename}`;
+    console.log(`[URL DEBUG] forwardedHost=${forwardedHost} rawHost=${rawHost} BACKEND_URL=${process.env.BACKEND_URL} baseUrl=${baseUrl} localUrl=${localUrl}`);
 
     // Create resume in MongoDB (keeping 'cloudinaryUrl' field name for schema compatibility)
     const resume = new Resume({

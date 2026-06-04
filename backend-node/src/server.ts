@@ -18,8 +18,27 @@ dotenv.config();
 
 export const app = express();
 const httpServer = createServer(app);
+// Dynamic CORS: allow all Vercel preview/production domains + localhost
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  process.env.FRONTEND_URL || '',
+].filter(Boolean);
+
+function corsOriginCheck(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+  // Allow requests with no origin (server-to-server, mobile apps, curl)
+  if (!origin) return callback(null, true);
+  // Allow any vercel.app subdomain
+  if (origin.endsWith('.vercel.app')) return callback(null, true);
+  // Allow explicit origins
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  // Allow localhost with any port
+  if (origin.startsWith('http://localhost:')) return callback(null, true);
+  callback(null, false);
+}
+
 export const io = new Server(httpServer, {
-  cors: { origin: '*' }
+  cors: { origin: corsOriginCheck }
 });
 
 export const prisma = new PrismaClient();
@@ -32,7 +51,7 @@ export const redisClient = createClient({
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
 
 app.use(helmet());
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: corsOriginCheck, credentials: true }));
 app.use(express.json());
 
 const apiLimiter = rateLimit({
