@@ -1,8 +1,9 @@
 "use client";
 
-import { ComponentProps, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import type { ComponentProps } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 type DotLoaderProps = {
     frames: number[][];
@@ -26,7 +27,7 @@ export const DotLoader = ({
     const gridRef = useRef<HTMLDivElement>(null);
     const currentIndex = useRef(0);
     const repeats = useRef(0);
-    const interval = useRef<NodeJS.Timeout>(null);
+    const interval = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const applyFrameToDots = useCallback(
         (dots: HTMLDivElement[], frameIndex: number) => {
