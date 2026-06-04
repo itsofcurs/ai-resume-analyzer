@@ -37,9 +37,18 @@ router.post('/upload', (req: AuthRequest, res: any) => {
 
   try {
     const user = req.user!;
+    // Automatically determine the base URL without hardcoding
+    const forwardedHost = req.get('x-forwarded-host');
     const rawHost = req.get('host') || '';
-    const isProd = process.env.NODE_ENV === 'production' || !rawHost.includes('localhost');
-    const baseUrl = isProd ? 'https://talentai-node-backend.onrender.com' : 'http://127.0.0.1:5000';
+    const host = forwardedHost || rawHost;
+    const protocol = req.get('x-forwarded-proto') || 'http';
+    
+    let baseUrl = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL;
+    if (!baseUrl) {
+      baseUrl = (host.includes('localhost') || host.includes('127.0.0.1')) 
+        ? `http://${host}` 
+        : `${protocol}://${host}`;
+    }
     
     const localUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
