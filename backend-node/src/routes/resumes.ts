@@ -38,9 +38,10 @@ router.post('/upload', (req: AuthRequest, res: any) => {
   try {
     const user = req.user!;
     
-    // Construct local URL for the AI service to download
     const port = process.env.PORT || 5000;
-    const localUrl = `http://127.0.0.1:${port}/uploads/${req.file.filename}`;
+    const isProd = process.env.NODE_ENV === 'production';
+    const baseUrl = isProd ? `https://${req.get('host')}` : `http://127.0.0.1:${port}`;
+    const localUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     // Create resume in MongoDB (keeping 'cloudinaryUrl' field name for schema compatibility)
     const resume = new Resume({
