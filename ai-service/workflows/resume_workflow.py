@@ -35,6 +35,8 @@ from schemas.ats_ranking_schema import StandaloneATSScoreSchema, CandidateRankin
 from schemas.resume_schema import ResumeParseResponse
 from services.gemini_service import GeminiService
 from utils.parser_utils import clean_json_str
+from workflows.interview_workflow import InterviewQuestionGraph
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -331,6 +333,8 @@ class ResumeWorkflow:
                 logger.info(
                     f"[WORKFLOW] LangGraph pipeline COMPLETE for resume_id={resume_id} in {total_time:.2f}s"
                 )
+                # Automatically trigger interview question generation in the background
+                asyncio.create_task(InterviewQuestionGraph().run(resume_id))
         except Exception as exc:
             logger.error(f"[WORKFLOW] LangGraph execution crashed: {exc}")
             await self._set_status(resume_id, "FAILED")

@@ -12,6 +12,7 @@ import authRoutes from './routes/auth';
 import resumeRoutes from './routes/resumes';
 import copilotRoutes from './routes/copilot';
 import jobsRoutes from './routes/jobs';
+import interviewRoutes from './routes/interview';
 import path from 'path';
 
 dotenv.config();
@@ -69,6 +70,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/copilot', copilotRoutes);
 app.use('/api/jobs', jobsRoutes);
+app.use('/api/interview', interviewRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: "AI Hiring Intelligence Backend is LIVE", status: "ok" });

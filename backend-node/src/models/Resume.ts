@@ -18,6 +18,7 @@ export interface IResume extends Document {
   lastMatchedJob?: string;
   semanticScore?: number;
   comparisonHistory?: any[]; // Array of past comparisons
+  interviewQuestions?: any; // Generated interview questions
   uploadedBy: string; // Recruiter/User ID from Postgres
   organizationId: string; // Organization ID from Postgres
   createdAt: Date;
@@ -47,6 +48,7 @@ const ResumeSchema: Schema = new Schema(
     lastMatchedJob: { type: String },
     semanticScore: { type: Number },
     comparisonHistory: [{ type: Schema.Types.Mixed }],
+    interviewQuestions: { type: Schema.Types.Mixed },
     uploadedBy: { type: String, required: true }, // Postgres User ID
     organizationId: { type: String, required: true }, // Postgres Organization ID
   },
