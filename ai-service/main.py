@@ -162,7 +162,7 @@ async def request_guard(request: Request, call_next):
     guard: ConcurrencyGuard = getattr(request.app.state, "concurrency_guard", None)
 
     path = request.url.path
-    if path.startswith("/api/health") or path.startswith("/api/metrics") or path.startswith("/api/system"):
+    if path == "/" or path.startswith("/api/health") or path.startswith("/api/metrics") or path.startswith("/api/system"):
         return await call_next(request)
 
     internal_key = request.headers.get("x-internal-api-key")
@@ -394,6 +394,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+@app.get(
+    "/",
+    summary="Root health check",
+    tags=["Health"],
+)
+async def root_health_check():
+    """Render pings this route to verify service liveness."""
+    return {"status": "ok", "service": "talentai-python-service"}
 
 @app.post(
     "/api/process",
