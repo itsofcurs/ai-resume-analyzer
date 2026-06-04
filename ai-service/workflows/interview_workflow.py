@@ -16,6 +16,7 @@ from schemas.interview_schema import (
     FollowUpQuestion,
 )
 from services.gemini_service import GeminiService
+from utils.retry_utils import with_llm_retry
 from utils.parser_utils import clean_json_str
 from core.config import get_settings
 
@@ -171,6 +172,7 @@ class InterviewQuestionGraph:
             state["error"] = str(e)
         return state
 
+    @with_llm_retry
     async def _generate_section(self, prompt, resume_json: str, model_class):
         llm = GeminiService.get_instance().get_llm()
         chain = prompt | llm | StrOutputParser()
@@ -186,7 +188,7 @@ class InterviewQuestionGraph:
             state["technical_questions"] = await self._generate_section(TECHNICAL_PROMPT, resume_json, TechnicalQuestion)
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate technical questions: {e}")
-            state["technical_questions"] = []
+            state["error"] = str(e)
         return state
 
     async def _node_generate_project(self, state: InterviewState) -> InterviewState:
@@ -196,7 +198,7 @@ class InterviewQuestionGraph:
             state["project_questions"] = await self._generate_section(PROJECT_PROMPT, resume_json, ProjectQuestion)
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate project questions: {e}")
-            state["project_questions"] = []
+            state["error"] = str(e)
         return state
 
     async def _node_generate_behavioral(self, state: InterviewState) -> InterviewState:
@@ -206,7 +208,7 @@ class InterviewQuestionGraph:
             state["behavioral_questions"] = await self._generate_section(BEHAVIORAL_PROMPT, resume_json, BehavioralQuestion)
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate behavioral questions: {e}")
-            state["behavioral_questions"] = []
+            state["error"] = str(e)
         return state
 
     async def _node_generate_followups(self, state: InterviewState) -> InterviewState:
@@ -221,13 +223,18 @@ class InterviewQuestionGraph:
             
             llm = GeminiService.get_instance().get_llm()
             chain = FOLLOWUP_PROMPT | llm | StrOutputParser()
-            raw = await chain.ainvoke({"questions_json": questions_json})
+            
+            @with_llm_retry
+            async def invoke_chain():
+                return await chain.ainvoke({"questions_json": questions_json})
+            
+            raw = await invoke_chain()
             cleaned = clean_json_str(raw)
             data = json.loads(cleaned)
             state["follow_up_questions"] = [FollowUpQuestion(**item) for item in data]
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate follow-up questions: {e}")
-            state["follow_up_questions"] = []
+            state["error"] = str(e)
         return state
 
     async def _node_save_questions(self, state: InterviewState) -> InterviewState:

@@ -115,12 +115,13 @@ class GeminiService:
 
         model_name = settings.gemini_model
 
+
         try:
             logger.info(
                 "GeminiService: initialising ChatGoogleGenerativeAI with model='%s'",
                 model_name,
             )
-            self._llm = ChatGoogleGenerativeAI(
+            llm_instance = ChatGoogleGenerativeAI(
                 model=model_name,
                 google_api_key=api_key,
                 # Zero temperature for strictly deterministic evaluation and scoring.
@@ -131,9 +132,30 @@ class GeminiService:
                 # Prevent safety blocks on resume content
                 convert_system_message_to_human=True,
             )
+            
+            # Monkey-patch invoke and ainvoke to add our robust retry logic
+            from utils.retry_utils import with_llm_retry
+            
+            original_invoke = llm_instance.invoke
+            original_ainvoke = llm_instance.ainvoke
+            
+            @with_llm_retry
+            def invoke_with_retry(*args, **kwargs):
+                return original_invoke(*args, **kwargs)
+                
+            @with_llm_retry
+            async def ainvoke_with_retry(*args, **kwargs):
+                return await original_ainvoke(*args, **kwargs)
+                
+            llm_instance.invoke = invoke_with_retry
+            llm_instance.ainvoke = ainvoke_with_retry
+            
+            self._llm = llm_instance
+            
             logger.info(
                 "GeminiService: LLM client ready (model=%s).", model_name
             )
+
         except Exception as exc:
             logger.error("GeminiService: failed to initialise LLM — %s", exc)
             raise GeminiServiceError(

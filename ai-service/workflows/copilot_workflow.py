@@ -149,7 +149,24 @@ class CopilotWorkflow:
         try:
             query_vector = generate_query_embedding(state["query"])
             matches = await vector_search(query_vector, top_k=5)
-            state["tool_data"] = matches
+            
+            # Retrieve full data from Mongo to provide rich context to LLM
+            collection = get_mongo_collection()
+            full_profiles = []
+            for match in matches:
+                doc = await collection.find_one({"_id": ObjectId(match["resume_id"])})
+                if doc:
+                    parsed_data = doc.get("parsedData", {})
+                    full_profiles.append({
+                        "id": str(doc["_id"]),
+                        "candidateName": doc.get("candidateName", match["metadata"]["filename"]),
+                        "score": match["score"],
+                        "skills": parsed_data.get("skills", []),
+                        "experience": parsed_data.get("experience", []),
+                        "projects": parsed_data.get("projects", []),
+                        "education": parsed_data.get("education", [])
+                    })
+            state["tool_data"] = full_profiles
         except Exception as e:
             state["error"] = str(e)
         return state

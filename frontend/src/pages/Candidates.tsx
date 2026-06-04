@@ -93,7 +93,7 @@ export const Candidates = () => {
     } catch (err) {
       console.error(err);
       setInterviewQuestions(null);
-      setQuestionStatus('pending');
+      setQuestionStatus('failed');
     }
   };
 
@@ -638,7 +638,12 @@ export const Candidates = () => {
                       <h4 className="text-rose-900 font-bold">Generation Failed</h4>
                       <p className="text-rose-700 text-sm mt-1">We couldn't generate questions for this candidate.</p>
                     </div>
-                  ) : interviewQuestions ? (
+                  ) : interviewQuestions && (
+                      (interviewQuestions.technicalQuestions?.length > 0) ||
+                      (interviewQuestions.projectQuestions?.length > 0) ||
+                      (interviewQuestions.behavioralQuestions?.length > 0) ||
+                      (interviewQuestions.followUpQuestions?.length > 0)
+                  ) ? (
                     <div className="space-y-8">
                       {/* Technical Questions */}
                       {interviewQuestions.technicalQuestions?.length > 0 && (
