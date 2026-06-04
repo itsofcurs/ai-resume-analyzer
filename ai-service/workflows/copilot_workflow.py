@@ -42,6 +42,18 @@ INTENT_PROMPT = PromptTemplate.from_template(
     """
 )
 
+COMPARE_EXTRACTION_PROMPT = PromptTemplate.from_template(
+    """Extract the names of the two candidates the user wants to compare.
+    Query: {query}
+    
+    Return ONLY a valid JSON object matching this schema:
+    {{
+        "candidate_a_name": "string or null",
+        "candidate_b_name": "string or null"
+    }}
+    """
+)
+
 RESPONSE_PROMPT = PromptTemplate.from_template(
     """You are TalentAI's Recruiter Copilot.
     Respond to the user's query professionally based on the data provided below.
@@ -152,10 +164,39 @@ class CopilotWorkflow:
         return state
 
     async def _node_tool_compare(self, state: CopilotState) -> CopilotState:
-        logger.info("[COPILOT] Tool - Compare (Extraction requires two IDs, for now returning generic prompt)")
-        # In a fully fleshed out system, we would extract candidate A and B IDs from the query.
-        # For Phase 2A, we will assume standard chat or generic comparison if IDs aren't present.
-        state["tool_data"] = {"note": "Comparison tool triggered. Need candidate IDs."}
+        logger.info("[COPILOT] Tool - Compare")
+        try:
+            llm = GeminiService.get_instance().get_llm()
+            chain = COMPARE_EXTRACTION_PROMPT | llm | StrOutputParser()
+            raw = await chain.ainvoke({"query": state["query"]})
+            cleaned = clean_json_str(raw)
+            names = json.loads(cleaned)
+            
+            name_a = names.get("candidate_a_name")
+            name_b = names.get("candidate_b_name")
+            
+            if not name_a or not name_b:
+                state["tool_data"] = {"note": "Could not extract two distinct candidate names to compare."}
+                return state
+                
+            collection = get_mongo_collection()
+            
+            # Simple prefix/regex match for names
+            cand_a = await collection.find_one({"candidateName": {"$regex": f"^{name_a}", "$options": "i"}})
+            cand_b = await collection.find_one({"candidateName": {"$regex": f"^{name_b}", "$options": "i"}})
+            
+            if cand_a and cand_b:
+                logger.info(f"[COPILOT] Found compare candidates: {cand_a['_id']} and {cand_b['_id']}")
+                res = await self._comparison_workflow.run(str(cand_a["_id"]), str(cand_b["_id"]))
+                state["tool_data"] = res
+            else:
+                missing = []
+                if not cand_a: missing.append(name_a)
+                if not cand_b: missing.append(name_b)
+                state["tool_data"] = {"note": f"Could not find the following candidates in the database: {', '.join(missing)}"}
+                
+        except Exception as e:
+            state["error"] = str(e)
         return state
 
     async def _node_tool_chat(self, state: CopilotState) -> CopilotState:
