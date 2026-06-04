@@ -19,7 +19,7 @@ dotenv.config();
 export const app = express();
 const httpServer = createServer(app);
 export const io = new Server(httpServer, {
-  cors: { origin: ['http://localhost:5173', 'http://localhost:5174', process.env.FRONTEND_URL || ''] }
+  cors: { origin: '*' }
 });
 
 export const prisma = new PrismaClient();
@@ -32,7 +32,7 @@ export const redisClient = createClient({
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
 
 app.use(helmet());
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', process.env.FRONTEND_URL || ''] }));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 const apiLimiter = rateLimit({
