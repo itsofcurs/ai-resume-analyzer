@@ -12,7 +12,7 @@ const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
 export const Dashboard = () => {
   const [isDragging, setIsDragging] = useState(false);
-  const [stats, setStats] = useState({ total_resumes: 0, processed: 0, failed: 0, unique_skills: 0 });
+  const [stats, setStats] = useState({ total_resumes: 0, processed: 0, failed: 0, unique_skills: 0, avg_ats_score: null as number | null });
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
