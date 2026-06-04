@@ -37,21 +37,9 @@ router.post('/upload', (req: AuthRequest, res: any) => {
 
   try {
     const user = req.user!;
-    // Render's load balancer sometimes overwrites the 'host' header to 127.0.0.1.
-    // We check X-Forwarded-Host first, and fallback to the known Render URL.
-    const forwardedHost = req.get('x-forwarded-host');
-    const rawHost = req.get('host') || '127.0.0.1:5000';
-    const host = forwardedHost || rawHost;
-    
-    let baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL;
-    if (!baseUrl) {
-      if (host.includes('127.0.0.1') || host.includes('localhost')) {
-         // Ultimate fallback for Render if proxy headers are missing
-         baseUrl = 'https://talentai-node-backend.onrender.com';
-      } else {
-         baseUrl = `https://${host}`;
-      }
-    }
+    const rawHost = req.get('host') || '';
+    const isProd = process.env.NODE_ENV === 'production' || !rawHost.includes('localhost');
+    const baseUrl = isProd ? 'https://talentai-node-backend.onrender.com' : 'http://127.0.0.1:5000';
     
     const localUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
