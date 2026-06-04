@@ -119,7 +119,7 @@ class ResumeWorkflow:
             settings = get_settings()
             async with httpx.AsyncClient() as client:
                 await client.post(
-                    "http://127.0.0.1:5000/api/resumes/webhook/status",
+                    f"{settings.node_backend_url.rstrip('/')}/api/resumes/webhook/status",
                     json={"id": resume_id, "status": status},
                     headers={"x-api-key": settings.internal_api_key or "default-internal-key"},
                     timeout=2.0

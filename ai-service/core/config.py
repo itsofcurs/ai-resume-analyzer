@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Environment / service settings
     environment: str = Field(default="development", alias="ENVIRONMENT")
     app_name: str = Field(default="AI Recruitment Intelligence", alias="APP_NAME")
+    node_backend_url: str = Field(default="http://127.0.0.1:5000", alias="NODE_BACKEND_URL")
 
     # Gemini / LLM settings
     llm_enabled: bool = Field(default=True, alias="LLM_ENABLED")

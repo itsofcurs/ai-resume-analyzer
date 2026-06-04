@@ -66,7 +66,8 @@ router.post('/upload', (req: AuthRequest, res: any) => {
     // Trigger AI Service Pipeline (Sprint 3)
     try {
       // Don't await this, let it run in the background
-      axios.post('http://127.0.0.1:8000/api/process', {
+      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+      axios.post(`${aiServiceUrl}/api/process`, {
         resume_id: resume._id.toString(),
         cloudinary_url: resume.cloudinaryUrl,
         filename: resume.filename
