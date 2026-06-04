@@ -8,10 +8,13 @@ interface AgentVisualizerProps {
 }
 
 const STAGES = [
-  { id: 'PENDING', label: 'Upload & Queue', color: '#6366f1' },       // Indigo
-  { id: 'EXTRACTING', label: 'Text Extraction', color: '#8b5cf6' },    // Violet
-  { id: 'ANALYZING', label: 'Agent LLM Parse', color: '#ec4899' },     // Pink
-  { id: 'PROCESSED', label: 'Vector Store & Done', color: '#10b981' }  // Green
+  { id: 'PENDING', label: 'Upload', color: '#6366f1' },           // Indigo
+  { id: 'EXTRACTING', label: 'Extract', color: '#8b5cf6' },        // Violet
+  { id: 'ANALYZING', label: 'Parse', color: '#ec4899' },           // Pink
+  { id: 'EMBEDDING', label: 'Embed', color: '#f59e0b' },           // Amber
+  { id: 'SCORING', label: 'ATS Score', color: '#3b82f6' },         // Blue
+  { id: 'RANKING', label: 'Rank', color: '#06b6d4' },              // Cyan
+  { id: 'PROCESSED', label: 'Complete', color: '#10b981' }         // Green
 ];
 
 // Helper to determine index
@@ -46,7 +49,7 @@ const Node = ({ position, label, isActive, isCompleted, isFailed }: any) => {
 
   return (
     <group position={position}>
-      <Sphere ref={meshRef} args={[0.3, 32, 32]}>
+      <Sphere ref={meshRef} args={[0.22, 32, 32]}>
         <meshStandardMaterial 
           color={color} 
           emissive={color} 
@@ -55,7 +58,7 @@ const Node = ({ position, label, isActive, isCompleted, isFailed }: any) => {
           metalness={0.8}
         />
       </Sphere>
-      <Text position={[0, -0.6, 0]} fontSize={0.2} color="white" anchorX="center" anchorY="middle">
+      <Text position={[0, -0.5, 0]} fontSize={0.16} color="white" anchorX="center" anchorY="middle">
         {label}
       </Text>
     </group>
@@ -66,11 +69,11 @@ export const AgentVisualizer: React.FC<AgentVisualizerProps> = ({ status }) => {
   const currentIndex = getStageIndex(status);
   const isFailed = status === 'FAILED';
 
-  // Positions for 4 nodes
+  // Positions for 7 nodes
   const nodes = useMemo(() => {
     return STAGES.map((stage, i) => {
-      // Line them up horizontally
-      const x = (i - (STAGES.length - 1) / 2) * 2;
+      // Line them up horizontally with tighter spacing for 7 nodes
+      const x = (i - (STAGES.length - 1) / 2) * 1.6;
       return { ...stage, position: [x, 0, 0] as [number, number, number] };
     });
   }, []);
@@ -84,7 +87,7 @@ export const AgentVisualizer: React.FC<AgentVisualizerProps> = ({ status }) => {
         </h3>
       </div>
       
-      <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+      <Canvas camera={{ position: [0, 0, 7], fov: 45 }}>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
@@ -120,3 +123,4 @@ export const AgentVisualizer: React.FC<AgentVisualizerProps> = ({ status }) => {
     </div>
   );
 };
+

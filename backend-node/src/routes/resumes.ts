@@ -125,8 +125,10 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
     const failed = await Resume.countDocuments({ organizationId: orgId, status: 'FAILED' });
     
     // Aggregate unique skills (assuming parsedData.skills exists)
-    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills');
+    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score');
     const allSkills = new Set();
+    let totalAtsScore = 0;
+    let atsCount = 0;
     resumes.forEach(r => {
       if (r.parsedData?.skills && Array.isArray(r.parsedData.skills)) {
         r.parsedData.skills.forEach((s: any) => {
@@ -134,13 +136,18 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
             else if (s.skill) allSkills.add(s.skill); // handle object structure
         });
       }
+      if (r.atsScores?.overall_score != null) {
+        totalAtsScore += r.atsScores.overall_score;
+        atsCount++;
+      }
     });
 
     res.json({
       total_resumes: total,
       processed: processed,
       failed: failed,
-      unique_skills: allSkills.size
+      unique_skills: allSkills.size,
+      avg_ats_score: atsCount > 0 ? Math.round(totalAtsScore / atsCount) : null,
     });
   } catch (error) {
     console.error("Stats error:", error);

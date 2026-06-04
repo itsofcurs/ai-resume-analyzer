@@ -11,21 +11,30 @@ Pipeline stages:
   2. Structured parsing       → ResumeParserAgent.aparse()
   3. Vector embedding         → embeddings.generate_embedding()
   4. MongoDB vector storage   → database.store_vector()
-  5. MongoDB status update    → database.get_mongo_collection()
+  5. ATS scoring              → Standalone resume quality scoring
+  6. Candidate ranking        → Grade/Tier/Priority classification
+  7. MongoDB status update    → database.get_mongo_collection()
 """
 
+import json
 import logging
 import time
 from typing import Optional, TypedDict, Any
 
 from bson import ObjectId
+from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import StateGraph, END
 
 from database import get_mongo_collection, store_vector
 from embeddings import generate_embedding
 from nlp_pipeline import download_and_extract_text
 from agents.resume_parser import ResumeParserAgent
+from prompts.ats_scoring_prompt import ATS_SCORING_PROMPT
+from prompts.candidate_ranking_prompt import CANDIDATE_RANKING_PROMPT
+from schemas.ats_ranking_schema import StandaloneATSScoreSchema, CandidateRankingResultSchema
 from schemas.resume_schema import ResumeParseResponse
+from services.gemini_service import GeminiService
+from utils.parser_utils import clean_json_str
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +49,8 @@ class ResumeState(TypedDict):
     parsed: Optional[ResumeParseResponse]
     vector: Optional[list[float]]
     vector_stored: bool
+    ats_scores: Optional[StandaloneATSScoreSchema]
+    ranking: Optional[CandidateRankingResultSchema]
     error: Optional[str]
 
 
@@ -59,6 +70,8 @@ class ResumeWorkflow:
         graph.add_node("parse_resume", self._node_parse_resume)
         graph.add_node("generate_embedding", self._node_generate_embedding)
         graph.add_node("store_vector", self._node_store_vector)
+        graph.add_node("ats_scoring", self._node_ats_scoring)
+        graph.add_node("candidate_ranking", self._node_candidate_ranking)
         graph.add_node("update_mongo", self._node_update_mongo)
         graph.add_node("handle_failure", self._node_handle_failure)
 
@@ -80,13 +93,25 @@ class ResumeWorkflow:
         # Conditional edges from generate_embedding
         graph.add_conditional_edges(
             "generate_embedding",
-            lambda state: "store_vector" if state.get("vector") else "update_mongo"
+            lambda state: "store_vector" if state.get("vector") else "ats_scoring"
         )
         
         # Conditional edges from store_vector
         graph.add_conditional_edges(
             "store_vector",
-            lambda state: "handle_failure" if state.get("error") else "update_mongo"
+            lambda state: "handle_failure" if state.get("error") else "ats_scoring"
+        )
+        
+        # Conditional edges from ats_scoring (non-fatal: skip to ranking on error)
+        graph.add_conditional_edges(
+            "ats_scoring",
+            lambda state: "candidate_ranking"
+        )
+        
+        # Conditional edges from candidate_ranking
+        graph.add_conditional_edges(
+            "candidate_ranking",
+            lambda state: "update_mongo"
         )
         
         # Conditional edges from update_mongo
@@ -181,18 +206,76 @@ class ResumeWorkflow:
             state["error"] = str(exc)
         return state
 
+    async def _node_ats_scoring(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 5 — ATS scoring for {state['resume_id']}")
+        try:
+            await self._set_status(state["resume_id"], "SCORING")
+            
+            parsed = state["parsed"]
+            resume_json = json.dumps(parsed.model_dump(exclude_none=True), ensure_ascii=False)
+            
+            llm = GeminiService.get_instance().get_llm()
+            chain = ATS_SCORING_PROMPT | llm | StrOutputParser()
+            raw_response = await chain.ainvoke({"resume_json": resume_json})
+            cleaned = clean_json_str(raw_response)
+            scores_dict = json.loads(cleaned)
+            state["ats_scores"] = StandaloneATSScoreSchema(**scores_dict)
+            logger.info(
+                f"[WORKFLOW] ATS scores for {state['resume_id']}: overall={state['ats_scores'].overall_score}"
+            )
+        except Exception as exc:
+            logger.error(f"[WORKFLOW] Stage 5 ATS scoring FAILED (non-fatal): {exc}")
+            state["ats_scores"] = StandaloneATSScoreSchema()  # safe defaults
+        return state
+
+    async def _node_candidate_ranking(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 6 — Candidate ranking for {state['resume_id']}")
+        try:
+            await self._set_status(state["resume_id"], "RANKING")
+            
+            parsed = state["parsed"]
+            resume_json = json.dumps(parsed.model_dump(exclude_none=True), ensure_ascii=False)
+            ats_scores = state.get("ats_scores") or StandaloneATSScoreSchema()
+            ats_json = json.dumps(ats_scores.model_dump(), ensure_ascii=False)
+            
+            llm = GeminiService.get_instance().get_llm()
+            chain = CANDIDATE_RANKING_PROMPT | llm | StrOutputParser()
+            raw_response = await chain.ainvoke({"resume_json": resume_json, "ats_scores_json": ats_json})
+            cleaned = clean_json_str(raw_response)
+            ranking_dict = json.loads(cleaned)
+            state["ranking"] = CandidateRankingResultSchema(**ranking_dict)
+            logger.info(
+                f"[WORKFLOW] Ranking for {state['resume_id']}: grade={state['ranking'].grade}, "
+                f"tier={state['ranking'].tier}, priority={state['ranking'].hiring_priority}"
+            )
+        except Exception as exc:
+            logger.error(f"[WORKFLOW] Stage 6 Candidate ranking FAILED (non-fatal): {exc}")
+            state["ranking"] = CandidateRankingResultSchema()  # safe defaults
+        return state
+
     async def _node_update_mongo(self, state: ResumeState) -> ResumeState:
-        logger.info(f"[WORKFLOW] Stage 5 — MongoDB final update for {state['resume_id']}")
+        logger.info(f"[WORKFLOW] Stage 7 — MongoDB final update for {state['resume_id']}")
         try:
             parsed = state["parsed"]
             parsed_data = parsed.to_parsed_data()
             ai_analysis = parsed.to_ai_analysis()
+
+            # Build ATS and ranking dicts for MongoDB
+            ats_data = None
+            if state.get("ats_scores"):
+                ats_data = state["ats_scores"].model_dump()
+            
+            ranking_data = None
+            if state.get("ranking"):
+                ranking_data = state["ranking"].model_dump()
 
             await self._set_status(
                 state["resume_id"],
                 status="PROCESSED",
                 parsedData=parsed_data,
                 aiAnalysis=ai_analysis,
+                atsScores=ats_data,
+                candidateRanking=ranking_data,
                 candidateName=parsed.name,
                 candidateEmail=parsed.email or "",
                 candidatePhone=parsed.phone or "",
@@ -200,7 +283,7 @@ class ResumeWorkflow:
                 rawText="",
             )
         except Exception as exc:
-            logger.error(f"[WORKFLOW] Stage 5 FAILED: {exc}")
+            logger.error(f"[WORKFLOW] Stage 7 FAILED: {exc}")
             state["error"] = str(exc)
         return state
 
@@ -232,6 +315,8 @@ class ResumeWorkflow:
             "parsed": None,
             "vector": None,
             "vector_stored": False,
+            "ats_scores": None,
+            "ranking": None,
             "error": None,
         }
 

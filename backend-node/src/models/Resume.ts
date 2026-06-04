@@ -7,10 +7,12 @@ export interface IResume extends Document {
   candidateEmail?: string;
   candidatePhone?: string;
   rawText: string;
-  status: 'PENDING' | 'EXTRACTING' | 'ANALYZING' | 'PROCESSED' | 'FAILED';
+  status: 'PENDING' | 'EXTRACTING' | 'ANALYZING' | 'SCORING' | 'RANKING' | 'PROCESSED' | 'FAILED';
   parsedData?: any; // The lightweight NLP extraction
   aiAnalysis?: any; // The Gemini/LLM reasoning output
   embeddingsId?: string; // Reference to Vector DB ID
+  atsScores?: any; // Standalone ATS scoring breakdown
+  candidateRanking?: any; // Candidate grade/tier/recommendation
   uploadedBy: string; // Recruiter/User ID from Postgres
   organizationId: string; // Organization ID from Postgres
   createdAt: Date;
@@ -27,12 +29,14 @@ const ResumeSchema: Schema = new Schema(
     rawText: { type: String, required: true },
     status: {
       type: String,
-      enum: ['PENDING', 'EXTRACTING', 'ANALYZING', 'PROCESSED', 'FAILED'],
+      enum: ['PENDING', 'EXTRACTING', 'ANALYZING', 'SCORING', 'RANKING', 'PROCESSED', 'FAILED'],
       default: 'PENDING',
     },
     parsedData: { type: Schema.Types.Mixed },
     aiAnalysis: { type: Schema.Types.Mixed },
     embeddingsId: { type: String },
+    atsScores: { type: Schema.Types.Mixed },
+    candidateRanking: { type: Schema.Types.Mixed },
     uploadedBy: { type: String, required: true }, // Postgres User ID
     organizationId: { type: String, required: true }, // Postgres Organization ID
   },

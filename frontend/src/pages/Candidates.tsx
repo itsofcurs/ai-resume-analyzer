@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
-import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit } from 'lucide-react';
+import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award } from 'lucide-react';
 import axios from 'axios';
 import type { RootState } from '../store';
 
@@ -220,6 +220,41 @@ export const Candidates = () => {
                       </span>
                     )}
                   </div>
+
+                  {/* ATS Score + Grade Badges */}
+                  {candidate.atsScores?.overall_score != null && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
+                        candidate.atsScores.overall_score >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        candidate.atsScores.overall_score >= 60 ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                        candidate.atsScores.overall_score >= 40 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}>
+                        <Target size={12} /> ATS {candidate.atsScores.overall_score}
+                      </span>
+                      {candidate.candidateRanking?.grade && (
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
+                          ['A+', 'A'].includes(candidate.candidateRanking.grade) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          ['B+', 'B'].includes(candidate.candidateRanking.grade) ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                          ['C+', 'C'].includes(candidate.candidateRanking.grade) ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                          'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
+                          <Award size={12} /> Grade {candidate.candidateRanking.grade}
+                        </span>
+                      )}
+                      {candidate.candidateRanking?.hiring_priority && (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${
+                          candidate.candidateRanking.hiring_priority === 'Critical' ? 'bg-rose-50 text-rose-700' :
+                          candidate.candidateRanking.hiring_priority === 'High' ? 'bg-emerald-50 text-emerald-700' :
+                          candidate.candidateRanking.hiring_priority === 'Medium' ? 'bg-blue-50 text-blue-700' :
+                          'bg-slate-50 text-slate-600'
+                        }`}>
+                          {candidate.candidateRanking.hiring_priority}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                 </div>
 
                 <div className="flex justify-between items-center border-t border-slate-50 pt-4">
@@ -327,6 +362,92 @@ export const Candidates = () => {
                 </div>
               ) : (
                 <>
+                  {/* ATS Score Breakdown */}
+                  {selectedCandidate.atsScores && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100/50 shadow-sm mb-8">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target size={18} className="text-blue-600" />
+                        <h4 className="font-bold text-slate-800 text-base">ATS Score Breakdown</h4>
+                        <span className={`ml-auto px-3 py-1 rounded-full text-sm font-bold ${
+                          selectedCandidate.atsScores.overall_score >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                          selectedCandidate.atsScores.overall_score >= 60 ? 'bg-blue-100 text-blue-700' :
+                          selectedCandidate.atsScores.overall_score >= 40 ? 'bg-amber-100 text-amber-700' :
+                          'bg-rose-100 text-rose-700'
+                        }`}>
+                          {selectedCandidate.atsScores.overall_score}/100
+                        </span>
+                      </div>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Skill Completeness', value: selectedCandidate.atsScores.skill_completeness },
+                          { label: 'Experience', value: selectedCandidate.atsScores.experience_score },
+                          { label: 'Education', value: selectedCandidate.atsScores.education_score },
+                          { label: 'Resume Quality', value: selectedCandidate.atsScores.resume_quality },
+                        ].map((item) => (
+                          <div key={item.label}>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-slate-600 font-medium">{item.label}</span>
+                              <span className="text-slate-900 font-bold">{item.value}</span>
+                            </div>
+                            <div className="w-full bg-white/60 rounded-full h-2.5">
+                              <div className={`h-2.5 rounded-full transition-all duration-500 ${
+                                item.value >= 80 ? 'bg-emerald-500' :
+                                item.value >= 60 ? 'bg-blue-500' :
+                                item.value >= 40 ? 'bg-amber-500' : 'bg-rose-500'
+                              }`} style={{ width: `${item.value}%` }}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Candidate Ranking */}
+                  {selectedCandidate.candidateRanking && (
+                    <div className="bg-gradient-to-br from-cyan-50 to-teal-50 rounded-2xl p-6 border border-cyan-100/50 shadow-sm mb-8">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Award size={18} className="text-cyan-600" />
+                        <h4 className="font-bold text-slate-800 text-base">Candidate Ranking</h4>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="bg-white/60 rounded-xl p-3 text-center border border-cyan-100/50">
+                          <div className={`text-3xl font-black ${
+                            ['A+', 'A'].includes(selectedCandidate.candidateRanking.grade) ? 'text-emerald-600' :
+                            ['B+', 'B'].includes(selectedCandidate.candidateRanking.grade) ? 'text-blue-600' :
+                            ['C+', 'C'].includes(selectedCandidate.candidateRanking.grade) ? 'text-amber-600' :
+                            'text-rose-600'
+                          }`}>{selectedCandidate.candidateRanking.grade}</div>
+                          <div className="text-xs text-slate-500 font-medium mt-1">Grade</div>
+                        </div>
+                        <div className="bg-white/60 rounded-xl p-3 text-center border border-cyan-100/50">
+                          <div className={`text-sm font-bold px-2 py-1 rounded-lg mx-auto inline-block ${
+                            selectedCandidate.candidateRanking.tier === 'Exceptional' ? 'bg-emerald-100 text-emerald-700' :
+                            selectedCandidate.candidateRanking.tier === 'Strong' ? 'bg-blue-100 text-blue-700' :
+                            selectedCandidate.candidateRanking.tier === 'Moderate' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>{selectedCandidate.candidateRanking.tier}</div>
+                          <div className="text-xs text-slate-500 font-medium mt-1">Tier</div>
+                        </div>
+                        <div className="bg-white/60 rounded-xl p-3 text-center border border-cyan-100/50">
+                          <div className={`text-sm font-bold px-2 py-1 rounded-lg mx-auto inline-block ${
+                            selectedCandidate.candidateRanking.hiring_priority === 'Critical' ? 'bg-rose-100 text-rose-700' :
+                            selectedCandidate.candidateRanking.hiring_priority === 'High' ? 'bg-emerald-100 text-emerald-700' :
+                            selectedCandidate.candidateRanking.hiring_priority === 'Medium' ? 'bg-blue-100 text-blue-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>{selectedCandidate.candidateRanking.hiring_priority}</div>
+                          <div className="text-xs text-slate-500 font-medium mt-1">Priority</div>
+                        </div>
+                      </div>
+                      {selectedCandidate.candidateRanking.recruiter_recommendation && (
+                        <div className="bg-white/60 rounded-xl p-4 border border-cyan-100">
+                          <p className="text-sm text-slate-700 leading-relaxed italic">
+                            "{selectedCandidate.candidateRanking.recruiter_recommendation}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Grid section */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     
