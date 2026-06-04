@@ -13,6 +13,11 @@ export interface IResume extends Document {
   embeddingsId?: string; // Reference to Vector DB ID
   atsScores?: any; // Standalone ATS scoring breakdown
   candidateRanking?: any; // Candidate grade/tier/recommendation
+  recommendationScore?: number;
+  recommendationReason?: string;
+  lastMatchedJob?: string;
+  semanticScore?: number;
+  comparisonHistory?: any[]; // Array of past comparisons
   uploadedBy: string; // Recruiter/User ID from Postgres
   organizationId: string; // Organization ID from Postgres
   createdAt: Date;
@@ -37,6 +42,11 @@ const ResumeSchema: Schema = new Schema(
     embeddingsId: { type: String },
     atsScores: { type: Schema.Types.Mixed },
     candidateRanking: { type: Schema.Types.Mixed },
+    recommendationScore: { type: Number },
+    recommendationReason: { type: String },
+    lastMatchedJob: { type: String },
+    semanticScore: { type: Number },
+    comparisonHistory: [{ type: Schema.Types.Mixed }],
     uploadedBy: { type: String, required: true }, // Postgres User ID
     organizationId: { type: String, required: true }, // Postgres Organization ID
   },

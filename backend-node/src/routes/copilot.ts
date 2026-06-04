@@ -3,7 +3,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma, redisClient } from '../server';
 import { Resume } from '../models/Resume';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { io } from '../server';
 import axios from 'axios';
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -52,9 +55,10 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
 router.post('/search', async (req: AuthRequest, res: any) => {
   try {
     const { query, top_k = 5 } = req.body;
+    io.emit('copilot_status', { status: 'SEMANTIC_MATCHING', query });
     
     // Call Python Semantic Search Engine
-    const pythonRes = await axios.post('http://127.0.0.1:8000/api/search', {
+    const pythonRes = await axios.post(`${AI_SERVICE_URL}/api/search`, {
       query,
       top_k
     }, {
@@ -65,13 +69,63 @@ router.post('/search', async (req: AuthRequest, res: any) => {
 
     const matches = pythonRes.data.matches;
     
-    // Optionally fetch full resume data from MongoDB for the matches
-    // But metadata from ChromaDB might be enough for a preview
-    
+    io.emit('copilot_status', { status: 'COMPLETED' });
     res.json({ query, matches });
   } catch (error) {
     console.error("Semantic search error:", error);
+    io.emit('copilot_status', { status: 'FAILED' });
     res.status(500).json({ error: 'Failed to perform semantic search' });
+  }
+});
+
+router.post('/chat', async (req: AuthRequest, res: any) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: 'Query is required' });
+
+  io.emit('copilot_status', { status: 'COPILOT_SEARCHING', query });
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/chat`, { query });
+    io.emit('copilot_status', { status: 'COMPLETED' });
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Copilot Chat Error:", error.message);
+    io.emit('copilot_status', { status: 'FAILED' });
+    return res.status(500).json({ error: 'Failed to process copilot request' });
+  }
+});
+
+router.post('/recommend', async (req: AuthRequest, res: any) => {
+  const { job_description, top_k = 5 } = req.body;
+  if (!job_description) return res.status(400).json({ error: 'Job description is required' });
+
+  io.emit('copilot_status', { status: 'RECOMMENDING' });
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/recommend`, { job_description, top_k });
+    io.emit('copilot_status', { status: 'COMPLETED' });
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Recommend Error:", error.message);
+    io.emit('copilot_status', { status: 'FAILED' });
+    return res.status(500).json({ error: 'Failed to generate recommendations' });
+  }
+});
+
+router.post('/compare', async (req: AuthRequest, res: any) => {
+  const { candidate_a_id, candidate_b_id } = req.body;
+  if (!candidate_a_id || !candidate_b_id) return res.status(400).json({ error: 'Both candidate IDs required' });
+
+  io.emit('copilot_status', { status: 'COMPARING' });
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/compare`, { candidate_a_id, candidate_b_id });
+    io.emit('copilot_status', { status: 'COMPLETED' });
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Compare Error:", error.message);
+    io.emit('copilot_status', { status: 'FAILED' });
+    return res.status(500).json({ error: 'Failed to generate comparison' });
   }
 });
 

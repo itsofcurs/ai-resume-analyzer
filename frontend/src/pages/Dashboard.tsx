@@ -7,6 +7,9 @@ import { io } from 'socket.io-client';
 import type { RootState } from '../store';
 import { logout } from '../store/authSlice';
 import { AgentVisualizer } from '../components/AgentVisualizer';
+import { CopilotPanel } from '../components/CopilotPanel';
+import { SemanticSearchWidget } from '../components/SemanticSearchWidget';
+import { RecommendedCandidates } from '../components/RecommendedCandidates';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
@@ -399,6 +402,17 @@ export const Dashboard = () => {
               AI actively scanning for keyword stuffing, perfect phrasing, and impossible timeline claims.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Recruiter Intelligence Platform Phase 2A Extensions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        <div className="lg:col-span-2">
+          <CopilotPanel />
+        </div>
+        <div className="space-y-6">
+          <SemanticSearchWidget />
+          <RecommendedCandidates />
         </div>
       </div>
 

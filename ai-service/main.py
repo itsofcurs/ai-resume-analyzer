@@ -48,6 +48,9 @@ from embeddings import generate_embedding, generate_query_embedding, embedding_r
 from workflows.resume_workflow import ResumeWorkflow
 from workflows.job_match_workflow import JobMatchWorkflow
 from workflows.batch_job_match_workflow import BatchJobMatchWorkflow
+from workflows.recommendation_workflow import RecommendationWorkflow
+from workflows.comparison_workflow import ComparisonWorkflow
+from workflows.copilot_workflow import CopilotWorkflow
 from schemas.job_match_schema import JobMatchRequestSchema, FinalATSAnalysisSchema
 from schemas.ranking_schema import BatchRankingRequestSchema, BatchRankingResponseSchema
 from schemas.error_schema import ErrorResponseSchema
@@ -231,6 +234,9 @@ async def metrics_middleware(request: Request, call_next):
 # ---------------------------------------------------------------------------
 _resume_workflow = ResumeWorkflow()
 _job_match_workflow = JobMatchWorkflow()
+_recommendation_workflow = RecommendationWorkflow()
+_comparison_workflow = ComparisonWorkflow()
+_copilot_workflow = CopilotWorkflow()
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +269,18 @@ class SearchRequest(BaseModel):
     """
     query: str
     top_k: int = 5
+
+class RecommendRequest(BaseModel):
+    job_description: str
+    top_k: int = 5
+
+class CompareRequest(BaseModel):
+    candidate_a_id: str
+    candidate_b_id: str
+
+class CopilotRequest(BaseModel):
+    query: str
+
 
 
 # ---------------------------------------------------------------------------
@@ -516,6 +534,60 @@ async def semantic_search(req: SearchRequest, request: Request):
             status_code=500,
             detail=f"Semantic search failed: {str(exc)}",
         )
+
+
+@app.post(
+    "/api/recommend",
+    summary="Recommend top candidates for a job description",
+    tags=["Phase2A"],
+)
+async def recommend_candidates(req: RecommendRequest):
+    try:
+        logger.info("POST /api/recommend — top_k=%d", req.top_k)
+        result = await _recommendation_workflow.run(req.job_description, req.top_k)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/recommend — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post(
+    "/api/compare",
+    summary="Compare two candidates",
+    tags=["Phase2A"],
+)
+async def compare_candidates(req: CompareRequest):
+    try:
+        logger.info("POST /api/compare — a=%s b=%s", req.candidate_a_id, req.candidate_b_id)
+        result = await _comparison_workflow.run(req.candidate_a_id, req.candidate_b_id)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/compare — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post(
+    "/api/copilot/chat",
+    summary="Recruiter Copilot Chat",
+    tags=["Phase2A"],
+)
+async def copilot_chat(req: CopilotRequest):
+    try:
+        logger.info("POST /api/copilot/chat — query='%s'", req.query)
+        result = await _copilot_workflow.run(req.query)
+        return result
+    except Exception as exc:
+        logger.error("POST /api/copilot/chat — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
 
 
 @app.get(
