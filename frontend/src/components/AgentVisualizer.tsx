@@ -79,7 +79,7 @@ const NodeShape = ({ shape, color, isActive, isCompleted, isFailed }: any) => {
   return <Sphere ref={meshRef} args={[size, 32, 32]}><meshStandardMaterial {...materialProps} /></Sphere>;
 };
 
-const Node = ({ position, label, shape, color, isActive, isCompleted, isFailed }: any) => {
+const Node = ({ position, label, shape, color, isActive, isCompleted, isFailed, isEven }: any) => {
   return (
     <group position={position}>
       <Float speed={2} rotationIntensity={0.5} floatIntensity={1} floatingRange={[-0.1, 0.1]}>
@@ -89,7 +89,7 @@ const Node = ({ position, label, shape, color, isActive, isCompleted, isFailed }
         )}
       </Float>
       
-      <Html position={[0, -0.6, 0]} center className="pointer-events-none">
+      <Html position={[0, isEven ? -0.7 : 0.7, 0]} center className="pointer-events-none">
         <div className={`px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap backdrop-blur-md border shadow-lg transition-all ${
           isActive ? 'bg-white/10 border-white/30 text-white scale-110' :
           isCompleted ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' :
@@ -107,17 +107,18 @@ export const AgentVisualizer: React.FC<AgentVisualizerProps> = ({ status }) => {
   const currentIndex = getStageIndex(status);
   const isFailed = status === 'FAILED';
 
-  // Create an elegant 3D arc layout
+  // Create a wider curved layout
   const nodes = useMemo(() => {
     return STAGES.map((stage, i) => {
-      const t = i / (STAGES.length - 1); // 0 to 1
-      const angle = Math.PI * 0.8 * (t - 0.5); // Spread across an arc
-      const radius = 4;
+      // Space them out significantly along the X axis
+      const spacing = 1.8; 
+      const x = (i - (STAGES.length - 1) / 2) * spacing;
       
-      // Calculate positions along the arc
-      const x = Math.sin(angle) * radius;
-      const z = Math.cos(angle) * radius - radius * 0.8; // offset Z so it's centered nicely
-      const y = Math.sin(t * Math.PI) * 0.5; // Slight wave in height
+      // Gentle curve in Z so it feels 3D, but not so tight it clumps them
+      const z = Math.abs(x) * -0.2; 
+      
+      // Slight wave in height
+      const y = Math.sin(i * Math.PI * 0.5) * 0.2;
 
       return { 
         ...stage, 
@@ -187,6 +188,7 @@ export const AgentVisualizer: React.FC<AgentVisualizerProps> = ({ status }) => {
             isActive={currentIndex === i}
             isCompleted={currentIndex > i || status === 'PROCESSED'}
             isFailed={isFailed && currentIndex === i}
+            isEven={i % 2 === 0}
           />
         ))}
       </Canvas>
