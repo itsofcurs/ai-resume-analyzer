@@ -126,47 +126,41 @@ export const DotFlow = ({ status }: DotFlowProps) => {
     }, [status]);
 
     const [renderIndex, setRenderIndex] = useState(stageIndex);
-    const { contextSafe } = useGSAP();
-
     // Trigger animation when stage changes
-    useEffect(() => {
+    useGSAP(() => {
         if (renderIndex === stageIndex) return;
 
-        const transition = contextSafe(() => {
-            const el = containerRef.current;
-            if (!el) {
+        const el = containerRef.current;
+        if (!el) {
+            setRenderIndex(stageIndex);
+            return;
+        }
+        
+        gsap.to(el, {
+            y: 20,
+            opacity: 0,
+            filter: "blur(8px)",
+            duration: 0.4,
+            ease: "power2.in",
+            onComplete: () => {
                 setRenderIndex(stageIndex);
-                return;
-            }
-            
-            gsap.to(el, {
-                y: 20,
-                opacity: 0,
-                filter: "blur(8px)",
-                duration: 0.4,
-                ease: "power2.in",
-                onComplete: () => {
-                    setRenderIndex(stageIndex);
-                    gsap.fromTo(
-                        el,
-                        { y: -20, opacity: 0, filter: "blur(4px)" },
-                        {
-                            y: 0,
-                            opacity: 1,
-                            filter: "blur(0px)",
-                            duration: 0.6,
-                            ease: "power2.out",
-                        },
-                    );
-                },
-            });
+                gsap.fromTo(
+                    el,
+                    { y: -20, opacity: 0, filter: "blur(4px)" },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        filter: "blur(0px)",
+                        duration: 0.6,
+                        ease: "power2.out",
+                    }
+                );
+            },
         });
-
-        transition();
-    }, [stageIndex, renderIndex, contextSafe]);
+    }, [stageIndex]);
 
     // Animate width of container to fit text
-    useEffect(() => {
+    useGSAP(() => {
         if (!containerRef.current || !textRef.current) return;
         const newWidth = textRef.current.offsetWidth + 1;
         gsap.to(containerRef.current, {
