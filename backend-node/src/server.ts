@@ -17,6 +17,7 @@ import path from 'path';
 dotenv.config();
 
 export const app = express();
+app.set("trust proxy", 1); // Trust first proxy (Render/Vercel)
 const httpServer = createServer(app);
 // Dynamic CORS: allow all Vercel preview/production domains + localhost
 const allowedOrigins = [
