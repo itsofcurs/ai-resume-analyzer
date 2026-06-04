@@ -39,8 +39,8 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 # Internal imports — database and embeddings are kept at root level
 # ---------------------------------------------------------------------------
-from database import get_mongo_collection, get_chroma_collection, mongo_health_check, chroma_health_check
-from embeddings import generate_embedding, embedding_ready
+from database import get_mongo_collection, mongo_health_check, vector_search, vector_search_ready
+from embeddings import generate_embedding, generate_query_embedding, embedding_ready
 
 # ---------------------------------------------------------------------------
 # New modular architecture imports
@@ -164,6 +164,13 @@ async def request_guard(request: Request, call_next):
     path = request.url.path
     if path.startswith("/api/health") or path.startswith("/api/metrics") or path.startswith("/api/system"):
         return await call_next(request)
+
+    internal_key = request.headers.get("x-internal-api-key")
+    if settings.internal_api_key and internal_key != settings.internal_api_key:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Unauthorized. Invalid Internal API Key.", "error_code": "unauthorized"}
+        )
 
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > settings.max_request_size_bytes:
@@ -301,14 +308,14 @@ def _concurrency_limit_for_path(path: str, settings: Settings) -> int | None:
 async def _dependency_snapshot() -> dict[str, dict]:
     gemini_status = GeminiService.get_instance().health_check()
     mongo_ok = await mongo_health_check()
-    chroma_ok = chroma_health_check()
+    vector_ok = vector_search_ready()
     embeddings_ok = embedding_ready()
     cache_status = cache_service.health()
     queue_status = job_queue_service.health()
     return {
         "gemini": gemini_status,
         "mongodb": {"status": "ready" if mongo_ok else "unavailable"},
-        "chromadb": {"status": "ready" if chroma_ok else "unavailable"},
+        "vector_search": {"status": "ready" if vector_ok else "unavailable"},
         "embeddings": {"status": "ready" if embeddings_ok else "unavailable"},
         "cache": cache_status,
         "job_queue": queue_status,
@@ -365,7 +372,9 @@ async def workflow_timeout_handler(request: Request, exc: WorkflowTimeoutError):
     )
 
 
-@app.exception_handler((ATSProcessingError, EmbeddingError, CacheError))
+@app.exception_handler(ATSProcessingError)
+@app.exception_handler(EmbeddingError)
+@app.exception_handler(CacheError)
 async def processing_error_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=503,
@@ -396,7 +405,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         429: {"model": ErrorResponseSchema, "description": "Rate limited"},
     },
 )
-async def process_resume(req: ProcessRequest, background_tasks: BackgroundTasks):
+async def process_resume(req: ProcessRequest, background_tasks: BackgroundTasks, request: Request):
     """
     Webhook endpoint called by the Node.js gateway after a Cloudinary upload.
 
@@ -415,6 +424,10 @@ async def process_resume(req: ProcessRequest, background_tasks: BackgroundTasks)
         JSON acknowledgement. The actual result is written to MongoDB
         and the Node.js gateway polls / listens via Socket.io.
     """
+    settings: Settings = getattr(request.app.state, "settings", get_settings())
+    if settings.internal_api_key:
+        require_api_key(request.headers.get("x-api-key"), [settings.internal_api_key])
+
     if not req.resume_id or not req.cloudinary_url:
         raise HTTPException(
             status_code=400,
@@ -452,72 +465,34 @@ async def process_resume(req: ProcessRequest, background_tasks: BackgroundTasks)
         500: {"model": ErrorResponseSchema, "description": "Search failure"},
     },
 )
-def semantic_search(req: SearchRequest):
+async def semantic_search(req: SearchRequest, request: Request):
     """
-    Convert a natural language recruiter query to a vector embedding and
-    retrieve the top-K most semantically similar resumes from ChromaDB.
-
-    This endpoint is intentionally synchronous — embedding generation and
-    ChromaDB vector queries are CPU-bound and fast (< 200 ms typical).
+    Perform semantic search across indexed resumes using Vector Search.
 
     Args:
         req: SearchRequest with query string and top_k count.
 
     Returns:
-        JSON object with the original query and a list of matches, each
-        containing resume_id, cosine distance, and ChromaDB metadata.
+        JSON with a list of matches including resume_id, text snippet, and distance score.
 
     Raises:
-        HTTPException 500: If ChromaDB is not initialised or search fails.
-
-    Example response:
-        {
-            "query": "senior backend engineer with Kubernetes",
-            "matches": [
-                {
-                    "resume_id": "6650abc123def456",
-                    "distance": 0.142,
-                    "metadata": {
-                        "name": "Jane Doe",
-                        "filename": "jane_doe_resume.pdf",
-                        "skills": "[\"Go\", \"Kubernetes\", \"PostgreSQL\"]"
-                    }
-                }
-            ]
-        }
+        HTTPException 500: If vector search is not available or search fails.
     """
-    chroma = get_chroma_collection()
-    if chroma is None:
+    settings: Settings = getattr(request.app.state, "settings", get_settings())
+    if settings.internal_api_key:
+        require_api_key(request.headers.get("x-api-key"), [settings.internal_api_key])
+
+    if not vector_search_ready():
         raise HTTPException(
             status_code=500,
-            detail="Vector database (ChromaDB) is not initialised.",
+            detail="Vector search is not available.",
         )
 
     try:
         logger.info("POST /api/search — query='%s' top_k=%d", req.query, req.top_k)
-        query_vector = generate_embedding(req.query)
+        query_vector = generate_query_embedding(req.query)
 
-        results = chroma.query(
-            query_embeddings=[query_vector],
-            n_results=req.top_k,
-        )
-
-        matches = []
-        if results and "ids" in results and results["ids"]:
-            for i in range(len(results["ids"][0])):
-                matches.append({
-                    "resume_id": results["ids"][0][i],
-                    "distance": (
-                        results["distances"][0][i]
-                        if "distances" in results
-                        else 0.0
-                    ),
-                    "metadata": (
-                        results["metadatas"][0][i]
-                        if "metadatas" in results
-                        else {}
-                    ),
-                })
+        matches = await vector_search(query_vector, top_k=req.top_k)
 
         logger.info(
             "POST /api/search — returned %d matches for query='%s'",
@@ -549,17 +524,17 @@ def health_check():
     Returns:
         JSON with status, service name, and pipeline version.
     """
-    chroma_ok = get_chroma_collection() is not None
+    vector_ok = vector_search_ready()
 
     return {
         "status": "ok",
         "service": "AI Recruitment Intelligence",
-        "pipeline_version": "2.0.0",
+        "pipeline_version": "2.1.0",
         "components": {
-            "chromadb": "ready" if chroma_ok else "unavailable",
-            "mongodb": "connected",       # Motor client is async; assume connected
-            "gemini": "lazy-init",        # Initialised on first /api/process call
-            "embeddings": "loaded",
+            "mongodb": "connected",
+            "vector_search": "ready" if vector_ok else "unavailable",
+            "gemini": "lazy-init",
+            "embeddings": "gemini-api",
         },
     }
 

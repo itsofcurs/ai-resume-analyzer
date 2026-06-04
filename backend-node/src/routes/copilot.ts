@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { prisma, cacheMap } from '../server';
+import { prisma, redisClient } from '../server';
 import { Resume } from '../models/Resume';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import axios from 'axios';
@@ -19,10 +19,10 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
     const resume = await Resume.findOne({ _id: resumeId, organizationId: user.organizationId });
     if (!resume || !resume.parsedData) return res.status(404).json({ error: 'Resume not found or not processed' });
 
-    // Check Memory cache
+    // Check Redis cache
     const cacheKey = `summary:${resumeId}`;
-    const cached = cacheMap.get(cacheKey);
-    if (cached) return res.json({ summary: cached, cached: true });
+    const cached = await redisClient.get(cacheKey);
+    if (cached) return res.json({ summary: cached, cached: true, authenticity: resume.aiAnalysis });
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `You are an expert technical recruiter. Write a highly concise, professional 3-sentence summary of this candidate based on their extracted data. Focus on years of experience, core technical stack, and most impressive achievement. 
@@ -31,14 +31,20 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
     const result = await model.generateContent(prompt);
     const summary = result.response.text();
 
-    cacheMap.set(cacheKey, summary);
+    await redisClient.setEx(cacheKey, 3600 * 24, summary); // cache for 24 hours
     res.json({ 
         summary, 
         cached: false,
         authenticity: resume.aiAnalysis // Pass authenticity data to frontend
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Copilot summary error:", error);
+    if (error?.status === 429 || error?.message?.includes('429')) {
+      return res.status(429).json({ error: 'Gemini API Rate Limit Exceeded (Free Tier). Please wait 1 minute before generating more summaries.' });
+    }
+    if (error?.status === 503 || error?.message?.includes('503')) {
+      return res.status(503).json({ error: 'Gemini API is currently experiencing high demand. Please try again later.' });
+    }
     res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
@@ -51,6 +57,10 @@ router.post('/search', async (req: AuthRequest, res: any) => {
     const pythonRes = await axios.post('http://127.0.0.1:8000/api/search', {
       query,
       top_k
+    }, {
+      headers: {
+        'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
+      }
     });
 
     const matches = pythonRes.data.matches;
@@ -98,8 +108,14 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     
     res.json(JSON.parse(text));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Copilot analysis error:", error);
+    if (error?.status === 429 || error?.message?.includes('429')) {
+      return res.status(429).json({ error: 'Gemini API Rate Limit Exceeded (Free Tier). Please wait 1 minute before evaluating more candidates.' });
+    }
+    if (error?.status === 503 || error?.message?.includes('503')) {
+      return res.status(503).json({ error: 'Gemini API is currently experiencing high demand. Please try again later.' });
+    }
     res.status(500).json({ error: 'Failed to analyze fit' });
   }
 });

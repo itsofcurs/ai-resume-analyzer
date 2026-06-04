@@ -14,36 +14,26 @@ uvicorn[standard]==0.34.3
 # ---------------------------------------------------------------------------
 # LangChain ecosystem (modular AI architecture)
 # ---------------------------------------------------------------------------
-langchain==0.3.25
-langchain-core==0.3.58
-langchain-google-genai==2.1.4
+langchain
+langchain-core
+langchain-google-genai
+langgraph
 
 # ---------------------------------------------------------------------------
-# Google Gemini SDK (direct SDK kept as legacy fallback)
+# Google Gemini SDK (LLM + Embeddings API)
 # ---------------------------------------------------------------------------
-google-generativeai==0.8.5
-google-genai==1.13.0
+google-generativeai
+google-genai
 
 # ---------------------------------------------------------------------------
-# Vector database
-# ---------------------------------------------------------------------------
-chromadb==0.6.3
-
-# ---------------------------------------------------------------------------
-# Async MongoDB driver
+# Async MongoDB driver (primary store + vector search)
 # ---------------------------------------------------------------------------
 motor==3.7.0
 pymongo==4.12.1
 
 # ---------------------------------------------------------------------------
-# Semantic embeddings
+# NLP — text extraction (PDF parsing)
 # ---------------------------------------------------------------------------
-sentence-transformers==3.4.1
-
-# ---------------------------------------------------------------------------
-# NLP — text extraction and processing
-# ---------------------------------------------------------------------------
-spacy==3.8.4
 PyMuPDF==1.25.5         # PDF text extraction (fitz)
 python-docx==1.1.2      # DOCX text extraction (future support)
 
@@ -73,7 +63,7 @@ orjson==3.10.18          # Fast JSON serialisation
 # ---------------------------------------------------------------------------
 # Redis (optional, for distributed cache + rate limits)
 # ---------------------------------------------------------------------------
-redis==6.4.0
+redis>=5.0.0
 
 # ---------------------------------------------------------------------------
 # Observability (optional)

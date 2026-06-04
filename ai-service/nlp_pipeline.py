@@ -18,7 +18,6 @@ not yet migrated to the new workflow layer.
 
 import io
 import re
-import spacy
 import fitz  # PyMuPDF
 import requests
 import logging
@@ -30,12 +29,6 @@ import google.generativeai as genai
 from utils.parser_utils import sanitize_name, truncate_text, clean_json_str
 
 logger = logging.getLogger(__name__)
-
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    logger.warning("spacy en_core_web_sm not found, using blank en model")
-    nlp = spacy.blank("en")
 
 # Configure Gemini
 api_key = os.getenv("GEMINI_API_KEY")

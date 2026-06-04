@@ -123,8 +123,8 @@ class GeminiService:
             self._llm = ChatGoogleGenerativeAI(
                 model=model_name,
                 google_api_key=api_key,
-                # Conservative temperature for structured extraction tasks.
-                temperature=0.1,
+                # Zero temperature for strictly deterministic evaluation and scoring.
+                temperature=0.0,
                 # Timeout and retry handling for high-availability production usage
                 timeout=settings.gemini_timeout_s,
                 max_retries=settings.gemini_max_retries,

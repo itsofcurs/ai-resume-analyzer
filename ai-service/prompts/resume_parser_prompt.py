@@ -39,9 +39,14 @@ PROMPT_VERSION: str = "1.0.0"
 # Template string
 # ---------------------------------------------------------------------------
 
+import datetime
+
 _RESUME_PARSER_TEMPLATE: str = """\
 You are an expert technical recruiter and senior HR auditor with 15+ years of \
 experience evaluating software engineering resumes.
+
+IMPORTANT CONTEXT: Today's date is """ + datetime.datetime.now().strftime("%Y-%m-%d") + """. 
+Do NOT flag dates from the past (such as 2024, 2025, or early 2026) as being in the future.
 
 Your task is to perform two operations simultaneously on the resume text below:
   1. Extract structured candidate information.

@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Gemini / LLM settings
     llm_enabled: bool = Field(default=True, alias="LLM_ENABLED")
     gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-1.5-flash", alias="GEMINI_MODEL")
+    gemini_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_MODEL")
     gemini_timeout_s: float = Field(default=30.0, alias="GEMINI_TIMEOUT_S")
     gemini_max_retries: int = Field(default=3, alias="GEMINI_MAX_RETRIES")
 
@@ -43,7 +43,6 @@ class Settings(BaseSettings):
 
     # Storage settings
     mongodb_uri: str = Field(default="mongodb://localhost:27017/talentdb", alias="MONGODB_URI")
-    chroma_db_path: str = Field(default="./chroma_data", alias="CHROMA_DB_PATH")
 
     # Concurrency / timeouts
     max_batch_concurrency: int = Field(default=5, alias="MAX_BATCH_CONCURRENCY")
@@ -86,6 +85,7 @@ class Settings(BaseSettings):
 
     # Security / auth (optional; if not set, recruiter endpoints remain open)
     recruiter_api_keys: str = Field(default="", alias="RECRUITER_API_KEYS")  # comma-separated
+    internal_api_key: Optional[str] = Field(default=None, alias="INTERNAL_API_KEY")
 
     @field_validator(
         "max_batch_concurrency",

@@ -1,44 +1,27 @@
 """
 workflows/resume_workflow.py
 -----------------------------
-ResumeWorkflow — orchestrates the full resume processing pipeline.
+ResumeWorkflow — orchestrates the full resume processing pipeline using LangGraph.
 
 This is the single entry point called by the FastAPI /api/process handler.
-It replaces the direct call to nlp_pipeline.analyze_resume_unified() with
-the new modular agent architecture while preserving 100% pipeline compatibility.
+It uses a StateGraph to process the resume step-by-step.
 
 Pipeline stages:
   1. Text extraction          → nlp_pipeline.download_and_extract_text()
   2. Structured parsing       → ResumeParserAgent.aparse()
   3. Vector embedding         → embeddings.generate_embedding()
-  4. ChromaDB storage         → database.get_chroma_collection()
+  4. MongoDB vector storage   → database.store_vector()
   5. MongoDB status update    → database.get_mongo_collection()
-
-Error handling:
-  - Each stage is individually try/except'd and logged.
-  - A stage failure sets MongoDB status to "FAILED" and short-circuits.
-  - The workflow never raises exceptions to its caller — all errors are
-    handled internally and reported via MongoDB document status.
-
-LangGraph readiness:
-  - run() is designed to become a LangGraph graph entry-point.
-  - Each stage maps cleanly to a future LangGraph node.
-  - State dict shape is already defined (implicitly) for easy migration.
-
-Future workflow extensions (add as separate methods / classes):
-  - ATSWorkflow.run(resume_id, job_description_id)
-  - SkillGapWorkflow.run(resume_id, required_skills)
-  - BatchRankingWorkflow.run(session_id, top_k)
 """
 
-import json
 import logging
 import time
-from typing import Optional
+from typing import Optional, TypedDict, Any
 
 from bson import ObjectId
+from langgraph.graph import StateGraph, END
 
-from database import get_mongo_collection, get_chroma_collection
+from database import get_mongo_collection, store_vector
 from embeddings import generate_embedding
 from nlp_pipeline import download_and_extract_text
 from agents.resume_parser import ResumeParserAgent
@@ -46,219 +29,189 @@ from schemas.resume_schema import ResumeParseResponse
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# LangGraph State Definition
+# ---------------------------------------------------------------------------
+class ResumeState(TypedDict):
+    resume_id: str
+    cloudinary_url: str
+    filename: str
+    raw_text: Optional[str]
+    parsed: Optional[ResumeParseResponse]
+    vector: Optional[list[float]]
+    vector_stored: bool
+    error: Optional[str]
+
 
 class ResumeWorkflow:
     """
-    Orchestrates the full resume ingestion and AI analysis pipeline.
-
-    This class replaces the monolithic process_resume_pipeline() function
-    in main.py with a clean, testable, and extensible workflow object.
-
-    Each public method corresponds to one pipeline stage and can be
-    independently unit-tested or replaced without affecting other stages.
-
-    Attributes:
-        _parser_agent (ResumeParserAgent): Shared agent instance reused
-            across workflow runs to benefit from lazy chain initialisation.
+    Orchestrates the full resume ingestion and AI analysis pipeline using LangGraph.
     """
 
-    # Shared agent instance — the LangChain chain is built once on first call
     _parser_agent: ResumeParserAgent = ResumeParserAgent()
+
+    def __init__(self):
+        # Build the LangGraph
+        graph = StateGraph(ResumeState)
+
+        # Add Nodes
+        graph.add_node("extract_text", self._node_extract_text)
+        graph.add_node("parse_resume", self._node_parse_resume)
+        graph.add_node("generate_embedding", self._node_generate_embedding)
+        graph.add_node("store_vector", self._node_store_vector)
+        graph.add_node("update_mongo", self._node_update_mongo)
+        graph.add_node("handle_failure", self._node_handle_failure)
+
+        # Define Edges
+        graph.set_entry_point("extract_text")
+        
+        # Conditional edges from extract_text
+        graph.add_conditional_edges(
+            "extract_text",
+            lambda state: "handle_failure" if state.get("error") else "parse_resume"
+        )
+        
+        # Conditional edges from parse_resume
+        graph.add_conditional_edges(
+            "parse_resume",
+            lambda state: "handle_failure" if state.get("error") else "generate_embedding"
+        )
+        
+        # Conditional edges from generate_embedding
+        graph.add_conditional_edges(
+            "generate_embedding",
+            lambda state: "store_vector" if state.get("vector") else "update_mongo"
+        )
+        
+        # Conditional edges from store_vector
+        graph.add_conditional_edges(
+            "store_vector",
+            lambda state: "handle_failure" if state.get("error") else "update_mongo"
+        )
+        
+        # Conditional edges from update_mongo
+        graph.add_conditional_edges(
+            "update_mongo",
+            lambda state: "handle_failure" if state.get("error") else END
+        )
+
+        graph.add_edge("handle_failure", END)
+
+        self._graph = graph.compile()
 
     # ---------------------------------------------------------------------------
     # MongoDB helpers
     # ---------------------------------------------------------------------------
-
     @staticmethod
     async def _set_status(resume_id: str, status: str, **extra_fields) -> None:
-        """
-        Update the MongoDB resume document status and any additional fields.
-
-        Args:
-            resume_id:    MongoDB ObjectId string of the resume document.
-            status:       New status value (PENDING | EXTRACTING | ANALYZING |
-                          PROCESSED | FAILED).
-            **extra_fields: Additional key-value pairs to set in the document.
-        """
+        import httpx
+        from core.config import get_settings
+        
         collection = get_mongo_collection()
         update_payload = {"status": status, **extra_fields}
         await collection.update_one(
             {"_id": ObjectId(resume_id)},
             {"$set": update_payload},
         )
-
-    # ---------------------------------------------------------------------------
-    # Stage 1: Text extraction
-    # ---------------------------------------------------------------------------
-
-    @staticmethod
-    def _stage_extract_text(cloudinary_url: str, filename: str) -> str:
-        """
-        Download and extract raw text from a Cloudinary-hosted resume file.
-
-        Delegates to the existing nlp_pipeline.download_and_extract_text()
-        function which handles PDF (PyMuPDF), TXT, and DOCX formats.
-
-        Returns:
-            Extracted text string (may be empty if extraction fails).
-        """
-        start = time.time()
-        text = download_and_extract_text(cloudinary_url, filename)
-        logger.info(
-            "[WORKFLOW] Stage 1 — Text extraction: %d chars in %.2fs",
-            len(text),
-            time.time() - start,
-        )
-        return text
-
-    # ---------------------------------------------------------------------------
-    # Stage 2: Structured parsing via ResumeParserAgent
-    # ---------------------------------------------------------------------------
-
-    @staticmethod
-    async def _stage_parse_resume(raw_text: str) -> ResumeParseResponse:
-        """
-        Run the ResumeParserAgent to produce a structured ResumeParseResponse.
-
-        Args:
-            raw_text: Full extracted resume text.
-
-        Returns:
-            A validated ResumeParseResponse (never raises — has fallback).
-        """
-        start = time.time()
-        result = await ResumeWorkflow._parser_agent.aparse(raw_text)
-        logger.info(
-            "[WORKFLOW] Stage 2 — Agent parsing: '%s', skills=%d in %.2fs",
-            result.name,
-            len(result.skills),
-            time.time() - start,
-        )
-        return result
-
-    # ---------------------------------------------------------------------------
-    # Stage 3: Embedding generation
-    # ---------------------------------------------------------------------------
-
-    @staticmethod
-    def _stage_generate_embedding(raw_text: str) -> Optional[list[float]]:
-        """
-        Generate a vector embedding for the resume text using sentence-transformers.
-
-        Uses the existing embeddings.generate_embedding() function
-        (BAAI/bge-small-en-v1.5 model).
-
-        Returns:
-            A list of floats (384-dimensional vector), or None on failure.
-        """
-        start = time.time()
+        
+        # Notify Node.js gateway via webhook for real-time Socket.io updates
         try:
-            vector = generate_embedding(raw_text)
-            logger.info(
-                "[WORKFLOW] Stage 3 — Embedding: %d-dim vector in %.2fs",
-                len(vector),
-                time.time() - start,
-            )
-            return vector
+            settings = get_settings()
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "http://127.0.0.1:5000/api/resumes/webhook/status",
+                    json={"id": resume_id, "status": status},
+                    headers={"x-api-key": settings.internal_api_key or "default-internal-key"},
+                    timeout=2.0
+                )
         except Exception as exc:
-            logger.error("[WORKFLOW] Stage 3 — Embedding failed: %s", exc)
-            return None
+            logger.warning(f"[WORKFLOW] Failed to send status webhook to Node gateway: {exc}")
 
     # ---------------------------------------------------------------------------
-    # Stage 4: ChromaDB vector storage
+    # LangGraph Nodes
     # ---------------------------------------------------------------------------
-
-    @staticmethod
-    def _stage_store_vector(
-        resume_id: str,
-        vector: list[float],
-        filename: str,
-        parsed: ResumeParseResponse,
-    ) -> bool:
-        """
-        Upsert the resume embedding into ChromaDB for semantic search.
-
-        Args:
-            resume_id: MongoDB ObjectId string (used as ChromaDB document ID).
-            vector:    384-dim embedding vector.
-            filename:  Original resume filename for metadata.
-            parsed:    Parsed ResumeParseResponse for metadata fields.
-
-        Returns:
-            True on success, False on failure.
-        """
-        start = time.time()
-        chroma = get_chroma_collection()
-        if chroma is None:
-            logger.warning("[WORKFLOW] Stage 4 — ChromaDB not available, skipping.")
-            return False
-
+    async def _node_extract_text(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 1 — Text extraction started for {state['resume_id']}")
         try:
-            chroma.add(
-                ids=[resume_id],
-                embeddings=[vector],
-                metadatas=[{
-                    "filename": filename,
-                    "name": parsed.name,
-                    "skills": json.dumps(parsed.skills),
-                }],
-            )
-            logger.info(
-                "[WORKFLOW] Stage 4 — ChromaDB stored resume_id=%s in %.2fs",
-                resume_id,
-                time.time() - start,
-            )
-            return True
+            raw_text = download_and_extract_text(state["cloudinary_url"], state["filename"])
+            if not raw_text or not raw_text.strip():
+                state["error"] = "Extracted text is empty"
+                return state
+            await self._set_status(state["resume_id"], "EXTRACTING", rawText=raw_text)
+            state["raw_text"] = raw_text
         except Exception as exc:
-            logger.error("[WORKFLOW] Stage 4 — ChromaDB storage failed: %s", exc)
-            return False
+            logger.error(f"[WORKFLOW] Stage 1 FAILED: {exc}")
+            state["error"] = str(exc)
+        return state
+
+    async def _node_parse_resume(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 2 — Agent parsing started for {state['resume_id']}")
+        try:
+            parsed = await self._parser_agent.aparse(state["raw_text"])
+            await self._set_status(state["resume_id"], "ANALYZING")
+            state["parsed"] = parsed
+        except Exception as exc:
+            logger.error(f"[WORKFLOW] Stage 2 FAILED: {exc}")
+            state["error"] = str(exc)
+        return state
+
+    async def _node_generate_embedding(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 3 — Embedding generation for {state['resume_id']}")
+        try:
+            vector = generate_embedding(state["raw_text"])
+            state["vector"] = vector
+        except Exception as exc:
+            logger.error(f"[WORKFLOW] Stage 3 FAILED: {exc}")
+            state["vector"] = None
+        return state
+
+    async def _node_store_vector(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 4 — Storing vector for {state['resume_id']}")
+        try:
+            vector_stored = await store_vector(
+                resume_id=state["resume_id"],
+                vector=state["vector"],
+                filename=state["filename"],
+                name=state["parsed"].name,
+                skills=state["parsed"].skills,
+            )
+            state["vector_stored"] = vector_stored
+        except Exception as exc:
+            logger.error(f"[WORKFLOW] Stage 4 FAILED: {exc}")
+            state["error"] = str(exc)
+        return state
+
+    async def _node_update_mongo(self, state: ResumeState) -> ResumeState:
+        logger.info(f"[WORKFLOW] Stage 5 — MongoDB final update for {state['resume_id']}")
+        try:
+            parsed = state["parsed"]
+            parsed_data = parsed.to_parsed_data()
+            ai_analysis = parsed.to_ai_analysis()
+
+            await self._set_status(
+                state["resume_id"],
+                status="PROCESSED",
+                parsedData=parsed_data,
+                aiAnalysis=ai_analysis,
+                candidateName=parsed.name,
+                candidateEmail=parsed.email or "",
+                candidatePhone=parsed.phone or "",
+                embeddingsId=state["resume_id"] if state.get("vector_stored") else None,
+                rawText="",
+            )
+        except Exception as exc:
+            logger.error(f"[WORKFLOW] Stage 5 FAILED: {exc}")
+            state["error"] = str(exc)
+        return state
+
+    async def _node_handle_failure(self, state: ResumeState) -> ResumeState:
+        logger.error(f"[WORKFLOW] Handling failure for {state['resume_id']}: {state.get('error')}")
+        await self._set_status(state["resume_id"], "FAILED")
+        return state
 
     # ---------------------------------------------------------------------------
-    # Stage 5: MongoDB final update
+    # Main orchestrator (FastAPI entrypoint)
     # ---------------------------------------------------------------------------
-
-    @staticmethod
-    async def _stage_update_mongo(
-        resume_id: str,
-        parsed: ResumeParseResponse,
-        vector_stored: bool,
-    ) -> None:
-        """
-        Write the final PROCESSED state and all extracted data to MongoDB.
-
-        Uses the ResumeParseResponse helper methods to produce the exact
-        dict shapes expected by the existing document structure, ensuring
-        full backward compatibility with the Node.js gateway and frontend.
-
-        Args:
-            resume_id:     MongoDB ObjectId string.
-            parsed:        Fully validated ResumeParseResponse.
-            vector_stored: Whether the ChromaDB upsert succeeded.
-        """
-        start = time.time()
-        parsed_data = parsed.to_parsed_data()       # lightweight, Node.js-compatible
-        ai_analysis = parsed.to_ai_analysis()       # authenticity block + rich data
-
-        await ResumeWorkflow._set_status(
-            resume_id,
-            status="PROCESSED",
-            parsedData=parsed_data,
-            aiAnalysis=ai_analysis,
-            candidateName=parsed.name,
-            candidateEmail=parsed.email or "",
-            candidatePhone=parsed.phone or "",
-            embeddingsId=resume_id if vector_stored else None,
-            rawText="",  # Clear raw text from DB to save storage; already processed
-        )
-        logger.info(
-            "[WORKFLOW] Stage 5 — MongoDB updated to PROCESSED in %.2fs",
-            time.time() - start,
-        )
-
-    # ---------------------------------------------------------------------------
-    # Main orchestrator
-    # ---------------------------------------------------------------------------
-
     async def run(
         self,
         resume_id: str,
@@ -266,76 +219,33 @@ class ResumeWorkflow:
         filename: str,
     ) -> None:
         """
-        Execute the full resume processing pipeline asynchronously.
-
-        This method is called by the FastAPI /api/process background task.
-        It sequences all five pipeline stages and handles errors at each
-        stage without propagating exceptions to the caller.
-
-        Args:
-            resume_id:      MongoDB ObjectId string of the PENDING resume doc.
-            cloudinary_url: Cloudinary CDN URL for the uploaded resume file.
-            filename:       Original filename (used for format detection).
+        Execute the full resume processing pipeline asynchronously using LangGraph.
         """
         pipeline_start = time.time()
-        logger.info("[WORKFLOW] Starting pipeline for resume_id=%s", resume_id)
+        logger.info(f"[WORKFLOW] Starting LangGraph pipeline for resume_id={resume_id}")
 
-        # ------------------------------------------------------------------
-        # Stage 1 — Text extraction
-        # ------------------------------------------------------------------
+        initial_state: ResumeState = {
+            "resume_id": resume_id,
+            "cloudinary_url": cloudinary_url,
+            "filename": filename,
+            "raw_text": None,
+            "parsed": None,
+            "vector": None,
+            "vector_stored": False,
+            "error": None,
+        }
+
         try:
-            raw_text = self._stage_extract_text(cloudinary_url, filename)
-            if not raw_text.strip():
-                raise ValueError("Extracted text is empty")
+            final_state = await self._graph.ainvoke(initial_state)
+            
+            total_time = time.time() - pipeline_start
+            
+            if final_state.get("error"):
+                logger.error(f"[WORKFLOW] LangGraph pipeline FAILED for {resume_id} in {total_time:.2f}s")
+            else:
+                logger.info(
+                    f"[WORKFLOW] LangGraph pipeline COMPLETE for resume_id={resume_id} in {total_time:.2f}s"
+                )
         except Exception as exc:
-            logger.error("[WORKFLOW] Stage 1 FAILED: %s", exc)
+            logger.error(f"[WORKFLOW] LangGraph execution crashed: {exc}")
             await self._set_status(resume_id, "FAILED")
-            return
-
-        # Update status: extraction started
-        await self._set_status(
-            resume_id, "EXTRACTING", rawText=raw_text
-        )
-
-        # ------------------------------------------------------------------
-        # Stage 2 — Structured parsing (ResumeParserAgent via LangChain)
-        # ------------------------------------------------------------------
-        parsed: ResumeParseResponse = await self._stage_parse_resume(raw_text)
-
-        # Update status: AI analysis in progress
-        await self._set_status(resume_id, "ANALYZING")
-
-        # ------------------------------------------------------------------
-        # Stage 3 — Embedding generation
-        # ------------------------------------------------------------------
-        vector = self._stage_generate_embedding(raw_text)
-
-        # ------------------------------------------------------------------
-        # Stage 4 — ChromaDB vector storage
-        # ------------------------------------------------------------------
-        vector_stored = False
-        if vector is not None:
-            vector_stored = self._stage_store_vector(
-                resume_id, vector, filename, parsed
-            )
-
-        # ------------------------------------------------------------------
-        # Stage 5 — MongoDB final update
-        # ------------------------------------------------------------------
-        try:
-            await self._stage_update_mongo(resume_id, parsed, vector_stored)
-        except Exception as exc:
-            logger.error("[WORKFLOW] Stage 5 FAILED: %s", exc)
-            await self._set_status(resume_id, "FAILED")
-            return
-
-        total_time = time.time() - pipeline_start
-        logger.info(
-            "[WORKFLOW] Pipeline COMPLETE for resume_id=%s in %.2fs "
-            "(candidate='%s', skills=%d, vector=%s)",
-            resume_id,
-            total_time,
-            parsed.name,
-            len(parsed.skills),
-            "stored" if vector_stored else "skipped",
-        )

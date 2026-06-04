@@ -11,18 +11,26 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'talent_resumes',
-    // We want to allow raw files (PDFs, DOCX, TXT)
-    resource_type: 'raw',
-    format: async (req, file) => {
-        const ext = file.originalname.split('.').pop();
-        return ext || 'raw';
-    },
-    public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`,
-  } as any,
+import fs from 'fs';
+import path from 'path';
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const parts = file.originalname.split('.');
+    const ext = parts.length > 1 ? '.' + parts.pop() : '';
+    const nameWithoutExt = parts.join('.');
+    const publicId = `${Date.now()}-${nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '_')}${ext}`;
+    cb(null, publicId);
+  }
 });
 
 export const uploadCloudinary = multer({ storage: storage });

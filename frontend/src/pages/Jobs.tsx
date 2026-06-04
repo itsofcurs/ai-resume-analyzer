@@ -67,7 +67,9 @@ export const Jobs = () => {
   };
 
   useEffect(() => {
+    // We intentionally ignore exhaustive-deps here as fetchData is heavily dependent on token
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleCreateJob = async (e: FormEvent) => {
@@ -89,7 +91,7 @@ export const Jobs = () => {
       setNewTitle('');
       setNewDesc('');
       setNewSkills('');
-    } catch (error) {
+    } catch {
       alert("Failed to create job role");
     }
   };
@@ -111,7 +113,7 @@ export const Jobs = () => {
       if (selectedJob && selectedJob.id === id) {
         setSelectedJob(null);
       }
-    } catch (error) {
+    } catch {
       alert("Failed to delete job role");
     }
   };
@@ -263,6 +265,21 @@ export const Jobs = () => {
                         Trigger real-time compatibility fit reports evaluating skills, authenticity risks, and recommend ratios.
                       </p>
                     </div>
+                    {candidates.length > 0 && (
+                      <button
+                        onClick={() => {
+                          candidates.forEach(c => {
+                            if (!fitAnalysisResults[c._id || c.id]) {
+                              analyzeCandidateFit(c._id || c.id);
+                            }
+                          });
+                        }}
+                        className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors border border-indigo-200"
+                      >
+                        <Sparkles size={14} />
+                        Analyze All Pending
+                      </button>
+                    )}
                   </div>
 
                   {candidates.length === 0 ? (
@@ -328,6 +345,13 @@ export const Jobs = () => {
                                         {fit.match_score}%
                                       </span>
                                     </div>
+                                    <button 
+                                      onClick={() => analyzeCandidateFit(candidate._id || candidate.id)}
+                                      className="ml-2 p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                      title="Re-analyze Fit"
+                                    >
+                                      <BrainCircuit size={16} />
+                                    </button>
                                   </div>
                                 </div>
                               ) : isAnalyzing ? (

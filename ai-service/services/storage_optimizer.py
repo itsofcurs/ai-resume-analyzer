@@ -5,7 +5,7 @@ Deployment-time storage optimization hooks.
 
 This module provides optional functions to:
   - Create MongoDB indexes (including TTL for ephemeral traces/events).
-  - Provide Chroma collection namespace conventions.
+  - Create MongoDB Atlas Vector Search index (programmatic setup).
   - Prepare for embedding deduplication / cleanup strategies.
 
 It is safe to import and does nothing automatically.
@@ -17,8 +17,8 @@ from typing import Any, Optional
 
 
 class StorageOptimizer:
-    def __init__(self, *, chroma_namespace: str = "default") -> None:
-        self._chroma_namespace = chroma_namespace
+    def __init__(self) -> None:
+        pass
 
     async def ensure_mongo_indexes(self, mongo_collection) -> dict[str, Any]:
         """
@@ -53,11 +53,3 @@ class StorageOptimizer:
             return {"status": "ok", "index": name}
         except Exception as exc:
             return {"status": "failed", "error": str(exc)}
-
-    def chroma_collection_name(self, base: str) -> str:
-        """
-        Namespace isolation for Chroma collections.
-        """
-        ns = (self._chroma_namespace or "default").strip().lower()
-        return f"{ns}__{base}"
-

@@ -7,20 +7,46 @@ import axios from 'axios';
 
 const router = Router();
 
+// Webhook for Python AI service to update status
+router.post('/webhook/status', async (req: any, res: any) => {
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== (process.env.INTERNAL_API_KEY || 'default-internal-key')) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const { id, status } = req.body;
+  if (!id || !status) {
+    return res.status(400).json({ error: 'Missing id or status' });
+  }
+
+  // Emit to all connected clients
+  io.emit('resume_status_update', { id, status });
+  res.status(200).json({ success: true });
+});
+
 // Apply auth middleware to all resume routes
 router.use(authenticateToken as any);
 
-router.post('/upload', uploadCloudinary.single('file'), async (req: AuthRequest, res: any) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+router.post('/upload', (req: AuthRequest, res: any) => {
+  uploadCloudinary.single('file')(req, res, async (err) => {
+    if (err) {
+      console.error("Multer Error:", err);
+      return res.status(500).json({ error: 'Multer upload failed', details: err.message || err });
+    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   try {
     const user = req.user!;
     
-    // Create resume in MongoDB
+    // Construct local URL for the AI service to download
+    const port = process.env.PORT || 5000;
+    const localUrl = `http://127.0.0.1:${port}/uploads/${req.file.filename}`;
+
+    // Create resume in MongoDB (keeping 'cloudinaryUrl' field name for schema compatibility)
     const resume = new Resume({
       filename: req.file.originalname,
-      cloudinaryUrl: req.file.path, // Cloudinary URL
-      rawText: "Pending extraction...", // Will be updated by AI service
+      cloudinaryUrl: localUrl, 
+      rawText: "Pending extraction...", 
       status: 'PENDING',
       uploadedBy: user.userId,
       organizationId: user.organizationId
@@ -31,7 +57,7 @@ router.post('/upload', uploadCloudinary.single('file'), async (req: AuthRequest,
     res.status(202).json({ 
       message: "Upload successful, processing started", 
       id: resume._id,
-      cloudinaryUrl: resume.cloudinaryUrl
+      cloudinaryUrl: localUrl
     });
 
     // Notify clients that a new resume is pending
@@ -44,6 +70,10 @@ router.post('/upload', uploadCloudinary.single('file'), async (req: AuthRequest,
         resume_id: resume._id.toString(),
         cloudinary_url: resume.cloudinaryUrl,
         filename: resume.filename
+      }, {
+        headers: {
+          'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
+        }
       }).catch(err => {
         console.error("Webhook trigger failed:", err.message);
         if (err.response) {
@@ -58,6 +88,7 @@ router.post('/upload', uploadCloudinary.single('file'), async (req: AuthRequest,
     console.error("Upload error:", error);
     res.status(500).json({ error: 'Upload failed' });
   }
+  });
 });
 
 router.get('/', async (req: AuthRequest, res: any) => {
@@ -102,6 +133,25 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
   } catch (error) {
     console.error("Stats error:", error);
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+router.delete('/:id', async (req: AuthRequest, res: any) => {
+  try {
+    const user = req.user!;
+    const resumeId = req.params.id;
+
+    // Delete from MongoDB (ensure the user's organization owns it)
+    const result = await Resume.deleteOne({ _id: resumeId, organizationId: user.organizationId });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Resume not found or unauthorized' });
+    }
+
+    res.status(200).json({ message: 'Resume deleted successfully' });
+  } catch (error) {
+    console.error("Delete resume error:", error);
+    res.status(500).json({ error: 'Failed to delete resume' });
   }
 });
 

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, DragEvent, ChangeEvent } from 'react';
-import { UploadCloud, FileText, CheckCircle, Users, TrendingUp, BrainCircuit, ChevronRight, X, Sparkles, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle, Users, TrendingUp, BrainCircuit, ChevronRight, X, Sparkles, Search, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
 import type { RootState } from '../store';
 import { logout } from '../store/authSlice';
+import { AgentVisualizer } from '../components/AgentVisualizer';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -23,6 +24,7 @@ export const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const token = useSelector((state: RootState) => state.auth.token);
   const dispatch = useDispatch();
@@ -51,12 +53,19 @@ export const Dashboard = () => {
     socket.on('resume_processed', () => {
       fetchData(); // auto-refresh when processed
     });
+    socket.on('resume_status_update', (data: { id: string, status: string }) => {
+      setCandidates(prev => prev.map(c => 
+        (c._id === data.id || c.id === data.id) ? { ...c, status: data.status } : c
+      ));
+      if (data.status === 'PROCESSED' || data.status === 'FAILED') fetchData(); // Refresh stats
+    });
     return () => { socket.disconnect(); };
   }, [token]);
 
   const handleFileUpload = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
+    setIsUploading(true);
     try {
       await axios.post(`${API_URL}/resumes/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
@@ -64,7 +73,9 @@ export const Dashboard = () => {
       fetchData(); // Refresh data immediately to show PENDING state
     } catch (error) {
       console.error("Upload failed", error);
-      alert("Failed to upload file");
+      alert("Failed to upload file. Please try again.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -100,6 +111,28 @@ export const Dashboard = () => {
     if (e.target.files && e.target.files[0]) {
       handleFileUpload(e.target.files[0]);
     }
+    // Reset the input so the same file can be uploaded again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteCandidate = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this candidate?")) return;
+    try {
+      await axios.delete(`${API_URL}/resumes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCandidates(prev => prev.filter(c => (c._id || c.id) !== id));
+      if (selectedCandidate && (selectedCandidate._id || selectedCandidate.id) === id) {
+        setSelectedCandidate(null);
+      }
+      fetchData(); // Refresh stats
+    } catch (error) {
+      console.error("Failed to delete candidate:", error);
+      alert("Failed to delete candidate");
+    }
   };
 
   const openCandidate = async (candidate: any) => {
@@ -112,8 +145,8 @@ export const Dashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSummary(res.data.summary);
-      } catch (err) {
-        setSummary("Failed to generate AI Summary.");
+      } catch (err: any) {
+        setSummary(err.response?.data?.error || "Failed to generate AI Summary.");
       } finally {
         setLoadingSummary(false);
       }
@@ -122,6 +155,9 @@ export const Dashboard = () => {
 
   // Find candidate by ID for search results
   const getCandidateById = (id: string) => candidates.find(c => (c._id || c.id) === id);
+
+  const processingCandidate = candidates.find(c => ['PENDING', 'EXTRACTING', 'ANALYZING'].includes(c.status));
+  const activeStatus = processingCandidate ? processingCandidate.status : null;
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 relative">
@@ -149,6 +185,11 @@ export const Dashboard = () => {
         </form>
       </header>
       
+      {/* 3D Agent Workflow Tracker (Shown when a resume is processing or recently processed) */}
+      {(activeStatus || candidates.length > 0) && (
+        <AgentVisualizer status={activeStatus || (candidates.length > 0 ? candidates[0].status : null)} />
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white/70 backdrop-blur-md rounded-2xl p-6 border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
@@ -260,6 +301,13 @@ export const Dashboard = () => {
                           {candidate.status}
                         </p>
                       </div>
+                      <button
+                        onClick={(e) => handleDeleteCandidate(candidate._id || candidate.id, e)}
+                        className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                        title="Delete Candidate"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                       <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500" />
                     </div>
                   </div>
@@ -292,8 +340,12 @@ export const Dashboard = () => {
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-1">Ingest Resumes</h3>
             <p className="text-sm text-slate-500 mb-4">Drag & drop PDF, DOCX, or TXT</p>
-            <button className="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-6 rounded-xl transition-colors text-sm shadow-sm pointer-events-none">
-              Browse Files
+            <button 
+              className="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-6 rounded-xl transition-colors text-sm shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+              disabled={isUploading}
+              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+            >
+              {isUploading ? "Uploading..." : "Browse Files"}
             </button>
           </div>
 

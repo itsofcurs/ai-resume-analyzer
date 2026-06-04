@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
@@ -10,22 +12,39 @@ import authRoutes from './routes/auth';
 import resumeRoutes from './routes/resumes';
 import copilotRoutes from './routes/copilot';
 import jobsRoutes from './routes/jobs';
+import path from 'path';
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const httpServer = createServer(app);
 export const io = new Server(httpServer, {
-  cors: { origin: '*' }
+  cors: { origin: ['http://localhost:5173', 'http://localhost:5174', process.env.FRONTEND_URL || ''] }
 });
 
 export const prisma = new PrismaClient();
-export const cacheMap = new Map<string, string>();
 
-app.use(cors());
+// Initialize Redis Client
+export const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.error('Redis Client Error', err));
+
+app.use(helmet());
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', process.env.FRONTEND_URL || ''] }));
 app.use(express.json());
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', apiLimiter);
+
 // Routes
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/copilot', copilotRoutes);
@@ -59,6 +78,10 @@ async function startServer() {
     await prisma.$connect();
     console.log('Connected to PostgreSQL via Prisma');
 
+    // Connect to Redis
+    await redisClient.connect();
+    console.log('Connected to Redis');
+
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -68,4 +91,6 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
