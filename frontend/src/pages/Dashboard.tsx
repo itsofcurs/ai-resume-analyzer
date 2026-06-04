@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { FormEvent, DragEvent, ChangeEvent } from 'react';
-import { UploadCloud, FileText, CheckCircle, Users, TrendingUp, BrainCircuit, ChevronRight, X, Sparkles, Search, ShieldAlert, ShieldCheck, Trash2, Target, Award } from 'lucide-react';
+import type { DragEvent, ChangeEvent } from 'react';
+import { UploadCloud, FileText, CheckCircle, Users, TrendingUp, BrainCircuit, ChevronRight, X, Sparkles, ShieldAlert, ShieldCheck, Trash2, Target, Award } from 'lucide-react';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
@@ -24,9 +24,7 @@ export const Dashboard = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Semantic Search State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+
   const [isUploading, setIsUploading] = useState(false);
 
   const token = useSelector((state: RootState) => state.auth.token);
@@ -83,25 +81,7 @@ export const Dashboard = () => {
     }
   };
 
-  const handleSemanticSearch = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) {
-      setSearchResults(null);
-      return;
-    }
-    
-    setIsSearching(true);
-    try {
-      const res = await axios.post(`${API_URL}/copilot/search`, { query: searchQuery }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSearchResults(res.data.matches);
-    } catch (err) {
-      console.error("Search failed", err);
-    } finally {
-      setIsSearching(false);
-    }
-  };
+
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault(); 
@@ -157,8 +137,7 @@ export const Dashboard = () => {
     }
   };
 
-  // Find candidate by ID for search results
-  const getCandidateById = (id: string) => candidates.find(c => (c._id || c.id) === id);
+
 
   const processingCandidate = candidates.find(c => ['PENDING', 'EXTRACTING', 'ANALYZING', 'SCORING', 'RANKING'].includes(c.status));
   const activeStatus = processingCandidate ? processingCandidate.status : null;
@@ -231,12 +210,9 @@ export const Dashboard = () => {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-semibold text-slate-800">
-                {searchResults ? `Search Results (${searchResults.length})` : 'Recent Candidates'}
+                Recent Candidates
               </h3>
               <div className="flex items-center gap-4">
-                {searchResults && (
-                  <button className="text-sm text-slate-500 hover:text-slate-700" onClick={() => { setSearchResults(null); setSearchQuery(''); }}>Clear Search</button>
-                )}
                 <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700" onClick={fetchData}>Refresh Data</button>
               </div>
             </div>
@@ -244,32 +220,6 @@ export const Dashboard = () => {
             <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
               {loading ? (
                 <div className="p-8 text-center text-slate-500">Loading data from Database...</div>
-              ) : searchResults ? (
-                searchResults.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500">No candidates match this semantic query.</div>
-                ) : (
-                  searchResults.map((match, idx) => {
-                    const c = getCandidateById(match.resume_id);
-                    return (
-                      <div key={idx} onClick={() => c && openCandidate(c)} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
-                            {match.metadata?.name?.substring(0,2).toUpperCase() || 'UN'}
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
-                              {match.metadata?.name || 'Unknown Candidate'}
-                            </h4>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Match Score: {((1 - match.distance) * 100).toFixed(1)}%
-                            </p>
-                          </div>
-                        </div>
-                        <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500" />
-                      </div>
-                    )
-                  })
-                )
               ) : candidates.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">No resumes uploaded yet. Upload one to see it here!</div>
               ) : candidates.map((candidate) => {
