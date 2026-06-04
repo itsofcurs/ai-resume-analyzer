@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, Loader2, Target } from 'lucide-react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import type { RootState } from '../store';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
