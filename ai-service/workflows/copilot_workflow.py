@@ -174,7 +174,12 @@ class CopilotWorkflow:
                 "tool_data": json.dumps(state["tool_data"], default=str)
             })
             cleaned = clean_json_str(raw)
-            state["response"] = json.loads(cleaned)
+            try:
+                state["response"] = json.loads(cleaned)
+            except json.JSONDecodeError:
+                logger.warning(f"[COPILOT] LLM did not return JSON. Using raw text fallback. Text: {cleaned[:100]}")
+                state["response"] = {"message": cleaned, "data": None}
+                
             # Inject structured data so UI can render widgets
             if state["intent"] in ["search", "recommend"]:
                 state["response"]["data"] = state["tool_data"]
