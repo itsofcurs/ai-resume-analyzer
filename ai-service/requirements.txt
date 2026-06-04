@@ -58,7 +58,7 @@ python-dotenv==1.1.0
 # Utilities
 # ---------------------------------------------------------------------------
 tenacity==9.0.0          # Retry logic for LLM calls
-orjson==3.10.18          # Fast JSON serialisation
+orjson>=3.11.5          # Fast JSON serialisation
 
 # ---------------------------------------------------------------------------
 # Redis (optional, for distributed cache + rate limits)
