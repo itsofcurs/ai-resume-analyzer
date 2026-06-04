@@ -610,7 +610,7 @@ def health_check():
     return {
         "status": "ok",
         "service": "AI Recruitment Intelligence",
-        "pipeline_version": "2.1.0",
+        "pipeline_version": "2.2.0-Phase2A",
         "components": {
             "mongodb": "connected",
             "vector_search": "ready" if vector_ok else "unavailable",
