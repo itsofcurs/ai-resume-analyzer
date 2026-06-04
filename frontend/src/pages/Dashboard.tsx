@@ -8,7 +8,7 @@ import type { RootState } from '../store';
 import { logout } from '../store/authSlice';
 import { AgentVisualizer } from '../components/AgentVisualizer';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
 export const Dashboard = () => {
   const [isDragging, setIsDragging] = useState(false);
@@ -49,7 +49,8 @@ export const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-    const socket = io('http://localhost:5000');
+    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const socket = io(socketUrl);
     socket.on('resume_processed', () => {
       fetchData(); // auto-refresh when processed
     });

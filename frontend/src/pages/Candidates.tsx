@@ -5,7 +5,7 @@ import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, Ex
 import axios from 'axios';
 import type { RootState } from '../store';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
 export const Candidates = () => {
   const [candidates, setCandidates] = useState<any[]>([]);

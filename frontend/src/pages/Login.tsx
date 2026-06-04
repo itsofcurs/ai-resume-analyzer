@@ -24,8 +24,9 @@ export const Login = () => {
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       dispatch(login({ token: response.data.token, role: response.data.role }));
       navigate('/');
     } catch (error: unknown) {
@@ -33,13 +34,13 @@ export const Login = () => {
         // Auto-register for demo purposes
         try {
           const defaultName = email.split('@')[0];
-          await axios.post('http://localhost:5000/api/auth/register', { 
+          await axios.post(`${API_URL}/auth/register`, { 
             email, 
             password, 
             name: defaultName,
             organizationName: `${defaultName} Org`
           });
-          const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+          const res = await axios.post(`${API_URL}/auth/login`, { email, password });
           dispatch(login({ token: res.data.token, role: res.data.role }));
           navigate('/');
         } catch {

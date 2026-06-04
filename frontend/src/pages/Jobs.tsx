@@ -5,7 +5,7 @@ import { Plus, Trash2, Sparkles, BrainCircuit, X, Briefcase } from 'lucide-react
 import axios from 'axios';
 import type { RootState } from '../store';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
 // Template constants to make it incredibly cool and quick to seed data
 const JOB_TEMPLATES = [
