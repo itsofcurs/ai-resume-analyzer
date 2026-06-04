@@ -38,8 +38,9 @@ router.post('/upload', (req: AuthRequest, res: any) => {
   try {
     const user = req.user!;
     
-    const port = process.env.PORT || 5000;
-    const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://127.0.0.1:${port}`;
+    const host = req.get('host') || '127.0.0.1:5000';
+    const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+    const baseUrl = process.env.RENDER_EXTERNAL_URL || `${protocol}://${host}`;
     const localUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     // Create resume in MongoDB (keeping 'cloudinaryUrl' field name for schema compatibility)
