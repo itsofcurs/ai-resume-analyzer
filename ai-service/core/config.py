@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # Groq settings
     groq_api_key: Optional[str] = Field(default=None, alias="GROQ_API_KEY")
-    groq_model: str = Field(default="llama3-70b-8192", alias="GROQ_MODEL")
+    groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
 
     # OpenRouter settings
     openrouter_api_key: Optional[str] = Field(default=None, alias="OPENROUTER_API_KEY")
