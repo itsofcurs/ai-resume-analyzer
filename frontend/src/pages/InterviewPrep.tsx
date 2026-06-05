@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
-import { BrainCircuit, Loader2, FileText, Send, User, ChevronDown, ChevronUp, BookOpen, Lightbulb, GraduationCap } from 'lucide-react';
+import { BrainCircuit, Loader2, FileText, Send, User, BookOpen, Lightbulb, GraduationCap } from 'lucide-react';
 import type { RootState } from '../store';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../components/ui/accordion';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
@@ -73,54 +74,101 @@ function parseSummary(raw: string): { title: string; content: string }[] {
   return sections;
 }
 
-const QnACard = ({ question, answer, index }: { question: string; answer: string; index: number }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  return (
-    <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-5 py-4 flex items-start gap-3 text-left hover:bg-slate-50/50 transition-colors"
-      >
-        <span className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-          {index + 1}
-        </span>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm text-slate-800 leading-snug">{question}</h4>
-        </div>
-        <div className="shrink-0 mt-0.5">
-          {isOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-        </div>
-      </button>
-      
-      {isOpen && (
-        <div className="px-5 pb-4 pt-0 border-t border-slate-100 animate-fade-in">
-          <div className="ml-10 mt-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Lightbulb size={13} className="text-amber-500" />
-              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Answer</span>
-            </div>
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{answer}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+
 
 const SummarySection = ({ title, content, index }: { title: string; content: string; index: number }) => {
   const icons = [BookOpen, GraduationCap, Lightbulb, BrainCircuit];
   const Icon = icons[index % icons.length];
   
+  const renderContent = (text: string) => {
+    const lines = text.split('\n');
+    let listItems: string[] = [];
+    const elements: React.ReactNode[] = [];
+    
+    lines.forEach((line, i) => {
+      const trimmed = line.trim();
+      const listMatch = trimmed.match(/^[-*]\s+(.+)/) || trimmed.match(/^\d+\.\s+(.+)/);
+      
+      if (listMatch) {
+        listItems.push(listMatch[1]);
+      } else {
+        if (listItems.length > 0) {
+          elements.push(
+            <ul key={`list-${i}`} className="space-y-2.5 my-4 ml-1">
+              {listItems.map((item, j) => (
+                <li key={j} className="flex items-start gap-3">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2 shadow-sm ${index % 2 === 0 ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
+                  <span className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>') }} />
+                </li>
+              ))}
+            </ul>
+          );
+          listItems = [];
+        }
+        
+        if (trimmed) {
+          elements.push(
+            <p key={`p-${i}`} className="text-sm text-slate-700 leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: trimmed.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>') }} />
+          );
+        }
+      }
+    });
+    
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key="list-final" className="space-y-2.5 my-4 ml-1">
+          {listItems.map((item, j) => (
+            <li key={j} className="flex items-start gap-3">
+              <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2 shadow-sm ${index % 2 === 0 ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
+              <span className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>') }} />
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    
+    return elements;
+  };
+
+  const gradients = [
+    "from-indigo-500 to-blue-500",
+    "from-emerald-400 to-teal-500",
+    "from-purple-500 to-pink-500",
+    "from-amber-400 to-orange-500"
+  ];
+  
+  const bgColors = [
+    "bg-indigo-50",
+    "bg-emerald-50",
+    "bg-purple-50",
+    "bg-amber-50"
+  ];
+  
+  const iconColors = [
+    "text-indigo-600",
+    "text-emerald-600",
+    "text-purple-600",
+    "text-amber-600"
+  ];
+
+  const gradient = gradients[index % gradients.length];
+  const bgColor = bgColors[index % bgColors.length];
+  const iconColor = iconColors[index % iconColors.length];
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-          <Icon size={14} />
+    <div className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] overflow-hidden relative group hover:shadow-md transition-all duration-300">
+      <div className={`absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b ${gradient}`}></div>
+      <div className="p-6 pl-8">
+        <div className="flex items-center gap-3.5 mb-5 border-b border-slate-100 pb-4">
+          <div className={`w-11 h-11 rounded-xl ${bgColor} ${iconColor} flex items-center justify-center shadow-inner border border-white/50 shrink-0`}>
+            <Icon size={22} />
+          </div>
+          <h4 className="text-[17px] font-bold text-slate-800 tracking-tight">{title}</h4>
         </div>
-        <h4 className="font-bold text-sm text-slate-800">{title}</h4>
+        <div className="pl-1">
+          {renderContent(content)}
+        </div>
       </div>
-      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{content}</p>
     </div>
   );
 };
@@ -284,9 +332,27 @@ export const InterviewPrep = () => {
               {result && !loading && mode === 'QnA' && (
                 <div className="space-y-3">
                   {parsedQnA.length > 0 ? (
-                    parsedQnA.map((item, idx) => (
-                      <QnACard key={idx} question={item.question} answer={item.answer} index={idx} />
-                    ))
+                    <Accordion
+                      type="single"
+                      collapsible
+                      className="bg-white border-slate-200/80 shadow-sm w-full rounded-xl -space-y-px"
+                      defaultValue="item-0"
+                    >
+                      {parsedQnA.map((item, idx) => (
+                        <AccordionItem
+                          value={`item-${idx}`}
+                          key={`item-${idx}`}
+                          className="relative border-x border-slate-200/80 first:rounded-t-xl first:border-t last:rounded-b-xl last:border-b"
+                        >
+                          <AccordionTrigger className="px-5 py-4 text-[14px] font-semibold text-slate-800 leading-snug hover:no-underline hover:bg-slate-50/50">
+                            {item.question}
+                          </AccordionTrigger>
+                          <AccordionContent className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap px-5 pb-4">
+                            {item.answer}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
                   ) : (
                     // Fallback: render as plain text if parsing fails
                     <div className="bg-white rounded-xl border border-slate-200/80 p-5">
