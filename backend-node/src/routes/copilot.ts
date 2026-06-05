@@ -47,12 +47,30 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
     const cached = await redisClient.get(cacheKey);
     if (cached) return res.json({ summary: cached, cached: true, authenticity: resume.aiAnalysis });
 
-    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `You are an expert technical recruiter. Write a highly concise, professional 3-sentence summary of this candidate based on their extracted data. Focus on years of experience, core technical stack, and most impressive achievement. 
     Candidate data: ${JSON.stringify(resume.parsedData)}`;
 
-    const result = await model.generateContent(prompt);
-    const summary = result.response.text();
+    let summary = "";
+    let lastError = null;
+    const maxRetries = Math.min(genAIPool.length, 3); // try up to 3 keys
+
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            summary = result.response.text();
+            break; // Success!
+        } catch (err: any) {
+            console.error(`Attempt ${i + 1} failed:`, err?.statusText || err?.message);
+            lastError = err;
+            // if it's not a server/rate-limit error (e.g. invalid prompt), maybe we should break? 
+            // but 403 and 503 and 429 are all good candidates to retry with a different key
+        }
+    }
+
+    if (!summary) {
+        throw lastError; // if all retries failed, throw the last error to be caught by the outer catch
+    }
 
     await redisClient.setEx(cacheKey, 3600 * 24, summary); // cache for 24 hours
     res.json({ 
@@ -161,7 +179,6 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
 
     if (!resume || !job) return res.status(404).json({ error: 'Resume or Job not found' });
 
-    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `Analyze the fit between this candidate and the job description.
     Job Title: ${job.title}
     Job Description: ${job.description}
@@ -177,8 +194,24 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
     
     Return ONLY valid JSON.`;
 
-    const result = await model.generateContent(prompt);
-    let text = result.response.text();
+    let text = "";
+    let lastError = null;
+    const maxRetries = Math.min(genAIPool.length, 3);
+
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            text = result.response.text();
+            break;
+        } catch (err: any) {
+            console.error(`Analyze attempt ${i + 1} failed:`, err?.statusText || err?.message);
+            lastError = err;
+        }
+    }
+
+    if (!text) throw lastError;
+
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     
     res.json(JSON.parse(text));
