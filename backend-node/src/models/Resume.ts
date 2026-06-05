@@ -20,6 +20,7 @@ export interface IResume extends Document {
   comparisonHistory?: any[]; // Array of past comparisons
   interviewQuestions?: any; // Generated interview questions
   interviewEvaluation?: any; // AI evaluation of candidate answers
+  fraudAnalysis?: any; // Phase 2C-B: Trust Score and Fraud Metrics
   uploadedBy: string; // Recruiter/User ID from Postgres
   organizationId: string; // Organization ID from Postgres
   createdAt: Date;
@@ -51,6 +52,7 @@ const ResumeSchema: Schema = new Schema(
     comparisonHistory: [{ type: Schema.Types.Mixed }],
     interviewQuestions: { type: Schema.Types.Mixed },
     interviewEvaluation: { type: Schema.Types.Mixed },
+    fraudAnalysis: { type: Schema.Types.Mixed }, // Phase 2C-B
     uploadedBy: { type: String, required: true }, // Postgres User ID
     organizationId: { type: String, required: true }, // Postgres Organization ID
   },

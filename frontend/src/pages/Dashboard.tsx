@@ -13,7 +13,7 @@ const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
 export const Dashboard = () => {
   const [isDragging, setIsDragging] = useState(false);
-  const [stats, setStats] = useState({ total_resumes: 0, processed: 0, failed: 0, unique_skills: 0, avg_ats_score: null as number | null });
+  const [stats, setStats] = useState({ total_resumes: 0, processed: 0, failed: 0, unique_skills: 0, avg_ats_score: null as number | null, averageTrustScore: null as number | null, highRiskCandidates: 0, mediumRiskCandidates: 0, verifiedCandidates: 0 });
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
@@ -209,6 +209,40 @@ export const Dashboard = () => {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Fraud Detection Metrics */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        {stats.averageTrustScore != null && (
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <ShieldCheck size={64} />
+            </div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Trust Score</p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.averageTrustScore}</h3>
+            <p className="text-xs text-emerald-600 mt-2 font-medium flex items-center gap-1">
+              <TrendingUp size={12} /> Fraud Detection Agent
+            </p>
+          </div>
+        )}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-rose-200 transition-colors">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <ShieldAlert size={64} />
+          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">High Risk</p>
+          <h3 className="text-3xl font-black text-rose-600 tracking-tight">{stats.highRiskCandidates}</h3>
+          <p className="text-xs text-rose-600 mt-2 font-medium">Flagged candidates</p>
+        </div>
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-amber-200 transition-colors">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Medium Risk</p>
+          <h3 className="text-3xl font-black text-amber-500 tracking-tight">{stats.mediumRiskCandidates}</h3>
+          <p className="text-xs text-amber-600 mt-2 font-medium">Contradictions found</p>
+        </div>
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Verified (Low Risk)</p>
+          <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.verifiedCandidates}</h3>
+          <p className="text-xs text-emerald-600 mt-2 font-medium">Clean profiles</p>
+        </div>
       </div>
 
       {/* Pipeline Status Strip (only when processing) */}

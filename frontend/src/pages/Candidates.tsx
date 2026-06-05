@@ -564,6 +564,104 @@ export const Candidates = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Phase 2C-B: Fraud Risk & Consistency Analysis */}
+                      {selectedCandidate.fraudAnalysis && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <ShieldAlert size={18} className={
+                                selectedCandidate.fraudAnalysis.fraudRisk === 'HIGH' ? 'text-rose-600' :
+                                selectedCandidate.fraudAnalysis.fraudRisk === 'MEDIUM' ? 'text-amber-500' :
+                                'text-emerald-600'
+                              } />
+                              Fraud & Consistency Analysis
+                            </h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                selectedCandidate.fraudAnalysis.fraudRisk === 'HIGH' ? 'bg-rose-100 text-rose-700' :
+                                selectedCandidate.fraudAnalysis.fraudRisk === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                                'bg-emerald-100 text-emerald-700'
+                            }`}>
+                              {selectedCandidate.fraudAnalysis.fraudRisk} RISK
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Trust Score</div>
+                              <div className={`text-xl font-black mt-1 ${
+                                selectedCandidate.fraudAnalysis.trustScore >= 80 ? 'text-emerald-600' :
+                                selectedCandidate.fraudAnalysis.trustScore >= 50 ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.fraudAnalysis.trustScore}/100</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Consistency</div>
+                              <div className={`text-xl font-black mt-1 ${
+                                selectedCandidate.fraudAnalysis.consistencyScore >= 80 ? 'text-emerald-600' :
+                                selectedCandidate.fraudAnalysis.consistencyScore >= 50 ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.fraudAnalysis.consistencyScore}/100</div>
+                            </div>
+                          </div>
+                          
+                          {selectedCandidate.fraudAnalysis.recruiterAlert && (
+                            <div className="mb-4 bg-rose-50 text-rose-700 p-3 rounded-xl text-sm border border-rose-100">
+                              <strong>Alert:</strong> {selectedCandidate.fraudAnalysis.recruiterAlert}
+                            </div>
+                          )}
+
+                          <div className="space-y-4 text-sm">
+                            {selectedCandidate.fraudAnalysis.suspiciousClaims?.length > 0 && (
+                              <div>
+                                <h5 className="font-bold text-slate-700 mb-2">Suspicious Claims</h5>
+                                <div className="space-y-2">
+                                  {selectedCandidate.fraudAnalysis.suspiciousClaims.map((c: any, i: number) => (
+                                    <div key={i} className="bg-rose-50 p-3 rounded-lg border border-rose-100">
+                                      <div className="font-medium text-rose-800">Claim: {c.claim}</div>
+                                      <div className="text-rose-600 text-xs mt-1">Evidence: {c.evidence} (Conf: {c.confidence}%)</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedCandidate.fraudAnalysis.verifiedClaims?.length > 0 && (
+                              <div>
+                                <h5 className="font-bold text-slate-700 mb-2">Verified Claims</h5>
+                                <div className="space-y-2">
+                                  {selectedCandidate.fraudAnalysis.verifiedClaims.map((c: any, i: number) => (
+                                    <div key={i} className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                                      <div className="font-medium text-emerald-800">Claim: {c.claim}</div>
+                                      <div className="text-emerald-600 text-xs mt-1">Evidence: {c.evidence} (Conf: {c.confidence}%)</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedCandidate.fraudAnalysis.contradictions?.length > 0 && (
+                              <div>
+                                <h5 className="font-bold text-slate-700 mb-2">Contradictions Found</h5>
+                                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                                  {selectedCandidate.fraudAnalysis.contradictions.map((c: string, i: number) => (
+                                    <li key={i}>{c}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            <div className="bg-slate-50 p-3 rounded-lg mt-2 border border-slate-200">
+                                <div className="font-bold text-slate-700">Final Assessment</div>
+                                <div className="text-slate-600 mt-1">{selectedCandidate.fraudAnalysis.finalAssessment}</div>
+                                <div className="mt-2 flex gap-4 text-xs font-medium">
+                                    <span className="text-slate-500">Impact: <span className="text-slate-800">{selectedCandidate.fraudAnalysis.hiringImpact}</span></span>
+                                    <span className="text-slate-500">Decision: <span className="text-slate-800">{selectedCandidate.fraudAnalysis.recruiterDecision}</span></span>
+                                </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

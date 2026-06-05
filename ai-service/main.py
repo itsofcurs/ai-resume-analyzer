@@ -950,3 +950,11 @@ async def job_match_batch(req: BatchRankingRequestSchema, request: Request):
             status_code=500,
             detail="Batch job match analysis failed. Please retry or contact support.",
         )
+
+@app.post("/api/fraud/analyze", tags=["Fraud Detection"])
+async def fraud_analyze(req: dict):
+    from workflows.fraud_detection_workflow import FraudDetectionWorkflow
+    workflow = FraudDetectionWorkflow()
+    result = await workflow.run(req.get('resume_id'))
+    return result
+

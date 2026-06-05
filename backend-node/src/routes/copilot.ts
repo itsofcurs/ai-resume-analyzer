@@ -76,7 +76,8 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
     res.json({ 
         summary, 
         cached: false,
-        authenticity: resume.aiAnalysis // Pass authenticity data to frontend
+        authenticity: resume.aiAnalysis, // Pass authenticity data to frontend
+        fraudAnalysis: resume.fraudAnalysis // Pass fraud analysis to frontend
     });
   } catch (error: any) {
     console.error("Copilot summary error:", error);
@@ -184,6 +185,7 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
     Job Description: ${job.description}
     Candidate Data: ${JSON.stringify(resume.parsedData)}
     Authenticity Alerts: ${JSON.stringify(resume.aiAnalysis)}
+    Fraud Analysis (Phase 2C-B): ${JSON.stringify(resume.fraudAnalysis)}
     
     Provide a JSON response with:
     - match_score (0-100)

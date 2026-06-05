@@ -31,13 +31,14 @@ INTENT_PROMPT = PromptTemplate.from_template(
     - "search": User wants to find candidates with specific skills or background (e.g. "Find React devs").
     - "recommend": User wants top candidates based on a full job description.
     - "compare": User wants to compare two specific candidates (if they provided IDs or names).
+    - "trust": User is asking about fraud risk, suspicious claims, trustworthy candidates, or contradictions (e.g. "Show suspicious candidates", "Explain trust scores").
     - "chat": General recruitment questions or follow-up questions.
     
     User Query: {query}
     
     Return ONLY a valid JSON:
     {{
-        "intent": "search|recommend|compare|chat"
+        "intent": "search|recommend|compare|trust|chat"
     }}
     """
 )
@@ -88,6 +89,7 @@ class CopilotWorkflow:
         graph.add_node("tool_search", self._node_tool_search)
         graph.add_node("tool_recommend", self._node_tool_recommend)
         graph.add_node("tool_compare", self._node_tool_compare)
+        graph.add_node("tool_trust", self._node_tool_trust)
         graph.add_node("tool_chat", self._node_tool_chat)
         graph.add_node("generate_response", self._node_generate_response)
         graph.add_node("handle_failure", self._node_handle_failure)
@@ -105,6 +107,8 @@ class CopilotWorkflow:
                 return "tool_recommend"
             elif intent == "compare":
                 return "tool_compare"
+            elif intent == "trust":
+                return "tool_trust"
             return "tool_chat"
             
         graph.add_conditional_edges(
@@ -113,7 +117,7 @@ class CopilotWorkflow:
         )
         
         # All tools route to generate_response
-        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_chat"]:
+        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_chat"]:
             graph.add_conditional_edges(
                 node,
                 lambda state: "handle_failure" if state.get("error") else "generate_response"
@@ -212,6 +216,26 @@ class CopilotWorkflow:
                 if not cand_b: missing.append(name_b)
                 state["tool_data"] = {"note": f"Could not find the following candidates in the database: {', '.join(missing)}"}
                 
+        except Exception as e:
+            state["error"] = str(e)
+        return state
+
+    async def _node_tool_trust(self, state: CopilotState) -> CopilotState:
+        logger.info("[COPILOT] Tool - Trust/Fraud")
+        try:
+            collection = get_mongo_collection()
+            # Fetch candidates that have fraudAnalysis
+            cursor = collection.find(
+                {"fraudAnalysis": {"$exists": True, "$ne": None}},
+                {"candidateName": 1, "fraudAnalysis.fraudRisk": 1, "fraudAnalysis.trustScore": 1, "fraudAnalysis.hiringImpact": 1, "fraudAnalysis.recruiterDecision": 1, "fraudAnalysis.contradictions": 1, "fraudAnalysis.suspiciousClaims": 1}
+            ).limit(20)
+            
+            candidates = []
+            async for doc in cursor:
+                doc["_id"] = str(doc["_id"])
+                candidates.append(doc)
+                
+            state["tool_data"] = {"candidates_with_fraud_data": candidates}
         except Exception as e:
             state["error"] = str(e)
         return state

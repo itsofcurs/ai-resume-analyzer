@@ -36,7 +36,8 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
     1. ATS Score comparison
     2. Skill Match & Depth
     3. Education & Experience
-    4. Final Recommendation (who is better and why)
+    4. Authenticity, Trust, and Fraud Risk (compare Trust Scores, Fraud Risk, Consistency, and Recruiter Decision)
+    5. Final Recommendation (who is better and why)
     
     Return ONLY a valid JSON object matching this schema:
     {{
@@ -44,6 +45,7 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
         "ats_comparison": "string",
         "skill_comparison": "string",
         "experience_comparison": "string",
+        "fraud_comparison": "string",
         "final_recommendation": "string"
     }}
     """
@@ -102,13 +104,17 @@ class ComparisonWorkflow:
                 "id": str(cand_a["_id"]),
                 "name": cand_a.get("candidateName", "Unknown"),
                 "parsed": cand_a.get("parsedData", {}),
-                "ats": cand_a.get("atsScores", {})
+                "ats": cand_a.get("atsScores", {}),
+                "ranking": cand_a.get("candidateRanking", {}),
+                "fraud": cand_a.get("fraudAnalysis", {})
             }
             state["candidate_b_data"] = {
                 "id": str(cand_b["_id"]),
                 "name": cand_b.get("candidateName", "Unknown"),
                 "parsed": cand_b.get("parsedData", {}),
-                "ats": cand_b.get("atsScores", {})
+                "ats": cand_b.get("atsScores", {}),
+                "ranking": cand_b.get("candidateRanking", {}),
+                "fraud": cand_b.get("fraudAnalysis", {})
             }
         except Exception as e:
             state["error"] = str(e)

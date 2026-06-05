@@ -186,11 +186,18 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
     const processed = await Resume.countDocuments({ organizationId: orgId, status: 'PROCESSED' });
     const failed = await Resume.countDocuments({ organizationId: orgId, status: 'FAILED' });
     
-    // Aggregate unique skills (assuming parsedData.skills exists)
-    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score');
+    // Aggregate unique skills and fraud metrics
+    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score fraudAnalysis');
     const allSkills = new Set();
     let totalAtsScore = 0;
     let atsCount = 0;
+    
+    let totalTrustScore = 0;
+    let trustCount = 0;
+    let highRiskCandidates = 0;
+    let mediumRiskCandidates = 0;
+    let verifiedCandidates = 0;
+
     resumes.forEach(r => {
       if (r.parsedData?.skills && Array.isArray(r.parsedData.skills)) {
         r.parsedData.skills.forEach((s: any) => {
@@ -202,6 +209,15 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
         totalAtsScore += r.atsScores.overall_score;
         atsCount++;
       }
+      if (r.fraudAnalysis) {
+        if (r.fraudAnalysis.trustScore != null) {
+          totalTrustScore += r.fraudAnalysis.trustScore;
+          trustCount++;
+        }
+        if (r.fraudAnalysis.fraudRisk === 'HIGH') highRiskCandidates++;
+        if (r.fraudAnalysis.fraudRisk === 'MEDIUM') mediumRiskCandidates++;
+        if (r.fraudAnalysis.fraudRisk === 'LOW') verifiedCandidates++;
+      }
     });
 
     res.json({
@@ -210,6 +226,10 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
       failed: failed,
       unique_skills: allSkills.size,
       avg_ats_score: atsCount > 0 ? Math.round(totalAtsScore / atsCount) : null,
+      averageTrustScore: trustCount > 0 ? Math.round(totalTrustScore / trustCount) : null,
+      highRiskCandidates,
+      mediumRiskCandidates,
+      verifiedCandidates
     });
   } catch (error) {
     console.error("Stats error:", error);

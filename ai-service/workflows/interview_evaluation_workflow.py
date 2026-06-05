@@ -163,4 +163,13 @@ class InterviewEvaluationWorkflow:
         if result_state.get("error"):
             return {"error": result_state["error"]}
             
+        # Fire and forget Fraud Detection (Phase 2C-B)
+        try:
+            import asyncio
+            from workflows.fraud_detection_workflow import FraudDetectionWorkflow
+            fraud_workflow = FraudDetectionWorkflow()
+            asyncio.create_task(fraud_workflow.run(resume_id))
+        except Exception as e:
+            logger.error(f"[INTERVIEW_EVALUATION] Failed to trigger fraud detection automatically: {e}")
+
         return result_state["evaluation"]
