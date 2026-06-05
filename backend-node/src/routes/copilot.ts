@@ -9,7 +9,16 @@ import axios from 'axios';
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+const getGeminiKey = () => {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY.trim();
+  if (process.env.GEMINI_API_KEYS) {
+      return process.env.GEMINI_API_KEYS.split(',')[0].trim();
+  }
+  return '';
+};
+
+const genAI = new GoogleGenerativeAI(getGeminiKey());
 
 router.use(authenticateToken as any);
 
