@@ -312,7 +312,6 @@ class InterviewQuestionGraph:
             # Try to parse the JSON string
             cleaned_result = result_str.replace("```json", "").replace("```", "").strip()
             try:
-                import json
                 result_json = json.loads(cleaned_result)
                 return {"result": result_json, "format": "json"}
             except Exception as json_e:
