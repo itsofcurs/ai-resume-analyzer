@@ -99,7 +99,8 @@ router.post('/prep', async (req: AuthRequest, res: any) => {
     }, {
       headers: {
         'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
-      }
+      },
+      timeout: 80000 // 80 second timeout to avoid Render's 100s proxy kill
     });
 
     res.json(response.data);
