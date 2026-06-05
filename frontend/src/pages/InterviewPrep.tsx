@@ -180,6 +180,7 @@ export const InterviewPrep = () => {
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [topic, setTopic] = useState('');
   const [mode, setMode] = useState<'QnA' | 'Summary'>('QnA');
+  const [displayedMode, setDisplayedMode] = useState<'QnA' | 'Summary' | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
@@ -215,6 +216,7 @@ export const InterviewPrep = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setResult(response.data.result);
+      setDisplayedMode(mode);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to generate interview prep.');
     } finally {
@@ -222,8 +224,8 @@ export const InterviewPrep = () => {
     }
   };
 
-  const parsedQnA = mode === 'QnA' && result ? parseQnA(result) : [];
-  const parsedSummary = mode === 'Summary' && result ? parseSummary(result) : [];
+  const parsedQnA = displayedMode === 'QnA' && result ? parseQnA(result) : [];
+  const parsedSummary = displayedMode === 'Summary' && result ? parseSummary(result) : [];
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto animate-fade-in">
@@ -305,8 +307,8 @@ export const InterviewPrep = () => {
           <div className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 min-h-[500px] flex flex-col">
             <div className="p-4 border-b border-slate-100 flex items-center gap-2 text-slate-700 font-bold text-sm bg-slate-50/80 rounded-t-2xl">
               <FileText size={16} className="text-indigo-600" />
-              Generated {mode === 'QnA' ? 'Questions & Answers' : 'Study Guide'}
-              {result && mode === 'QnA' && parsedQnA.length > 0 && (
+              Generated {displayedMode === 'QnA' ? 'Questions & Answers' : 'Study Guide'}
+              {result && displayedMode === 'QnA' && parsedQnA.length > 0 && (
                 <span className="ml-auto text-xs font-medium text-slate-400">{parsedQnA.length} questions</span>
               )}
             </div>
@@ -324,12 +326,12 @@ export const InterviewPrep = () => {
               {loading && (
                 <div className="h-full flex flex-col items-center justify-center text-indigo-500 py-16">
                   <Loader2 size={36} className="animate-spin mb-3" />
-                  <p className="font-medium text-sm animate-pulse">AI is analyzing candidate profile and generating {mode}...</p>
+                  <p className="font-medium text-sm animate-pulse">AI is analyzing candidate profile and generating...</p>
                 </div>
               )}
 
               {/* Q&A Cards */}
-              {result && !loading && mode === 'QnA' && (
+              {result && !loading && displayedMode === 'QnA' && (
                 <div className="space-y-3">
                   {parsedQnA.length > 0 ? (
                     <Accordion
@@ -363,7 +365,7 @@ export const InterviewPrep = () => {
               )}
 
               {/* Summary Sections */}
-              {result && !loading && mode === 'Summary' && (
+              {result && !loading && displayedMode === 'Summary' && (
                 <div className="space-y-4">
                   {parsedSummary.length > 0 ? (
                     parsedSummary.map((section, idx) => (
