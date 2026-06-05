@@ -17,7 +17,10 @@ uvicorn[standard]==0.34.3
 langchain
 langchain-core
 langchain-google-genai
+langchain-openai
+langchain-groq
 langgraph
+chromadb
 
 # ---------------------------------------------------------------------------
 # Google Gemini SDK (LLM + Embeddings API)

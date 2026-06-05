@@ -15,7 +15,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 
-from services.gemini_service import GeminiService
+from services.llm.llm_router import LLMRouter
 from database import get_mongo_collection
 from bson import ObjectId
 
@@ -66,7 +66,7 @@ class CandidateGuidanceAgent:
     Conversational Agent Executor for Candidate Guidance.
     """
     def __init__(self):
-        self._llm = GeminiService.get_instance().get_llm()
+        self._llm = LLMRouter.get_llm("guidance")
         self._tools = [analyze_resume_gaps_tool]
         self._prompt = ChatPromptTemplate.from_messages([
             ("system", CANDIDATE_SYSTEM_PROMPT),

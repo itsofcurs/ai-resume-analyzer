@@ -51,6 +51,7 @@ from workflows.batch_job_match_workflow import BatchJobMatchWorkflow
 from workflows.recommendation_workflow import RecommendationWorkflow
 from workflows.comparison_workflow import ComparisonWorkflow
 from workflows.copilot_workflow import CopilotWorkflow
+from workflows.interview_workflow import InterviewQuestionGraph
 from schemas.job_match_schema import JobMatchRequestSchema, FinalATSAnalysisSchema
 from schemas.ranking_schema import BatchRankingRequestSchema, BatchRankingResponseSchema
 from schemas.error_schema import ErrorResponseSchema
@@ -237,6 +238,7 @@ _job_match_workflow = JobMatchWorkflow()
 _recommendation_workflow = RecommendationWorkflow()
 _comparison_workflow = ComparisonWorkflow()
 _copilot_workflow = CopilotWorkflow()
+_interview_workflow = InterviewQuestionGraph()
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +282,9 @@ class CompareRequest(BaseModel):
 
 class CopilotRequest(BaseModel):
     query: str
+
+class InterviewRegenerateRequest(BaseModel):
+    resume_id: str
 
 
 
@@ -586,6 +591,23 @@ async def copilot_chat(req: CopilotRequest):
         return result
     except Exception as exc:
         logger.error("POST /api/copilot/chat — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post(
+    "/api/interview/regenerate",
+    summary="Regenerate Interview Questions",
+    tags=["Phase2A"],
+)
+async def regenerate_interview(req: InterviewRegenerateRequest, background_tasks: BackgroundTasks):
+    try:
+        logger.info("POST /api/interview/regenerate — resume_id='%s'", req.resume_id)
+        # We can either await or run as background. It returns questions or saves them.
+        # interview_workflow just saves to DB and sends a webhook, so run async.
+        background_tasks.add_task(_interview_workflow.run, req.resume_id)
+        return {"message": "Interview regeneration started", "resume_id": req.resume_id}
+    except Exception as exc:
+        logger.error("POST /api/interview/regenerate — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

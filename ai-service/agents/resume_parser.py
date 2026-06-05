@@ -44,7 +44,8 @@ from schemas.resume_schema import (
     EducationSchema,
     ProjectSchema,
 )
-from services.gemini_service import GeminiService, GeminiServiceError
+from services.gemini_service import GeminiServiceError
+from services.llm.llm_router import LLMRouter
 from utils.parser_utils import sanitize_name, clean_json_str, DEFAULT_PROMPT_CHAR_LIMIT
 from utils.security_guardrails import prepare_llm_input, validate_resume_text
 
@@ -113,8 +114,8 @@ class ResumeParserAgent:
         if self._chain is not None:
             return self._chain
 
-        llm = GeminiService.get_instance().get_llm()
-        self._chain = RESUME_PARSER_PROMPT | llm | StrOutputParser()
+        self._llm = LLMRouter.get_llm("resume_parsing")
+        self._chain = RESUME_PARSER_PROMPT | self._llm | StrOutputParser()
         logger.info(
             "ResumeParserAgent: LangChain chain built (prompt_version=%s).",
             PROMPT_VERSION,

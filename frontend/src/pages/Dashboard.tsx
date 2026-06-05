@@ -64,38 +64,53 @@ export const Dashboard = () => {
     return () => { socket.disconnect(); };
   }, [token]);
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (files: FileList | File[]) => {
     const formData = new FormData();
-    formData.append('file', file);
-    setIsUploading(true);
-    try {
-      await axios.post(`${API_URL}/resumes/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
-      });
-      fetchData(); // Refresh data immediately to show PENDING state
-    } catch (error) {
-      console.error("Upload failed", error);
-      alert("Failed to upload file. Please try again.");
-    } finally {
-      setIsUploading(false);
+    const fileArray = Array.from(files);
+    
+    if (fileArray.length === 1) {
+      formData.append('file', fileArray[0]);
+      setIsUploading(true);
+      try {
+        await axios.post(`${API_URL}/resumes/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+        });
+        fetchData();
+      } catch (error) {
+        console.error("Upload failed", error);
+        alert("Failed to upload file. Please try again.");
+      } finally {
+        setIsUploading(false);
+      }
+    } else if (fileArray.length > 1) {
+      fileArray.forEach(f => formData.append('files', f));
+      setIsUploading(true);
+      try {
+        await axios.post(`${API_URL}/resumes/upload/batch`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+        });
+        fetchData();
+      } catch (error) {
+        console.error("Batch upload failed", error);
+        alert("Failed to upload files. Please try again.");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
-
-
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault(); 
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files);
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileUpload(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileUpload(e.target.files);
     }
-    // Reset the input so the same file can be uploaded again if needed
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -298,6 +313,7 @@ export const Dashboard = () => {
             className="hidden" 
             onChange={handleFileChange} 
             accept=".pdf,.docx,.txt" 
+            multiple
           />
           <div 
             className={`bg-white rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 ease-in-out cursor-pointer shadow-sm ${

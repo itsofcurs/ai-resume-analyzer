@@ -32,6 +32,22 @@ class Settings(BaseSettings):
     gemini_timeout_s: float = Field(default=30.0, alias="GEMINI_TIMEOUT_S")
     gemini_max_retries: int = Field(default=3, alias="GEMINI_MAX_RETRIES")
 
+    # DeepSeek settings
+    deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
+    deepseek_model: str = Field(default="deepseek-chat", alias="DEEPSEEK_MODEL")
+    
+    # Qwen settings
+    qwen_api_key: Optional[str] = Field(default=None, alias="QWEN_API_KEY")
+    qwen_model: str = Field(default="qwen-max", alias="QWEN_MODEL")
+
+    # Groq settings
+    groq_api_key: Optional[str] = Field(default=None, alias="GROQ_API_KEY")
+    groq_model: str = Field(default="llama3-70b-8192", alias="GROQ_MODEL")
+
+    # OpenRouter settings
+    openrouter_api_key: Optional[str] = Field(default=None, alias="OPENROUTER_API_KEY")
+    openrouter_model: str = Field(default="meta-llama/llama-3-8b-instruct", alias="OPENROUTER_MODEL")
+
     # Cache settings
     cache_backend: str = Field(default="memory", alias="CACHE_BACKEND")
     cache_default_ttl_s: Optional[int] = Field(default=None, alias="CACHE_DEFAULT_TTL_S")
@@ -115,8 +131,10 @@ class Settings(BaseSettings):
         return value
 
     def validate_startup(self) -> None:
-        if self.llm_enabled and not self.gemini_api_key:
-            raise ValueError("GEMINI_API_KEY is required when LLM_ENABLED is true.")
+        if self.llm_enabled and not any([self.gemini_api_key, self.groq_api_key, self.openrouter_api_key]):
+            raise ValueError("At least one LLM API Key (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY) is required when LLM_ENABLED is true.")
+        if self.environment == "production" and self.cache_backend.lower().strip() != "redis":
+            raise ValueError("Redis must be used as the CACHE_BACKEND in production.")
         if self.cache_backend.lower().strip() == "redis" and not self.redis_url:
             raise ValueError("REDIS_URL is required when CACHE_BACKEND=redis.")
         if self.shortlist_strong_match < self.shortlist_good_match:

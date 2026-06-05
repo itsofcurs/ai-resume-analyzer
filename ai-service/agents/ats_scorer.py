@@ -30,7 +30,8 @@ from schemas.job_match_schema import (
 )
 from schemas.resume_schema import ResumeParseResponse
 from services.embedding_matcher import EmbeddingMatcher
-from services.gemini_service import GeminiService, GeminiServiceError
+from services.gemini_service import GeminiServiceError
+from services.llm.llm_router import LLMRouter
 from services.rule_based_scorer import RuleBasedScorer, RuleBasedScoringConfig
 from services.cache_service import CacheService, cache_service
 from utils.llm_output_guardrails import safe_json_parser
@@ -95,7 +96,7 @@ class ATSScoringAgent:
     def _get_reasoning_chain(self):
         if self._reasoning_chain is not None:
             return self._reasoning_chain
-        llm = GeminiService.get_instance().get_llm()
+        llm = LLMRouter.get_llm("ats_scoring")
         # PromptTemplate -> Gemini -> string output
         self._reasoning_chain = ATS_REASONING_PROMPT | llm | StrOutputParser()
         logger.info(

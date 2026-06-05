@@ -46,6 +46,11 @@ export const io = new Server(httpServer, {
 export const prisma = new PrismaClient();
 
 // Initialize Redis Client
+if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+  console.error("FATAL: REDIS_URL is strictly required in production.");
+  process.exit(1);
+}
+
 export const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
 });

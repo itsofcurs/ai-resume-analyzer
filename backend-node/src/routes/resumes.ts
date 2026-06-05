@@ -103,6 +103,68 @@ router.post('/upload', (req: AuthRequest, res: any) => {
   });
 });
 
+router.post('/upload/batch', (req: AuthRequest, res: any) => {
+  uploadCloudinary.array('files', 20)(req, res, async (err) => {
+    if (err) {
+      console.error("Multer Error:", err);
+      return res.status(500).json({ error: 'Multer batch upload failed', details: err.message || err });
+    }
+    if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    try {
+      const user = req.user!;
+      const forwardedHost = req.get('x-forwarded-host');
+      const rawHost = req.get('host') || '';
+      const host = forwardedHost || rawHost;
+      const protocol = req.get('x-forwarded-proto') || 'http';
+      
+      let baseUrl = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL;
+      if (!baseUrl) {
+        baseUrl = (host.includes('localhost') || host.includes('127.0.0.1')) 
+          ? `http://${host}` 
+          : `${protocol}://${host}`;
+      }
+
+      const files = req.files as Express.Multer.File[];
+      const results = [];
+
+      for (const file of files) {
+        const localUrl = `${baseUrl}/uploads/${file.filename}`;
+        
+        const resume = new Resume({
+          filename: file.originalname,
+          cloudinaryUrl: localUrl, 
+          rawText: "Pending extraction...", 
+          status: 'PENDING',
+          uploadedBy: user.userId,
+          organizationId: user.organizationId
+        });
+
+        await resume.save();
+        results.push({ id: resume._id, filename: file.originalname });
+        io.emit('resume_status_update', { id: resume._id, status: "PENDING" });
+
+        // Trigger AI asynchronously
+        const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+        axios.post(`${aiServiceUrl}/api/process`, {
+          resume_id: resume._id.toString(),
+          cloudinary_url: resume.cloudinaryUrl,
+          filename: resume.filename
+        }, {
+          headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' }
+        }).catch(e => console.error("Batch webhook failed:", e.message));
+      }
+
+      res.status(202).json({ message: "Batch upload successful", files: results });
+    } catch (error) {
+      console.error("Batch upload error:", error);
+      res.status(500).json({ error: 'Batch upload failed' });
+    }
+  });
+});
+
 router.get('/', async (req: AuthRequest, res: any) => {
   try {
     const user = req.user!;

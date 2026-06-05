@@ -45,4 +45,36 @@ router.get('/:candidateId', async (req: AuthRequest, res: any) => {
   }
 });
 
+import axios from 'axios';
+
+router.post('/regenerate', async (req: AuthRequest, res: any) => {
+  try {
+    const user = req.user!;
+    const { candidateId } = req.body;
+
+    if (!candidateId) {
+      return res.status(400).json({ error: 'Missing candidateId' });
+    }
+
+    const resume = await Resume.findOne({ _id: candidateId, organizationId: user.organizationId });
+    if (!resume) {
+      return res.status(404).json({ error: 'Candidate not found or unauthorized' });
+    }
+
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+    const response = await axios.post(`${aiServiceUrl}/api/interview/regenerate`, {
+      resume_id: candidateId
+    }, {
+      headers: {
+        'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
+      }
+    });
+
+    res.json(response.data);
+  } catch (error: any) {
+    console.error("Regenerate interview questions error:", error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to trigger interview generation' });
+  }
+});
+
 export default router;

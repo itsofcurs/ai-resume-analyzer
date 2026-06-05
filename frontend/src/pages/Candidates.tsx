@@ -97,6 +97,22 @@ export const Candidates = () => {
     }
   };
 
+  const handleRegenerateInterview = async () => {
+    if (!selectedCandidate) return;
+    try {
+      setQuestionStatus('generating');
+      await axios.post(`${API_URL}/interview/regenerate`, {
+        candidateId: selectedCandidate._id || selectedCandidate.id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // The socket event QUESTION_GENERATION_COMPLETED will trigger fetchInterviewQuestions
+    } catch (err) {
+      console.error(err);
+      setQuestionStatus('failed');
+    }
+  };
+
   const openCandidate = async (candidate: any) => {
     setSelectedCandidate(candidate);
     setActiveTab('overview');
@@ -645,6 +661,14 @@ export const Candidates = () => {
                       (interviewQuestions.followUpQuestions?.length > 0)
                   ) ? (
                     <div className="space-y-8">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handleRegenerateInterview}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm"
+                        >
+                          Regenerate Questions
+                        </button>
+                      </div>
                       {/* Technical Questions */}
                       {interviewQuestions.technicalQuestions?.length > 0 && (
                         <div className="space-y-4">
@@ -725,7 +749,13 @@ export const Candidates = () => {
                     </div>
                   ) : (
                     <div className="text-center py-20 text-slate-500">
-                      No interview questions generated yet.
+                      <p className="mb-4">No interview questions generated yet.</p>
+                      <button
+                        onClick={handleRegenerateInterview}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                      >
+                        Generate Interview Prep
+                      </button>
                     </div>
                   )}
                 </div>

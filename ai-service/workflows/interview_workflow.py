@@ -15,7 +15,7 @@ from schemas.interview_schema import (
     BehavioralQuestion,
     FollowUpQuestion,
 )
-from services.gemini_service import GeminiService
+from services.llm.llm_router import LLMRouter
 from utils.retry_utils import ainvoke_with_retry
 from utils.parser_utils import clean_json_str
 from core.config import get_settings
@@ -173,7 +173,7 @@ class InterviewQuestionGraph:
         return state
 
     async def _generate_section(self, prompt, resume_json: str, model_class):
-        llm = GeminiService.get_instance().get_llm()
+        llm = LLMRouter.get_llm("interview")
         chain = prompt | llm | StrOutputParser()
         raw = await ainvoke_with_retry(chain, {"resume_json": resume_json})
         cleaned = clean_json_str(raw)
@@ -220,7 +220,7 @@ class InterviewQuestionGraph:
             )
             questions_json = json.dumps(all_questions)
             
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("interview")
             chain = FOLLOWUP_PROMPT | llm | StrOutputParser()
             raw = await ainvoke_with_retry(chain, {"questions_json": questions_json})
             cleaned = clean_json_str(raw)

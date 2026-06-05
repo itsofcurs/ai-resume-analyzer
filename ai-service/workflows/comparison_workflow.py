@@ -17,7 +17,7 @@ from langgraph.graph import StateGraph, END
 from bson import ObjectId
 
 from database import get_mongo_collection
-from services.gemini_service import GeminiService
+from services.llm.llm_router import LLMRouter
 from utils.parser_utils import clean_json_str
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ class ComparisonWorkflow:
     async def _node_generate_comparison(self, state: ComparisonState) -> ComparisonState:
         logger.info("[COMPARE] Stage 2 - Generating AI Comparison")
         try:
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("comparison")
             chain = COMPARISON_PROMPT | llm | StrOutputParser()
             
             raw_response = await chain.ainvoke({

@@ -8,6 +8,8 @@ def test_settings_requires_gemini_key_when_llm_enabled(monkeypatch):
     monkeypatch.setenv("LLM_ENABLED", "true")
     # Override any .env-sourced value
     monkeypatch.setenv("GEMINI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
     s = Settings()
     with pytest.raises(ValueError):
         s.validate_startup()

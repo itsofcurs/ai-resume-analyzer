@@ -12,11 +12,18 @@ export const SemanticSearchWidget = () => {
   const [isSearching, setIsSearching] = useState(false);
   const token = useSelector((state: RootState) => state.auth.token);
 
+  const [hasSearched, setHasSearched] = useState(false);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      setResults([]);
+      setHasSearched(false);
+      return;
+    }
 
     setIsSearching(true);
+    setHasSearched(true);
     try {
       const response = await axios.post(`${API_URL}/copilot/search`, { query, top_k: 3 }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -45,7 +52,13 @@ export const SemanticSearchWidget = () => {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (e.target.value.trim() === '') {
+                setResults([]);
+                setHasSearched(false);
+              }
+            }}
             placeholder="Type your search here..."
             className="w-full bg-slate-100 border-transparent focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 rounded-lg pl-4 pr-10 py-2 text-sm transition-all"
             disabled={isSearching}
@@ -58,6 +71,12 @@ export const SemanticSearchWidget = () => {
             {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
           </button>
         </form>
+
+        {hasSearched && !isSearching && results.length === 0 && (
+          <div className="mt-4 p-4 text-center text-slate-500 text-sm bg-slate-50 rounded-lg border border-slate-100">
+            No candidates found matching this query.
+          </div>
+        )}
 
         {results.length > 0 && (
           <div className="mt-4 space-y-3">

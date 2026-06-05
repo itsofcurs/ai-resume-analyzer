@@ -33,7 +33,7 @@ from prompts.ats_scoring_prompt import ATS_SCORING_PROMPT
 from prompts.candidate_ranking_prompt import CANDIDATE_RANKING_PROMPT
 from schemas.ats_ranking_schema import StandaloneATSScoreSchema, CandidateRankingResultSchema
 from schemas.resume_schema import ResumeParseResponse
-from services.gemini_service import GeminiService
+from services.llm.llm_router import LLMRouter
 from utils.parser_utils import clean_json_str
 from workflows.interview_workflow import InterviewQuestionGraph
 import asyncio
@@ -216,7 +216,7 @@ class ResumeWorkflow:
             parsed = state["parsed"]
             resume_json = json.dumps(parsed.model_dump(exclude_none=True), ensure_ascii=False)
             
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("ats_scoring")
             chain = ATS_SCORING_PROMPT | llm | StrOutputParser()
             raw_response = await chain.ainvoke({"resume_json": resume_json})
             cleaned = clean_json_str(raw_response)
@@ -240,7 +240,7 @@ class ResumeWorkflow:
             ats_scores = state.get("ats_scores") or StandaloneATSScoreSchema()
             ats_json = json.dumps(ats_scores.model_dump(), ensure_ascii=False)
             
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("ranking")
             chain = CANDIDATE_RANKING_PROMPT | llm | StrOutputParser()
             raw_response = await chain.ainvoke({"resume_json": resume_json, "ats_scores_json": ats_json})
             cleaned = clean_json_str(raw_response)

@@ -17,7 +17,7 @@ from langgraph.graph import StateGraph, END
 
 from database import vector_search, get_mongo_collection
 from embeddings import generate_query_embedding
-from services.gemini_service import GeminiService
+from services.llm.llm_router import LLMRouter
 from utils.parser_utils import clean_json_str
 from bson import ObjectId
 from workflows.recommendation_workflow import RecommendationWorkflow
@@ -133,7 +133,7 @@ class CopilotWorkflow:
     async def _node_detect_intent(self, state: CopilotState) -> CopilotState:
         logger.info(f"[COPILOT] Stage 1 - Detecting intent for query: {state['query']}")
         try:
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("copilot")
             chain = INTENT_PROMPT | llm | StrOutputParser()
             raw = await chain.ainvoke({"query": state["query"]})
             cleaned = clean_json_str(raw)
@@ -183,7 +183,7 @@ class CopilotWorkflow:
     async def _node_tool_compare(self, state: CopilotState) -> CopilotState:
         logger.info("[COPILOT] Tool - Compare")
         try:
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("copilot")
             chain = COMPARE_EXTRACTION_PROMPT | llm | StrOutputParser()
             raw = await chain.ainvoke({"query": state["query"]})
             cleaned = clean_json_str(raw)
@@ -224,7 +224,7 @@ class CopilotWorkflow:
     async def _node_generate_response(self, state: CopilotState) -> CopilotState:
         logger.info("[COPILOT] Stage 3 - Generating Response")
         try:
-            llm = GeminiService.get_instance().get_llm()
+            llm = LLMRouter.get_llm("copilot")
             chain = RESPONSE_PROMPT | llm | StrOutputParser()
             raw = await chain.ainvoke({
                 "query": state["query"],
