@@ -362,6 +362,7 @@ export const InterviewPrep = () => {
               {result && !loading && displayedMode === 'QnA' && (
                 <div className="space-y-3">
                   {parsedQnA.length > 0 ? (
+                    <>
                     <Accordion
                       type="single"
                       collapsible
@@ -474,6 +475,7 @@ export const InterviewPrep = () => {
                         </div>
                       </div>
                     )}
+                    </>
                   ) : (
                     // Fallback: render as plain text if parsing fails
                     <div className="bg-white rounded-xl border border-slate-200/80 p-5">
