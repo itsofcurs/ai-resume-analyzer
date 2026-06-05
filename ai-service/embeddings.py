@@ -27,17 +27,45 @@ from core.errors import EmbeddingError
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Configure Gemini SDK at module load
+# Configure Gemini SDK Clients at module load
 # ---------------------------------------------------------------------------
 _settings = get_settings()
+
+import itertools
+import threading
+from google.generativeai.client import get_default_generative_client
+
+_clients = []
+_pool_iterator = None
+_lock = threading.Lock()
 _configured = False
 
-if _settings.gemini_api_key:
-    genai.configure(api_key=_settings.gemini_api_key)
-    _configured = True
-    logger.info("Embeddings: Gemini API configured (model=gemini-embedding-2)")
+keys = _settings.get_parsed_gemini_keys()
+if keys:
+    for key in keys:
+        try:
+            # We must create a new client for each key
+            # According to the source, we can pass `client` to embed_content directly
+            # We initialize a GenerativeServiceClient directly to bypass global state.
+            from google.generativeai.client import configure
+            # We use an ugly hack to get a client: configure sets the global client,
+            # so we save the previous state and restore it. The proper way is to use genai.Client
+            # but older SDK versions don't have it.
+            # However, embed_content takes a `client` object which is a GenerativeServiceClient
+            # Let's import the raw grpc client:
+            from google.generativeai import client as genai_client
+            # the make_client function requires API key and returns a client
+            c = genai_client.make_client(api_key=key)
+            _clients.append(c)
+        except Exception as e:
+            logger.warning(f"Failed to initialize embedding client for a key: {e}")
+            
+    if _clients:
+        _pool_iterator = itertools.cycle(_clients)
+        _configured = True
+        logger.info(f"Embeddings: Gemini API pool configured ({len(_clients)} keys, model=gemini-embedding-2)")
 else:
-    logger.warning("Embeddings: GEMINI_API_KEY not set — embedding calls will fail")
+    logger.warning("Embeddings: GEMINI_API_KEY(S) not set — embedding calls will fail")
 
 EMBEDDING_MODEL = "models/gemini-embedding-2"
 
@@ -55,11 +83,15 @@ def generate_embedding(text: str) -> list[float]:
     truncated_text = text[:8000]
 
     try:
+        with _lock:
+            current_client = next(_pool_iterator)
+            
         result = genai.embed_content(
             model=EMBEDDING_MODEL,
             content=truncated_text,
             task_type="RETRIEVAL_DOCUMENT",
-            output_dimensionality=768
+            output_dimensionality=768,
+            client=current_client
         )
         return result["embedding"]
     except Exception as exc:
@@ -77,11 +109,15 @@ def generate_query_embedding(text: str) -> list[float]:
         raise EmbeddingError("Gemini API not configured — GEMINI_API_KEY is missing")
 
     try:
+        with _lock:
+            current_client = next(_pool_iterator)
+
         result = genai.embed_content(
             model=EMBEDDING_MODEL,
             content=text[:2000],
             task_type="RETRIEVAL_QUERY",
-            output_dimensionality=768
+            output_dimensionality=768,
+            client=current_client
         )
         return result["embedding"]
     except Exception as exc:

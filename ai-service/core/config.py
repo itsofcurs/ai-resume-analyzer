@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # Gemini / LLM settings
     llm_enabled: bool = Field(default=True, alias="LLM_ENABLED")
     gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_api_keys: Optional[str] = Field(default=None, alias="GEMINI_API_KEYS")
     gemini_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_MODEL")
     gemini_timeout_s: float = Field(default=30.0, alias="GEMINI_TIMEOUT_S")
     gemini_max_retries: int = Field(default=3, alias="GEMINI_MAX_RETRIES")
@@ -104,6 +105,15 @@ class Settings(BaseSettings):
     recruiter_api_keys: str = Field(default="", alias="RECRUITER_API_KEYS")  # comma-separated
     internal_api_key: Optional[str] = Field(default=None, alias="INTERNAL_API_KEY")
 
+    def get_parsed_gemini_keys(self) -> list[str]:
+        """Returns a list of all provided Gemini API keys."""
+        keys = []
+        if self.gemini_api_keys:
+            keys.extend([k.strip() for k in self.gemini_api_keys.split(",") if k.strip()])
+        elif self.gemini_api_key:
+            keys.append(self.gemini_api_key.strip())
+        return list(set(keys))  # Deduplicate
+
     @field_validator(
         "max_batch_concurrency",
         "max_inflight_job_match",
@@ -131,8 +141,8 @@ class Settings(BaseSettings):
         return value
 
     def validate_startup(self) -> None:
-        if self.llm_enabled and not any([self.gemini_api_key, self.groq_api_key, self.openrouter_api_key]):
-            raise ValueError("At least one LLM API Key (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY) is required when LLM_ENABLED is true.")
+        if self.llm_enabled and not any([self.gemini_api_key, self.gemini_api_keys, self.groq_api_key, self.openrouter_api_key]):
+            raise ValueError("At least one LLM API Key (GEMINI_API_KEY, GEMINI_API_KEYS, GROQ_API_KEY, OPENROUTER_API_KEY) is required when LLM_ENABLED is true.")
         if self.environment == "production" and self.cache_backend.lower().strip() != "redis":
             raise ValueError("Redis must be used as the CACHE_BACKEND in production.")
         if self.cache_backend.lower().strip() == "redis" and not self.redis_url:

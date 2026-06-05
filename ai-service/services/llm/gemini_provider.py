@@ -7,6 +7,8 @@ Provider implementation for Google Gemini.
 import logging
 from typing import Optional
 
+import itertools
+import threading
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.runnables import Runnable
 
@@ -22,7 +24,9 @@ class GeminiProvider(LLMProvider):
 
     def __init__(self):
         self._settings = get_settings()
-        self._llm: Optional[ChatGoogleGenerativeAI] = None
+        self._llms: list[ChatGoogleGenerativeAI] = []
+        self._pool_iterator = None
+        self._lock = threading.Lock()
 
     @property
     def provider_name(self) -> str:
@@ -31,28 +35,35 @@ class GeminiProvider(LLMProvider):
     def get_client(self) -> Runnable:
         """
         Return the configured ChatGoogleGenerativeAI client.
+        Uses a round-robin pool if multiple API keys are provided.
         """
-        if self._llm is not None:
-            return self._llm
+        if self._llms:
+            with self._lock:
+                return next(self._pool_iterator)
 
-        api_key = self._settings.gemini_api_key
-        if not api_key:
-            raise ValueError(f"GEMINI_API_KEY is missing for provider {self.provider_name}.")
+        api_keys = self._settings.get_parsed_gemini_keys()
+        if not api_keys:
+            raise ValueError(f"GEMINI_API_KEY(S) is missing for provider {self.provider_name}.")
 
         model_name = self._settings.gemini_model
 
         try:
-            self._llm = ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=api_key,
-                temperature=0.0,
-                timeout=self._settings.gemini_timeout_s,
-                max_retries=self._settings.gemini_max_retries,
-                convert_system_message_to_human=True,
-            )
-            logger.debug(f"{self.provider_name.capitalize()}Provider: LLM client ready ({model_name}).")
+            for key in api_keys:
+                llm = ChatGoogleGenerativeAI(
+                    model=model_name,
+                    google_api_key=key,
+                    temperature=0.0,
+                    timeout=self._settings.gemini_timeout_s,
+                    max_retries=self._settings.gemini_max_retries,
+                    convert_system_message_to_human=True,
+                )
+                self._llms.append(llm)
+            
+            self._pool_iterator = itertools.cycle(self._llms)
+            logger.debug(f"{self.provider_name.capitalize()}Provider: LLM client pool ready ({len(self._llms)} keys, model={model_name}).")
         except Exception as exc:
-            logger.error(f"{self.provider_name.capitalize()}Provider: Failed to init LLM — {exc}")
+            logger.error(f"{self.provider_name.capitalize()}Provider: Failed to init LLM pool — {exc}")
             raise
 
-        return self._llm
+        with self._lock:
+            return next(self._pool_iterator)
