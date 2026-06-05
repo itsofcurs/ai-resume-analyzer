@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Candidates } from './pages/Candidates';
 import { Jobs } from './pages/Jobs';
+import { InterviewPrep } from './pages/InterviewPrep';
 
 function App() {
   return (
@@ -37,6 +38,16 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Jobs />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/interview-prep" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <InterviewPrep />
               </DashboardLayout>
             </ProtectedRoute>
           } 

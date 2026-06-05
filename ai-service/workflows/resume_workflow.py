@@ -333,8 +333,6 @@ class ResumeWorkflow:
                 logger.info(
                     f"[WORKFLOW] LangGraph pipeline COMPLETE for resume_id={resume_id} in {total_time:.2f}s"
                 )
-                # Automatically trigger interview question generation in the background
-                asyncio.create_task(InterviewQuestionGraph().run(resume_id))
         except Exception as exc:
             logger.error(f"[WORKFLOW] LangGraph execution crashed: {exc}")
             await self._set_status(resume_id, "FAILED")

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
-import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award, MessageSquare, Users } from 'lucide-react';
+import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award } from 'lucide-react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import type { RootState } from '../store';
@@ -22,10 +22,6 @@ export const Candidates = () => {
   const [summary, setSummary] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
 
-  // Interview Prep State
-  const [activeTab, setActiveTab] = useState<'overview' | 'interview'>('overview');
-  const [interviewQuestions, setInterviewQuestions] = useState<any>(null);
-  const [questionStatus, setQuestionStatus] = useState<'pending' | 'generating' | 'completed' | 'failed'>('pending');
 
 
   const token = useSelector((state: RootState) => state.auth.token);
@@ -47,16 +43,6 @@ export const Candidates = () => {
     fetchCandidates();
     const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const socket = io(socketUrl);
-    
-    socket.on('QUESTION_GENERATION_STARTED', () => {
-      setQuestionStatus('generating');
-    });
-    socket.on('QUESTION_GENERATION_COMPLETED', (data: { candidateId: string }) => {
-      fetchInterviewQuestions(data.candidateId);
-    });
-    socket.on('QUESTION_GENERATION_FAILED', () => {
-      setQuestionStatus('failed');
-    });
 
     return () => { socket.disconnect(); };
   }, [token]);
@@ -78,48 +64,12 @@ export const Candidates = () => {
   };
 
 
-  const fetchInterviewQuestions = async (id: string) => {
-    try {
-      const res = await axios.get(`${API_URL}/interview/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data) {
-        setInterviewQuestions(res.data);
-        setQuestionStatus('completed');
-      } else {
-        setInterviewQuestions(null);
-        setQuestionStatus('generating');
-      }
-    } catch (err) {
-      console.error(err);
-      setInterviewQuestions(null);
-      setQuestionStatus('failed');
-    }
-  };
-
-  const handleRegenerateInterview = async () => {
-    if (!selectedCandidate) return;
-    try {
-      setQuestionStatus('generating');
-      await axios.post(`${API_URL}/interview/regenerate`, {
-        candidateId: selectedCandidate._id || selectedCandidate.id
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // The socket event QUESTION_GENERATION_COMPLETED will trigger fetchInterviewQuestions
-    } catch (err) {
-      console.error(err);
-      setQuestionStatus('failed');
-    }
-  };
 
   const openCandidate = async (candidate: any) => {
     setSelectedCandidate(candidate);
-    setActiveTab('overview');
     if (candidate.status === 'PROCESSED') {
       setLoadingSummary(true);
       setSummary('');
-      fetchInterviewQuestions(candidate._id || candidate.id);
       try {
         const res = await axios.get(`${API_URL}/copilot/summary/${candidate._id || candidate.id}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -384,29 +334,12 @@ export const Candidates = () => {
               </button>
             </div>
 
-            {/* Tabs */}
-            {selectedCandidate.status === 'PROCESSED' && (
-              <div className="px-6 border-b border-slate-100 bg-slate-50/50 sticky top-[104px] z-10 flex gap-6">
-                <button 
-                  onClick={() => setActiveTab('overview')}
-                  className={`py-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-                >
-                  <div className="flex items-center gap-2"><FileText size={16} /> Overview</div>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('interview')}
-                  className={`py-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'interview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-                >
-                  <div className="flex items-center gap-2"><MessageSquare size={16} /> Interview Preparation</div>
-                </button>
-              </div>
-            )}
+
 
 
             {/* Content */}
             <div className="p-8 space-y-8 flex-1">
-              {activeTab === 'overview' ? (
-                <>
+
               {/* Cloudinary Resume View Button */}
               {selectedCandidate.cloudinaryUrl && (
                 <div className="flex justify-between items-center bg-blue-50/50 border border-blue-100/50 p-4 rounded-2xl">
@@ -633,132 +566,8 @@ export const Candidates = () => {
                       </div>
                     </div>
                   </div>
+
                 </>
-              )}
-                </>
-              ) : (
-                <div className="space-y-8 animate-fade-in">
-                  {questionStatus === 'generating' ? (
-                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                      <div className="w-12 h-12 bg-blue-50 text-blue-600 flex items-center justify-center rounded-2xl border border-blue-100">
-                        <BrainCircuit size={24} className="animate-spin" />
-                      </div>
-                      <div className="text-center">
-                        <h4 className="text-lg font-bold text-slate-800">Generating Interview Questions</h4>
-                        <p className="text-slate-500 text-sm mt-1">TalentAI is analyzing the candidate's profile to create personalized questions...</p>
-                      </div>
-                    </div>
-                  ) : questionStatus === 'failed' ? (
-                    <div className="bg-rose-50 border border-rose-100 p-6 rounded-2xl text-center">
-                      <ShieldAlert size={32} className="mx-auto text-rose-500 mb-3" />
-                      <h4 className="text-rose-900 font-bold">Generation Failed</h4>
-                      <p className="text-rose-700 text-sm mt-1">We couldn't generate questions for this candidate.</p>
-                    </div>
-                  ) : interviewQuestions && (
-                      (interviewQuestions.technicalQuestions?.length > 0) ||
-                      (interviewQuestions.projectQuestions?.length > 0) ||
-                      (interviewQuestions.behavioralQuestions?.length > 0) ||
-                      (interviewQuestions.followUpQuestions?.length > 0)
-                  ) ? (
-                    <div className="space-y-8">
-                      <div className="flex justify-end">
-                        <button
-                          onClick={handleRegenerateInterview}
-                          className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm"
-                        >
-                          Regenerate Questions
-                        </button>
-                      </div>
-                      {/* Technical Questions */}
-                      {interviewQuestions.technicalQuestions?.length > 0 && (
-                        <div className="space-y-4">
-                          <h4 className="font-black text-xl text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <BrainCircuit className="text-blue-600" /> Technical Questions
-                          </h4>
-                          <div className="grid gap-4">
-                            {interviewQuestions.technicalQuestions.map((q: any, i: number) => (
-                              <div key={i} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:border-blue-300 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
-                                  <span className="bg-blue-50 text-blue-700 px-3 py-1 text-xs font-bold rounded-lg border border-blue-100 uppercase tracking-wide">
-                                    {q.skill}
-                                  </span>
-                                  <span className={`px-3 py-1 text-xs font-bold rounded-lg border ${
-                                    q.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                    q.difficulty === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                    'bg-rose-50 text-rose-700 border-rose-100'
-                                  }`}>
-                                    {q.difficulty}
-                                  </span>
-                                </div>
-                                <p className="text-slate-800 font-medium text-lg leading-snug">{q.question}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Project Questions */}
-                      {interviewQuestions.projectQuestions?.length > 0 && (
-                        <div className="space-y-4 mt-8">
-                          <h4 className="font-black text-xl text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <Target className="text-indigo-600" /> Project Experience
-                          </h4>
-                          <div className="grid gap-4">
-                            {interviewQuestions.projectQuestions.map((q: any, i: number) => (
-                              <div key={i} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:border-indigo-300 transition-colors">
-                                <span className="text-xs font-bold text-indigo-500 uppercase tracking-wide block mb-2">Project: {q.project}</span>
-                                <p className="text-slate-800 font-medium text-lg leading-snug">{q.question}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Behavioral Questions */}
-                      {interviewQuestions.behavioralQuestions?.length > 0 && (
-                        <div className="space-y-4 mt-8">
-                          <h4 className="font-black text-xl text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <Users className="text-emerald-600" /> Behavioral
-                          </h4>
-                          <div className="grid gap-4">
-                            {interviewQuestions.behavioralQuestions.map((q: any, i: number) => (
-                              <div key={i} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:border-emerald-300 transition-colors">
-                                <p className="text-slate-800 font-medium text-lg leading-snug">{q.question}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Follow-up Questions */}
-                      {interviewQuestions.followUpQuestions?.length > 0 && (
-                        <div className="space-y-4 mt-8">
-                          <h4 className="font-black text-xl text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <MessageSquare className="text-purple-600" /> Strategic Follow-ups
-                          </h4>
-                          <div className="grid gap-4">
-                            {interviewQuestions.followUpQuestions.map((q: any, i: number) => (
-                              <div key={i} className="bg-purple-50/50 border border-purple-100 p-5 rounded-2xl shadow-sm">
-                                <div className="text-xs text-slate-500 mb-2 italic">Follow-up to: "{q.parentQuestion}"</div>
-                                <p className="text-purple-900 font-medium text-lg leading-snug">{q.question}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-20 text-slate-500">
-                      <p className="mb-4">No interview questions generated yet.</p>
-                      <button
-                        onClick={handleRegenerateInterview}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-                      >
-                        Generate Interview Prep
-                      </button>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>

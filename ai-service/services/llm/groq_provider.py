@@ -22,7 +22,11 @@ class GroqProvider(LLMProvider):
         self._settings = get_settings()
         self._llm: Optional[ChatGroq] = None
         
-    def get_llm(self) -> ChatGroq:
+    @property
+    def provider_name(self) -> str:
+        return "groq"
+        
+    def get_client(self) -> ChatGroq:
         """
         Return the configured ChatGroq client.
         """

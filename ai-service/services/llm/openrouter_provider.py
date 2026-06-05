@@ -23,7 +23,11 @@ class OpenRouterProvider(LLMProvider):
         self._settings = get_settings()
         self._llm: Optional[ChatOpenAI] = None
         
-    def get_llm(self) -> ChatOpenAI:
+    @property
+    def provider_name(self) -> str:
+        return "openrouter"
+        
+    def get_client(self) -> ChatOpenAI:
         """
         Return the configured ChatOpenAI client pointing to OpenRouter.
         """

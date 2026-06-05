@@ -77,4 +77,36 @@ router.post('/regenerate', async (req: AuthRequest, res: any) => {
   }
 });
 
+router.post('/prep', async (req: AuthRequest, res: any) => {
+  try {
+    const user = req.user!;
+    const { candidateId, topic, mode } = req.body;
+
+    if (!candidateId || !topic || !mode) {
+      return res.status(400).json({ error: 'Missing required fields: candidateId, topic, mode' });
+    }
+
+    const resume = await Resume.findOne({ _id: candidateId, organizationId: user.organizationId });
+    if (!resume) {
+      return res.status(404).json({ error: 'Candidate not found or unauthorized' });
+    }
+
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+    const response = await axios.post(`${aiServiceUrl}/api/interview/prep`, {
+      resume_id: candidateId,
+      topic,
+      mode
+    }, {
+      headers: {
+        'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
+      }
+    });
+
+    res.json(response.data);
+  } catch (error: any) {
+    console.error("Interview prep error:", error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to generate interview prep' });
+  }
+});
+
 export default router;

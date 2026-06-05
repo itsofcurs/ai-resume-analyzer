@@ -286,6 +286,11 @@ class CopilotRequest(BaseModel):
 class InterviewRegenerateRequest(BaseModel):
     resume_id: str
 
+class InterviewPrepRequest(BaseModel):
+    resume_id: str
+    topic: str
+    mode: str
+
 
 
 # ---------------------------------------------------------------------------
@@ -608,6 +613,25 @@ async def regenerate_interview(req: InterviewRegenerateRequest, background_tasks
         return {"message": "Interview regeneration started", "resume_id": req.resume_id}
     except Exception as exc:
         logger.error("POST /api/interview/regenerate — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post(
+    "/api/interview/prep",
+    summary="Generate targeted interview prep (QnA or Summary) based on candidate and topic",
+    tags=["Phase2A"],
+)
+async def generate_interview_prep(req: InterviewPrepRequest):
+    try:
+        logger.info(f"POST /api/interview/prep — resume_id='{req.resume_id}' topic='{req.topic}' mode='{req.mode}'")
+        result = await _interview_workflow.run_prep(req.resume_id, req.topic, req.mode)
+        if "error" in result:
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/interview/prep — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

@@ -60,6 +60,17 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <FileText size={18} />
             Job Roles
           </Link>
+          <Link 
+            to="/interview-prep" 
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
+              isActive('/interview-prep') 
+                ? 'bg-blue-50 text-blue-600 shadow-sm shadow-blue-500/5' 
+                : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
+            }`}
+          >
+            <BrainCircuit size={18} />
+            Interview Prep
+          </Link>
         </nav>
         <div className="p-4 border-t border-slate-200">
           <button 

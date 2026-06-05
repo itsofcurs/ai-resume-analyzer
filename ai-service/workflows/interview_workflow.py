@@ -270,3 +270,47 @@ class InterviewQuestionGraph:
             "error": None
         }
         await self._graph.ainvoke(initial_state)
+
+    async def run_prep(self, resume_id: str, topic: str, mode: str) -> dict:
+        """
+        Runs on-demand targeted interview prep (QnA or Summary) for a specific topic.
+        """
+        collection = get_mongo_collection()
+        resume = await collection.find_one({"_id": ObjectId(resume_id)})
+        if not resume:
+            return {"error": "Resume not found"}
+        
+        parsed_data = resume.get("parsedData", {})
+        if not parsed_data:
+            return {"error": "No parsed data available for candidate"}
+
+        resume_json = json.dumps(parsed_data)
+        llm = LLMRouter.get_llm("interview")
+        
+        if mode == "QnA":
+            prompt = PromptTemplate.from_template(
+                """You are an expert technical interviewer. Based on the candidate's profile, generate 5 targeted interview questions specifically about the topic/technology: '{topic}'.
+                
+                Candidate Profile:
+                {resume_json}
+                
+                Return a markdown formatted list of questions with brief sample answers expected from a candidate of their caliber.
+                Format clearly with ## Question 1, ## Answer, etc."""
+            )
+        else:
+            prompt = PromptTemplate.from_template(
+                """You are an expert technical interviewer and career coach. Based on the candidate's profile, generate a comprehensive study summary/guide for the topic/technology: '{topic}'.
+                
+                Candidate Profile:
+                {resume_json}
+                
+                Return a markdown formatted study guide tailored to their specific background and experience level. Include key concepts they should review, potential blind spots based on their resume, and advanced topics."""
+            )
+            
+        chain = prompt | llm | StrOutputParser()
+        try:
+            result = await ainvoke_with_retry(chain, {"resume_json": resume_json, "topic": topic})
+            return {"result": result}
+        except Exception as e:
+            logger.error(f"[INTERVIEW] Failed to generate prep for topic {topic}: {e}")
+            return {"error": str(e)}
