@@ -185,6 +185,10 @@ export const InterviewPrep = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
+  
+  const [candidateAnswers, setCandidateAnswers] = useState<Record<number, string>>({});
+  const [evaluating, setEvaluating] = useState(false);
+  const [evaluation, setEvaluation] = useState<any>(null);
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -226,6 +230,30 @@ export const InterviewPrep = () => {
 
   const parsedQnA = displayedMode === 'QnA' && result ? parseQnA(result) : [];
   const parsedSummary = displayedMode === 'Summary' && result ? parseSummary(result) : [];
+
+  const handleEvaluate = async () => {
+    if (!selectedCandidateId || parsedQnA.length === 0) return;
+    
+    const answersArray = parsedQnA.map((q, idx) => ({
+      question: q.question,
+      answer: candidateAnswers[idx] || "No answer provided."
+    }));
+
+    setEvaluating(true);
+    try {
+      const response = await axios.post(`${API_URL}/interview/evaluate`, {
+        resumeId: selectedCandidateId,
+        answers: answersArray
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEvaluation(response.data);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to evaluate interview answers.');
+    } finally {
+      setEvaluating(false);
+    }
+  };
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto animate-fade-in">
@@ -350,11 +378,102 @@ export const InterviewPrep = () => {
                             {item.question}
                           </AccordionTrigger>
                           <AccordionContent className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap px-5 pb-4">
-                            {item.answer}
+                            <div className="mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg text-slate-600 italic">
+                              <span className="font-semibold text-slate-700 not-italic block mb-1 text-xs uppercase">Reference Answer</span>
+                              {item.answer}
+                            </div>
+                            <div>
+                              <label className="font-semibold text-slate-700 block mb-2 text-xs uppercase">Candidate Answer</label>
+                              <textarea 
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition-all min-h-[80px]"
+                                placeholder="Type or dictate the candidate's answer here..."
+                                value={candidateAnswers[idx] || ''}
+                                onChange={(e) => setCandidateAnswers(prev => ({ ...prev, [idx]: e.target.value }))}
+                              />
+                            </div>
                           </AccordionContent>
                         </AccordionItem>
                       ))}
                     </Accordion>
+                    
+                    {/* Evaluate Button */}
+                    <div className="pt-4 flex justify-end">
+                      <button
+                        onClick={handleEvaluate}
+                        disabled={evaluating || Object.keys(candidateAnswers).length === 0}
+                        className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        {evaluating ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={16} />}
+                        {evaluating ? 'Evaluating...' : 'Evaluate Answers'}
+                      </button>
+                    </div>
+
+                    {/* Evaluation Panel */}
+                    {evaluation && (
+                      <div className="mt-8 border-t border-slate-100 pt-6 animate-fade-in">
+                        <div className="flex items-center gap-2 mb-4">
+                          <BrainCircuit className="text-emerald-500" size={20} />
+                          <h3 className="font-bold text-lg text-slate-800">AI Evaluation Results</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Overall</div>
+                            <div className="text-2xl font-black text-slate-800">{evaluation.overallScore}<span className="text-sm text-slate-400 font-medium">/100</span></div>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Technical</div>
+                            <div className="text-2xl font-black text-indigo-600">{evaluation.technicalScore}</div>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Behavioral</div>
+                            <div className="text-2xl font-black text-emerald-600">{evaluation.behavioralScore}</div>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Comm.</div>
+                            <div className="text-2xl font-black text-blue-600">{evaluation.communicationScore}</div>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Confidence</div>
+                            <div className="text-2xl font-black text-purple-600">{evaluation.confidenceScore}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-5">
+                            <h4 className="font-bold text-emerald-800 text-sm mb-3 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Strengths
+                            </h4>
+                            <ul className="space-y-2">
+                              {evaluation.strengths?.map((s: string, i: number) => (
+                                <li key={i} className="text-sm text-emerald-700 leading-relaxed pl-3 border-l-2 border-emerald-200">{s}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="bg-rose-50/50 border border-rose-100 rounded-xl p-5">
+                            <h4 className="font-bold text-rose-800 text-sm mb-3 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div> Areas to Improve
+                            </h4>
+                            <ul className="space-y-2">
+                              {evaluation.weaknesses?.map((w: string, i: number) => (
+                                <li key={i} className="text-sm text-rose-700 leading-relaxed pl-3 border-l-2 border-rose-200">{w}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 relative overflow-hidden">
+                          <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
+                          <h4 className="font-bold text-indigo-900 text-sm mb-2">Recruiter Summary</h4>
+                          <p className="text-sm text-indigo-800/90 leading-relaxed mb-4">{evaluation.recruiterSummary}</p>
+                          
+                          <div className="inline-block bg-white px-3 py-1.5 rounded-lg border border-indigo-200/60 shadow-sm">
+                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider mr-2">Recommendation:</span>
+                            <span className="text-sm font-black text-indigo-700">{evaluation.hireRecommendation}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   ) : (
                     // Fallback: render as plain text if parsing fails
                     <div className="bg-white rounded-xl border border-slate-200/80 p-5">

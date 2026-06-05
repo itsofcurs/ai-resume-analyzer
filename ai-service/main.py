@@ -52,6 +52,7 @@ from workflows.recommendation_workflow import RecommendationWorkflow
 from workflows.comparison_workflow import ComparisonWorkflow
 from workflows.copilot_workflow import CopilotWorkflow
 from workflows.interview_workflow import InterviewQuestionGraph
+from workflows.interview_evaluation_workflow import InterviewEvaluationWorkflow
 from schemas.job_match_schema import JobMatchRequestSchema, FinalATSAnalysisSchema
 from schemas.ranking_schema import BatchRankingRequestSchema, BatchRankingResponseSchema
 from schemas.error_schema import ErrorResponseSchema
@@ -239,12 +240,17 @@ _recommendation_workflow = RecommendationWorkflow()
 _comparison_workflow = ComparisonWorkflow()
 _copilot_workflow = CopilotWorkflow()
 _interview_workflow = InterviewQuestionGraph()
+_interview_evaluation_workflow = InterviewEvaluationWorkflow()
 
 
 # ---------------------------------------------------------------------------
 # HTTP Request / Response models
 # (These are FastAPI-layer models only — NOT the same as schemas/resume_schema.py)
 # ---------------------------------------------------------------------------
+
+class InterviewEvaluateRequest(BaseModel):
+    resume_id: str
+    answers: list[dict]
 
 class ProcessRequest(BaseModel):
     """
@@ -632,6 +638,25 @@ async def generate_interview_prep(req: InterviewPrepRequest):
         raise
     except Exception as exc:
         logger.error("POST /api/interview/prep — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post(
+    "/api/interview/evaluate",
+    summary="Evaluate candidate answers against generated questions",
+    tags=["Phase2C-A"],
+)
+async def evaluate_interview_answers(req: InterviewEvaluateRequest):
+    try:
+        logger.info(f"POST /api/interview/evaluate — resume_id='{req.resume_id}' answers_count={len(req.answers)}")
+        result = await _interview_evaluation_workflow.run(req.resume_id, req.answers)
+        if "error" in result:
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/interview/evaluate — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

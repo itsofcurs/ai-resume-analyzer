@@ -110,4 +110,38 @@ router.post('/prep', async (req: AuthRequest, res: any) => {
   }
 });
 
+// POST /api/interview/evaluate
+// Evaluate candidate answers against generated questions
+router.post('/evaluate', authenticateToken, async (req: any, res) => {
+  try {
+    const user = req.user;
+    const { resumeId, answers } = req.body;
+
+    if (!resumeId || !answers || !Array.isArray(answers)) {
+      return res.status(400).json({ error: 'Missing required fields: resumeId, answers (array)' });
+    }
+
+    const resume = await Resume.findOne({ _id: resumeId, organizationId: user.organizationId });
+    if (!resume) {
+      return res.status(404).json({ error: 'Candidate not found or unauthorized' });
+    }
+
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+    const response = await axios.post(`${aiServiceUrl}/api/interview/evaluate`, {
+      resume_id: resumeId,
+      answers
+    }, {
+      headers: {
+        'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
+      },
+      timeout: 100000 // Evaluation can take some time
+    });
+
+    res.json(response.data);
+  } catch (error: any) {
+    console.error("Interview evaluate error:", error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to evaluate interview answers' });
+  }
+});
+
 export default router;

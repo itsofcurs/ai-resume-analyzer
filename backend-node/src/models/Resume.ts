@@ -19,6 +19,7 @@ export interface IResume extends Document {
   semanticScore?: number;
   comparisonHistory?: any[]; // Array of past comparisons
   interviewQuestions?: any; // Generated interview questions
+  interviewEvaluation?: any; // AI evaluation of candidate answers
   uploadedBy: string; // Recruiter/User ID from Postgres
   organizationId: string; // Organization ID from Postgres
   createdAt: Date;
@@ -49,6 +50,7 @@ const ResumeSchema: Schema = new Schema(
     semanticScore: { type: Number },
     comparisonHistory: [{ type: Schema.Types.Mixed }],
     interviewQuestions: { type: Schema.Types.Mixed },
+    interviewEvaluation: { type: Schema.Types.Mixed },
     uploadedBy: { type: String, required: true }, // Postgres User ID
     organizationId: { type: String, required: true }, // Postgres Organization ID
   },
