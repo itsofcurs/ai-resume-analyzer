@@ -203,6 +203,7 @@ export const InterviewPrep = () => {
   const [error, setError] = useState('');
   
   const [candidateAnswers, setCandidateAnswers] = useState<Record<number, string>>({});
+  const [visibleAnswers, setVisibleAnswers] = useState<Record<number, boolean>>({});
   const [evaluating, setEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState<any>(null);
 
@@ -238,6 +239,7 @@ export const InterviewPrep = () => {
       // response.data.result might be the JSON array if Python backend returns format="json"
       setResult(response.data.result);
       setDisplayedMode(mode);
+      setVisibleAnswers({}); // Reset visibility when generating new questions
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to generate interview prep.');
     } finally {
@@ -396,9 +398,20 @@ export const InterviewPrep = () => {
                             {item.question}
                           </AccordionTrigger>
                           <AccordionContent className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap px-5 pb-4">
-                            <div className="mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg text-slate-600 italic">
-                              <span className="font-semibold text-slate-700 not-italic block mb-1 text-xs uppercase">Reference Answer</span>
-                              {item.answer}
+                            <div className="mb-4">
+                              <button 
+                                onClick={() => setVisibleAnswers(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                className="text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors"
+                              >
+                                {visibleAnswers[idx] ? 'Hide Expected Answer' : 'Show Expected Answer'}
+                              </button>
+                              
+                              {visibleAnswers[idx] && (
+                                <div className="mt-2 p-3 bg-slate-50 border border-slate-100 rounded-lg text-slate-600 italic animate-fade-in">
+                                  <span className="font-semibold text-slate-700 not-italic block mb-1 text-xs uppercase">Reference Answer</span>
+                                  {item.answer}
+                                </div>
+                              )}
                             </div>
                             <div>
                               <label className="font-semibold text-slate-700 block mb-2 text-xs uppercase">Candidate Answer</label>
