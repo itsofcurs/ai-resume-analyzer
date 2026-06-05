@@ -294,8 +294,7 @@ class InterviewQuestionGraph:
                 Candidate Profile:
                 {resume_json}
                 
-                Return a markdown formatted list of questions with brief sample answers expected from a candidate of their caliber.
-                Format clearly with ## Question 1, ## Answer, etc."""
+                Return ONLY a valid JSON array of objects. Each object must have a 'question' string and an 'answer' string (brief sample answer). Do not include markdown code blocks."""
             )
         else:
             prompt = PromptTemplate.from_template(
@@ -304,13 +303,21 @@ class InterviewQuestionGraph:
                 Candidate Profile:
                 {resume_json}
                 
-                Return a markdown formatted study guide tailored to their specific background and experience level. Include key concepts they should review, potential blind spots based on their resume, and advanced topics."""
+                Return ONLY a valid JSON array of objects. Each object must have a 'title' string (the section heading) and a 'content' string (the detailed markdown content for that section). Do not include markdown code blocks."""
             )
             
         chain = prompt | llm | StrOutputParser()
         try:
-            result = await ainvoke_with_retry(chain, {"resume_json": resume_json, "topic": topic})
-            return {"result": result}
+            result_str = await ainvoke_with_retry(chain, {"resume_json": resume_json, "topic": topic})
+            # Try to parse the JSON string
+            cleaned_result = result_str.replace("```json", "").replace("```", "").strip()
+            try:
+                import json
+                result_json = json.loads(cleaned_result)
+                return {"result": result_json, "format": "json"}
+            except Exception as json_e:
+                logger.warning(f"[INTERVIEW] Failed to parse JSON prep output: {json_e}. Returning as string.")
+                return {"result": result_str, "format": "string"}
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate prep for topic {topic}: {e}")
             return {"error": str(e)}

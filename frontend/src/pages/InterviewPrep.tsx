@@ -7,8 +7,16 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '..
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
-// Parse markdown-style Q&A into structured cards
-function parseQnA(raw: string): { question: string; answer: string }[] {
+// Parse markdown-style Q&A into structured cards or pass through JSON
+function parseQnA(raw: any): { question: string; answer: string }[] {
+  if (Array.isArray(raw)) {
+    return raw.map(item => ({
+      question: item.question || 'Question',
+      answer: item.answer || 'Answer'
+    }));
+  }
+  if (typeof raw !== 'string') return [];
+
   const items: { question: string; answer: string }[] = [];
   
   // Try numbered Q&A patterns: "1. **Q:** ..." or "**Question 1:**" or "Q1:" etc.
@@ -48,7 +56,15 @@ function parseQnA(raw: string): { question: string; answer: string }[] {
 }
 
 // Parse summary into sections
-function parseSummary(raw: string): { title: string; content: string }[] {
+function parseSummary(raw: any): { title: string; content: string }[] {
+  if (Array.isArray(raw)) {
+    return raw.map(item => ({
+      title: item.title || 'Overview',
+      content: item.content || ''
+    }));
+  }
+  if (typeof raw !== 'string') return [];
+
   const sections: { title: string; content: string }[] = [];
   const blocks = raw.split(/(?=\n#{1,3}\s)/);
   
@@ -219,6 +235,7 @@ export const InterviewPrep = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // response.data.result might be the JSON array if Python backend returns format="json"
       setResult(response.data.result);
       setDisplayedMode(mode);
     } catch (err: any) {
