@@ -10,15 +10,26 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 const router = Router();
 
-const getGeminiKey = () => {
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY.trim();
+const getGeminiKeys = (): string[] => {
   if (process.env.GEMINI_API_KEYS) {
-      return process.env.GEMINI_API_KEYS.split(',')[0].trim();
+      return process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 0);
   }
-  return '';
+  if (process.env.GEMINI_API_KEY) {
+      return [process.env.GEMINI_API_KEY.trim()];
+  }
+  return [];
 };
 
-const genAI = new GoogleGenerativeAI(getGeminiKey());
+const keys = getGeminiKeys();
+const genAIPool = keys.map(key => new GoogleGenerativeAI(key));
+let currentKeyIndex = 0;
+
+const getGenAI = (): GoogleGenerativeAI => {
+    if (genAIPool.length === 0) throw new Error("No Gemini API keys configured");
+    const genAI = genAIPool[currentKeyIndex];
+    currentKeyIndex = (currentKeyIndex + 1) % genAIPool.length;
+    return genAI;
+};
 
 router.use(authenticateToken as any);
 
@@ -36,7 +47,7 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
     const cached = await redisClient.get(cacheKey);
     if (cached) return res.json({ summary: cached, cached: true, authenticity: resume.aiAnalysis });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `You are an expert technical recruiter. Write a highly concise, professional 3-sentence summary of this candidate based on their extracted data. Focus on years of experience, core technical stack, and most impressive achievement. 
     Candidate data: ${JSON.stringify(resume.parsedData)}`;
 
@@ -150,7 +161,7 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
 
     if (!resume || !job) return res.status(404).json({ error: 'Resume or Job not found' });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `Analyze the fit between this candidate and the job description.
     Job Title: ${job.title}
     Job Description: ${job.description}
