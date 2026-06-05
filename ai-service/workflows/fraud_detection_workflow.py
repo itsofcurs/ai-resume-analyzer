@@ -41,6 +41,7 @@ SKILL_ANALYSIS_PROMPT = PromptTemplate.from_template(
     Interview Evaluation:
     {interview_json}
     
+    CRITICAL: Only analyze skills explicitly discussed in the interview. Do not penalize the candidate for skills they claimed but were never asked about.
     Does the candidate's demonstrated knowledge in the interview match the skills claimed on their resume? Are there major discrepancies in technical depth? Output a brief analysis."""
 )
 
@@ -53,6 +54,7 @@ PROJECT_ANALYSIS_PROMPT = PromptTemplate.from_template(
     Interview Evaluation:
     {interview_json}
     
+    CRITICAL: Only analyze projects explicitly discussed in the interview. Do not penalize the candidate for projects they claimed but were never asked about.
     Do the interview answers align with the scope, impact, and complexity of the projects claimed on the resume? Output a brief analysis."""
 )
 
@@ -82,6 +84,11 @@ SCORE_PROMPT = PromptTemplate.from_template(
     Project Analysis: {project_analysis}
     Timeline Analysis: {timeline_analysis}
     Contradictions: {contradictions}
+    
+    CRITICAL RULES:
+    1. If a resume claim was NOT discussed or asked about in the interview, do NOT mark it as suspicious or fraudulent.
+    2. An absence of evidence in the interview is NOT evidence of fraud.
+    3. Only mark a claim as suspicious if the candidate explicitly contradicted it or failed to answer a direct question about it.
     
     Return ONLY a JSON object with this exact schema:
     {{
