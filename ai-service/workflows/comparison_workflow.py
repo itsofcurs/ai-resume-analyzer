@@ -37,7 +37,8 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
     2. Skill Match & Depth
     3. Education & Experience
     4. Authenticity, Trust, and Fraud Risk (compare Trust Scores, Fraud Risk, Consistency, and Recruiter Decision)
-    5. Final Recommendation (who is better and why)
+    5. Hiring Readiness & Growth Potential (compare their skill gaps, 30/60/90 day plans, readiness scores, and learning agility)
+    6. Final Recommendation (who is better and why)
     
     Return ONLY a valid JSON object matching this schema:
     {{
@@ -46,6 +47,7 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
         "skill_comparison": "string",
         "experience_comparison": "string",
         "fraud_comparison": "string",
+        "readiness_comparison": "string",
         "final_recommendation": "string"
     }}
     """

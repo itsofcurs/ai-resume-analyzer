@@ -21,6 +21,7 @@ export interface IResume extends Document {
   interviewQuestions?: any; // Generated interview questions
   interviewEvaluation?: any; // AI evaluation of candidate answers
   fraudAnalysis?: any; // Phase 2C-B: Trust Score and Fraud Metrics
+  skillGapAnalysis?: any; // Phase 2C-C: Skill Gap Intelligence
   uploadedBy: string; // Recruiter/User ID from Postgres
   organizationId: string; // Organization ID from Postgres
   createdAt: Date;
@@ -53,6 +54,7 @@ const ResumeSchema: Schema = new Schema(
     interviewQuestions: { type: Schema.Types.Mixed },
     interviewEvaluation: { type: Schema.Types.Mixed },
     fraudAnalysis: { type: Schema.Types.Mixed }, // Phase 2C-B
+    skillGapAnalysis: { type: Schema.Types.Mixed }, // Phase 2C-C
     uploadedBy: { type: String, required: true }, // Postgres User ID
     organizationId: { type: String, required: true }, // Postgres Organization ID
   },

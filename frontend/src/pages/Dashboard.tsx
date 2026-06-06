@@ -13,7 +13,7 @@ const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
 export const Dashboard = () => {
   const [isDragging, setIsDragging] = useState(false);
-  const [stats, setStats] = useState({ total_resumes: 0, processed: 0, failed: 0, unique_skills: 0, avg_ats_score: null as number | null, averageTrustScore: null as number | null, highRiskCandidates: 0, mediumRiskCandidates: 0, verifiedCandidates: 0 });
+  const [stats, setStats] = useState({ total_resumes: 0, processed: 0, failed: 0, unique_skills: 0, avg_ats_score: null as number | null, averageTrustScore: null as number | null, highRiskCandidates: 0, mediumRiskCandidates: 0, verifiedCandidates: 0, averageHiringReadiness: null as number | null, averageGrowthPotential: null as number | null, candidatesInterviewReady: 0, candidatesRequiringUpskilling: 0 });
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
@@ -242,6 +242,44 @@ export const Dashboard = () => {
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Verified (Low Risk)</p>
           <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.verifiedCandidates}</h3>
           <p className="text-xs text-emerald-600 mt-2 font-medium">Clean profiles</p>
+        </div>
+      </div>
+
+      {/* Career Intelligence Metrics (Skill Gap Phase 2C-C) */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
+        {stats.averageHiringReadiness != null && (
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <BrainCircuit size={64} />
+            </div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Hiring Readiness</p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.averageHiringReadiness}%</h3>
+            <p className="text-xs text-indigo-600 mt-2 font-medium flex items-center gap-1">
+              <TrendingUp size={12} /> Career Intelligence
+            </p>
+          </div>
+        )}
+        {stats.averageGrowthPotential != null && (
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-blue-200 transition-colors">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <TrendingUp size={64} />
+            </div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Growth Potential</p>
+            <h3 className="text-3xl font-black text-blue-600 tracking-tight">{stats.averageGrowthPotential}%</h3>
+            <p className="text-xs text-blue-600 mt-2 font-medium flex items-center gap-1">
+              Future Leaders
+            </p>
+          </div>
+        )}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Interview Ready</p>
+          <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.candidatesInterviewReady}</h3>
+          <p className="text-xs text-emerald-600 mt-2 font-medium">Ready to hire</p>
+        </div>
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-amber-200 transition-colors">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Needs Upskilling</p>
+          <h3 className="text-3xl font-black text-amber-500 tracking-tight">{stats.candidatesRequiringUpskilling}</h3>
+          <p className="text-xs text-amber-600 mt-2 font-medium">Have missing skills</p>
         </div>
       </div>
 

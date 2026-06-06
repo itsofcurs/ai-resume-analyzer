@@ -32,13 +32,14 @@ INTENT_PROMPT = PromptTemplate.from_template(
     - "recommend": User wants top candidates based on a full job description.
     - "compare": User wants to compare two specific candidates (if they provided IDs or names).
     - "trust": User is asking about fraud risk, suspicious claims, trustworthy candidates, or contradictions (e.g. "Show suspicious candidates", "Explain trust scores").
+    - "skill_gap": User is asking about candidate hiring readiness, skill gaps, missing technologies, training needs, or growth potential (e.g. "Show candidates needing Docker training", "Which candidates are interview ready", "Who has highest growth potential", "Which candidates can become job ready within 30 days").
     - "chat": General recruitment questions or follow-up questions.
     
     User Query: {query}
     
     Return ONLY a valid JSON:
     {{
-        "intent": "search|recommend|compare|trust|chat"
+        "intent": "search|recommend|compare|trust|skill_gap|chat"
     }}
     """
 )
@@ -90,6 +91,7 @@ class CopilotWorkflow:
         graph.add_node("tool_recommend", self._node_tool_recommend)
         graph.add_node("tool_compare", self._node_tool_compare)
         graph.add_node("tool_trust", self._node_tool_trust)
+        graph.add_node("tool_skill_gap", self._node_tool_skill_gap)
         graph.add_node("tool_chat", self._node_tool_chat)
         graph.add_node("generate_response", self._node_generate_response)
         graph.add_node("handle_failure", self._node_handle_failure)
@@ -109,6 +111,8 @@ class CopilotWorkflow:
                 return "tool_compare"
             elif intent == "trust":
                 return "tool_trust"
+            elif intent == "skill_gap":
+                return "tool_skill_gap"
             return "tool_chat"
             
         graph.add_conditional_edges(
@@ -117,7 +121,7 @@ class CopilotWorkflow:
         )
         
         # All tools route to generate_response
-        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_chat"]:
+        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_skill_gap", "tool_chat"]:
             graph.add_conditional_edges(
                 node,
                 lambda state: "handle_failure" if state.get("error") else "generate_response"
@@ -236,6 +240,26 @@ class CopilotWorkflow:
                 candidates.append(doc)
                 
             state["tool_data"] = {"candidates_with_fraud_data": candidates}
+        except Exception as e:
+            state["error"] = str(e)
+        return state
+
+    async def _node_tool_skill_gap(self, state: CopilotState) -> CopilotState:
+        logger.info("[COPILOT] Tool - Skill Gap Intelligence")
+        try:
+            collection = get_mongo_collection()
+            # Fetch candidates that have skillGapAnalysis
+            cursor = collection.find(
+                {"skillGapAnalysis": {"$exists": True, "$ne": None}},
+                {"candidateName": 1, "skillGapAnalysis": 1}
+            ).limit(20)
+            
+            candidates = []
+            async for doc in cursor:
+                doc["_id"] = str(doc["_id"])
+                candidates.append(doc)
+                
+            state["tool_data"] = {"candidates_with_skill_gap_data": candidates}
         except Exception as e:
             state["error"] = str(e)
         return state

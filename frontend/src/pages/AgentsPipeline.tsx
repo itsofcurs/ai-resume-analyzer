@@ -64,6 +64,16 @@ const agents = [
     bg: 'bg-rose-50',
     textColor: 'text-rose-600',
     delay: 0.6
+  },
+  {
+    id: 'skillgap',
+    name: 'Skill Gap Intelligence Agent',
+    description: 'Generates hiring readiness scores and personalized 30/60/90 day career development plans.',
+    icon: BrainCircuit,
+    color: 'from-cyan-500 to-blue-600',
+    bg: 'bg-cyan-50',
+    textColor: 'text-cyan-600',
+    delay: 0.7
   }
 ];
 
@@ -182,6 +192,10 @@ export const AgentsPipeline = () => {
                 <div className="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" style={{ animationDelay: '1s' }}></div>
                   <span className="text-xs font-medium text-slate-300">Interview Evaluator Online</span>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+                  <span className="text-xs font-medium text-slate-300">Skill Gap Intelligence Enabled</span>
                 </div>
               </div>
             </div>

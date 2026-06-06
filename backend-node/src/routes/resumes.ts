@@ -187,7 +187,7 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
     const failed = await Resume.countDocuments({ organizationId: orgId, status: 'FAILED' });
     
     // Aggregate unique skills and fraud metrics
-    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score fraudAnalysis');
+    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score fraudAnalysis skillGapAnalysis');
     const allSkills = new Set();
     let totalAtsScore = 0;
     let atsCount = 0;
@@ -197,6 +197,13 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
     let highRiskCandidates = 0;
     let mediumRiskCandidates = 0;
     let verifiedCandidates = 0;
+
+    let totalHiringReadiness = 0;
+    let hiringReadinessCount = 0;
+    let totalGrowthPotential = 0;
+    let growthPotentialCount = 0;
+    let candidatesInterviewReady = 0;
+    let candidatesRequiringUpskilling = 0;
 
     resumes.forEach(r => {
       if (r.parsedData?.skills && Array.isArray(r.parsedData.skills)) {
@@ -218,6 +225,21 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
         if (r.fraudAnalysis.fraudRisk === 'MEDIUM') mediumRiskCandidates++;
         if (r.fraudAnalysis.fraudRisk === 'LOW') verifiedCandidates++;
       }
+      if (r.skillGapAnalysis) {
+        if (r.skillGapAnalysis.hiringReadinessScore != null) {
+          totalHiringReadiness += r.skillGapAnalysis.hiringReadinessScore;
+          hiringReadinessCount++;
+        }
+        if (r.skillGapAnalysis.growthPotentialScore != null) {
+          totalGrowthPotential += r.skillGapAnalysis.growthPotentialScore;
+          growthPotentialCount++;
+        }
+        if (r.skillGapAnalysis.hiringReadinessScore && r.skillGapAnalysis.hiringReadinessScore >= 80) {
+          candidatesInterviewReady++;
+        } else if (r.skillGapAnalysis.hiringReadinessScore && r.skillGapAnalysis.hiringReadinessScore < 80) {
+          candidatesRequiringUpskilling++;
+        }
+      }
     });
 
     res.json({
@@ -229,7 +251,11 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
       averageTrustScore: trustCount > 0 ? Math.round(totalTrustScore / trustCount) : null,
       highRiskCandidates,
       mediumRiskCandidates,
-      verifiedCandidates
+      verifiedCandidates,
+      averageHiringReadiness: hiringReadinessCount > 0 ? Math.round(totalHiringReadiness / hiringReadinessCount) : null,
+      averageGrowthPotential: growthPotentialCount > 0 ? Math.round(totalGrowthPotential / growthPotentialCount) : null,
+      candidatesInterviewReady,
+      candidatesRequiringUpskilling
     });
   } catch (error) {
     console.error("Stats error:", error);

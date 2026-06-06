@@ -662,6 +662,99 @@ export const Candidates = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Phase 2C-C: Skill Gap Intelligence & Career Development */}
+                      {selectedCandidate.skillGapAnalysis && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <BrainCircuit size={18} className="text-indigo-600" />
+                              Career Intelligence Report
+                            </h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                selectedCandidate.skillGapAnalysis.hiringReadinessScore >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                selectedCandidate.skillGapAnalysis.hiringReadinessScore >= 50 ? 'bg-amber-100 text-amber-700' :
+                                'bg-rose-100 text-rose-700'
+                            }`}>
+                              {selectedCandidate.skillGapAnalysis.hiringReadinessScore}% READY
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-4 mb-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Hiring Readiness</div>
+                              <div className={`text-xl font-black mt-1 ${
+                                selectedCandidate.skillGapAnalysis.hiringReadinessScore >= 80 ? 'text-emerald-600' :
+                                selectedCandidate.skillGapAnalysis.hiringReadinessScore >= 50 ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.skillGapAnalysis.hiringReadinessScore}/100</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Growth Potential</div>
+                              <div className="text-xl font-black mt-1 text-indigo-600">
+                                {selectedCandidate.skillGapAnalysis.growthPotentialScore}/100
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Learning Agility</div>
+                              <div className="text-xl font-black mt-1 text-blue-600">
+                                {selectedCandidate.skillGapAnalysis.learningAgilityScore}/100
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {selectedCandidate.skillGapAnalysis.strengths?.length > 0 && (
+                              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                                <h5 className="font-bold text-emerald-800 text-sm mb-2">Core Strengths</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-emerald-700">
+                                  {selectedCandidate.skillGapAnalysis.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {selectedCandidate.skillGapAnalysis.weaknesses?.length > 0 && (
+                              <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                                <h5 className="font-bold text-rose-800 text-sm mb-2">Areas for Improvement</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-rose-700">
+                                  {selectedCandidate.skillGapAnalysis.weaknesses.map((w: string, i: number) => <li key={i}>{w}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+
+                          {selectedCandidate.skillGapAnalysis.missingSkills?.length > 0 && (
+                            <div className="mb-4">
+                              <h5 className="font-bold text-slate-700 text-sm mb-2">Missing Skills & Technologies</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {selectedCandidate.skillGapAnalysis.missingSkills.concat(selectedCandidate.skillGapAnalysis.missingTechnologies || []).map((skill: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-md text-xs font-medium">
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-4">
+                            {selectedCandidate.skillGapAnalysis.thirtyDayPlan?.length > 0 && (
+                              <div>
+                                <h5 className="font-bold text-slate-700 text-sm mb-1">30-Day Plan</h5>
+                                <ul className="list-decimal pl-4 space-y-1 text-xs text-slate-600">
+                                  {selectedCandidate.skillGapAnalysis.thirtyDayPlan.map((item: string, i: number) => <li key={i}>{item}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {selectedCandidate.skillGapAnalysis.recommendedProjects?.length > 0 && (
+                              <div>
+                                <h5 className="font-bold text-slate-700 text-sm mb-1">Recommended Projects</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-slate-600">
+                                  {selectedCandidate.skillGapAnalysis.recommendedProjects.map((item: string, i: number) => <li key={i}>{item}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

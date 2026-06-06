@@ -186,6 +186,7 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
     Candidate Data: ${JSON.stringify(resume.parsedData)}
     Authenticity Alerts: ${JSON.stringify(resume.aiAnalysis)}
     Fraud Analysis (Phase 2C-B): ${JSON.stringify(resume.fraudAnalysis)}
+    Skill Gap Intelligence (Phase 2C-C): ${JSON.stringify(resume.skillGapAnalysis)}
     
     Provide a JSON response with:
     - match_score (0-100)

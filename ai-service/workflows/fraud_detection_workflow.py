@@ -283,6 +283,16 @@ class FraudDetectionWorkflow:
                 {"$set": {"fraudAnalysis": state["fraud_analysis"]}}
             )
             await self._emit_event(state["resume_id"], "FRAUD_COMPLETED")
+            
+            # Fire and forget Skill Gap Analysis (Phase 2C-C)
+            try:
+                from workflows.skill_gap_workflow import SkillGapWorkflow
+                skill_gap_workflow = SkillGapWorkflow()
+                import asyncio
+                asyncio.create_task(skill_gap_workflow.run(state["resume_id"]))
+            except Exception as e:
+                logger.error(f"[FRAUD] Failed to trigger skill gap automatically: {e}")
+
         except Exception as e:
             logger.error(f"[FRAUD] Failed to persist: {e}")
             state["error"] = str(e)

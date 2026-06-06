@@ -170,12 +170,15 @@ async def request_guard(request: Request, call_next):
     if path == "/" or path.startswith("/api/health") or path.startswith("/api/metrics") or path.startswith("/api/system"):
         return await call_next(request)
 
-    internal_key = request.headers.get("x-internal-api-key")
-    if settings.internal_api_key and internal_key != settings.internal_api_key:
-        return JSONResponse(
-            status_code=401,
-            content={"detail": "Unauthorized. Invalid Internal API Key.", "error_code": "unauthorized"}
-        )
+    internal_key = request.headers.get("x-internal-api-key") or request.headers.get("x-api-key")
+    is_internal_auth = False
+    if settings.internal_api_key:
+        if internal_key != settings.internal_api_key:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Unauthorized. Invalid Internal API Key.", "error_code": "unauthorized"}
+            )
+        is_internal_auth = True
 
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > settings.max_request_size_bytes:
@@ -188,7 +191,7 @@ async def request_guard(request: Request, call_next):
     key = f"{client_ip}:{path}"
 
     rate_limit = _rate_limit_for_path(path, settings)
-    if rate_limit:
+    if rate_limit and not is_internal_auth:
         allowed = True
         if redis_limiter is not None:
             allowed = redis_limiter.allow(key, limit=rate_limit["limit"], window_seconds=rate_limit["window"])
@@ -953,8 +956,35 @@ async def job_match_batch(req: BatchRankingRequestSchema, request: Request):
 
 @app.post("/api/fraud/analyze", tags=["Fraud Detection"])
 async def fraud_analyze(req: dict):
-    from workflows.fraud_detection_workflow import FraudDetectionWorkflow
-    workflow = FraudDetectionWorkflow()
-    result = await workflow.run(req.get('resume_id'))
-    return result
+    resume_id = req.get("resume_id")
+    if not resume_id:
+        raise HTTPException(status_code=400, detail="resume_id is required")
+        
+    try:
+        from workflows.fraud_detection_workflow import FraudDetectionWorkflow
+        workflow = FraudDetectionWorkflow()
+        # Fire and forget if needed, but here we wait for the result
+        result = await workflow.run(resume_id)
+        if result and "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return {"status": "success", "fraudAnalysis": result}
+    except Exception as e:
+        logger.error(f"Error in fraud analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/skill-gap/analyze", tags=["Skill Gap"])
+async def skill_gap_analyze(req: dict):
+    resume_id = req.get("resume_id")
+    if not resume_id:
+        raise HTTPException(status_code=400, detail="resume_id is required")
+        
+    try:
+        from workflows.skill_gap_workflow import SkillGapWorkflow
+        workflow = SkillGapWorkflow()
+        result = await workflow.run(resume_id)
+        if result and "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return {"status": "success", "skillGapAnalysis": result}
+    except Exception as e:
+        logger.error(f"Error in skill gap analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

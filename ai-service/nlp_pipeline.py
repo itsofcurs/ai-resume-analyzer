@@ -23,7 +23,7 @@ import requests
 import logging
 import os
 import json
-import google.generativeai as genai
+from google import genai
 
 # Shared text utilities — single source of truth for text processing
 from utils.parser_utils import sanitize_name, truncate_text, clean_json_str
@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 
 # Configure Gemini
 api_key = os.getenv("GEMINI_API_KEY")
+client = None
 if api_key:
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
 def download_and_extract_text(url: str, filename: str) -> str:
     """Download file from Cloudinary and extract raw text."""
@@ -74,7 +75,6 @@ def analyze_resume_unified(text: str) -> dict:
         }
         
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
         You are an expert technical recruiter and HR auditor. Analyze this resume text to extract candidate details and perform an authenticity/AI generation audit.
 
@@ -104,7 +104,10 @@ def analyze_resume_unified(text: str) -> dict:
         Resume text:
         {truncate_text(text)}
         """
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
         # Use shared utility to strip markdown fences reliably
         response_text = clean_json_str(response.text)
         parsed = json.loads(response_text)
