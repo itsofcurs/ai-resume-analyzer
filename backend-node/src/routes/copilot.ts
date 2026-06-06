@@ -130,7 +130,7 @@ router.post('/chat', async (req: AuthRequest, res: any) => {
     let analytics_summary = null;
     try {
       const cached = await redisClient.get(`analytics_dashboard:${orgId}`);
-      if (cached) analytics_summary = JSON.parse(cached);
+      if (cached) analytics_summary = JSON.parse(cached.toString());
     } catch (e) {
       console.warn("Could not load analytics summary for copilot context");
     }

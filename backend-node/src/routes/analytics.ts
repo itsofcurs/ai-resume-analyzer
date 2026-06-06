@@ -43,7 +43,7 @@ router.get('/dashboard', authenticateToken, async (req: AuthRequest, res: any) =
 
     if (req.query.refresh !== 'true') {
       const cached = await redisClient.get(cacheKey);
-      if (cached) return res.json(JSON.parse(cached));
+      if (cached) return res.json(JSON.parse(cached.toString()));
     }
 
     const matchStage = { $match: { organizationId: orgId } };
@@ -115,7 +115,7 @@ router.get('/funnel', authenticateToken, async (req: AuthRequest, res: any) => {
 
     if (req.query.refresh !== 'true') {
       const cached = await redisClient.get(cacheKey);
-      if (cached) return res.json(JSON.parse(cached));
+      if (cached) return res.json(JSON.parse(cached.toString()));
     }
 
     const result = await Resume.aggregate([
@@ -161,7 +161,7 @@ router.get('/trends', authenticateToken, async (req: AuthRequest, res: any) => {
 
     if (req.query.refresh !== 'true') {
       const cached = await redisClient.get(cacheKey);
-      if (cached) return res.json(JSON.parse(cached));
+      if (cached) return res.json(JSON.parse(cached.toString()));
     }
 
     // Daily upload aggregation for the last 30 days
@@ -198,7 +198,7 @@ router.get('/skills', authenticateToken, async (req: AuthRequest, res: any) => {
 
     if (req.query.refresh !== 'true') {
       const cached = await redisClient.get(cacheKey);
-      if (cached) return res.json(JSON.parse(cached));
+      if (cached) return res.json(JSON.parse(cached.toString()));
     }
 
     // Candidate Extracted Skills
