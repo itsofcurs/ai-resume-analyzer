@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
-import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network, Menu } from 'lucide-react';
 import { logout } from '../store/authSlice';
 import { HeaderSearch } from './SemanticSearchWidget';
 import { CopilotPanel } from './CopilotPanel';
@@ -28,6 +28,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
   });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem('sidebar_collapsed', String(collapsed)); } catch {}
@@ -39,12 +40,22 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      {/* Mobile Menu Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className="bg-white border-r border-slate-200/80 flex flex-col shadow-sm z-30 shrink-0 relative"
+        className={`bg-white border-r border-slate-200/80 flex-col shadow-sm z-50 shrink-0 fixed md:relative md:flex inset-y-0 left-0 transform ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
         style={{
           width: collapsed ? 72 : 256,
-          transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         {/* Logo */}
@@ -106,13 +117,19 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header bar */}
-        <header className="h-16 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 flex items-center justify-between px-6 shrink-0 z-20">
-          <div className="flex items-center gap-4">
+        <header className="h-16 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
+          <div className="flex items-center gap-3 md:gap-4">
+            <button 
+              className="md:hidden p-2 -ml-2 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
             <h2 className="text-lg font-bold text-slate-800 tracking-tight">{pageTitle}</h2>
           </div>
 
           {/* Semantic Search — wired */}
-          <div className="flex-1 max-w-lg mx-8">
+          <div className="flex-1 max-w-lg mx-2 md:mx-8">
             <HeaderSearch />
           </div>
 

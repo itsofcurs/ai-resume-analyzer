@@ -158,7 +158,7 @@ export const Dashboard = () => {
   const hasMoreCandidates = candidates.length > VISIBLE_COUNT;
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6 relative animate-fade-in">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 relative animate-fade-in">
       {/* Header */}
       <header>
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">AI Hiring Intelligence</h2>
@@ -166,7 +166,7 @@ export const Dashboard = () => {
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
             <Users size={64} />
@@ -212,7 +212,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Fraud Detection Metrics */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.averageTrustScore != null && (
           <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -246,7 +246,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Career Intelligence Metrics (Skill Gap Phase 2C-C) */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
         {stats.averageHiringReadiness != null && (
           <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -284,7 +284,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Workforce Intelligence Metrics (Predictive Hiring Phase 2C-D) */}
-      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4">
         {stats.averageSuccessScore != null && (
           <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">

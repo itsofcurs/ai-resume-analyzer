@@ -147,7 +147,7 @@ export const Jobs = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 relative">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 relative">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Job Roles & AI Matcher</h2>
@@ -317,7 +317,7 @@ export const Jobs = () => {
                                 <div className="flex flex-col md:flex-row md:items-center gap-4 text-right bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
                                   
                                   {/* Recommendations & Strengths */}
-                                  <div className="text-left max-w-[280px]">
+                                  <div className="text-left w-full sm:max-w-xs">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                       fit.recommendation === 'Strong Hire' ? 'bg-emerald-50 text-emerald-700' :
                                       fit.recommendation === 'Potential' ? 'bg-amber-50 text-amber-700' :
@@ -387,8 +387,8 @@ export const Jobs = () => {
 
       {/* Add Job Description Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-100 relative animate-scale-in">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-none sm:rounded-3xl max-w-2xl w-full h-full sm:h-auto overflow-y-auto p-4 sm:p-8 shadow-2xl border-0 sm:border border-slate-100 relative animate-scale-in">
             <button
               onClick={() => setShowAddModal(false)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"

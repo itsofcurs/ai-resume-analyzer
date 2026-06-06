@@ -82,8 +82,8 @@ export const CopilotPanel = () => {
     <>
       {/* Floating Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 animate-slide-up" style={{ width: 400 }}>
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-2xl shadow-slate-300/30 overflow-hidden" style={{ height: 520 }}>
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-6 z-[60] animate-slide-up sm:w-[400px]">
+          <div className="flex flex-col bg-white sm:rounded-2xl border-0 sm:border border-slate-200 shadow-2xl shadow-slate-300/30 overflow-hidden h-full sm:h-[520px]">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-5 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
