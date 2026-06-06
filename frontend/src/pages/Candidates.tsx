@@ -423,7 +423,7 @@ export const Candidates = () => {
                         <Award size={18} className="text-cyan-600" />
                         <h4 className="font-bold text-slate-800 text-base">Candidate Ranking</h4>
                       </div>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                         <div className="bg-white/60 rounded-xl p-3 text-center border border-cyan-100/50">
                           <div className={`text-3xl font-black ${
                             ['A+', 'A'].includes(selectedCandidate.candidateRanking.grade) ? 'text-emerald-600' :
@@ -584,9 +584,9 @@ export const Candidates = () => {
                               {selectedCandidate.fraudAnalysis.fraudRisk} RISK
                             </span>
                           </div>
-                          <div className="mt-4">
+                          
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                               <div className="text-xs text-slate-500 font-medium">Trust Score</div>
                               <div className={`text-xl font-black mt-1 ${
                                 selectedCandidate.fraudAnalysis.trustScore >= 80 ? 'text-emerald-600' :
@@ -594,7 +594,7 @@ export const Candidates = () => {
                                 'text-rose-600'
                               }`}>{selectedCandidate.fraudAnalysis.trustScore}/100</div>
                             </div>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                               <div className="text-xs text-slate-500 font-medium">Consistency</div>
                               <div className={`text-xl font-black mt-1 ${
                                 selectedCandidate.fraudAnalysis.consistencyScore >= 80 ? 'text-emerald-600' :
@@ -602,7 +602,6 @@ export const Candidates = () => {
                                 'text-rose-600'
                               }`}>{selectedCandidate.fraudAnalysis.consistencyScore}/100</div>
                             </div>
-                          </div>
                           </div>
                           
                           {selectedCandidate.fraudAnalysis.recruiterAlert && (
@@ -680,9 +679,8 @@ export const Candidates = () => {
                             </span>
                           </div>
                           
-                          <div className="mt-4">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                               <div className="text-xs text-slate-500 font-medium">Hiring Readiness</div>
                               <div className={`text-xl font-black mt-1 ${
                                 selectedCandidate.skillGapAnalysis.hiringReadinessScore >= 80 ? 'text-emerald-600' :
@@ -702,7 +700,6 @@ export const Candidates = () => {
                                 {selectedCandidate.skillGapAnalysis.learningAgilityScore}/100
                               </div>
                             </div>
-                          </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -774,9 +771,8 @@ export const Candidates = () => {
                             </span>
                           </div>
 
-                          <div className="mt-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-center">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                               <div className="text-xs text-slate-500 font-medium">Retention Risk</div>
                               <div className={`text-lg font-black mt-1 ${
                                 selectedCandidate.predictiveHiring.retentionRisk === 'LOW' ? 'text-emerald-600' :
