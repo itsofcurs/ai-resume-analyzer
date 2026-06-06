@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { BrainCircuit, Target, Activity, CheckCircle, ShieldAlert, Users, TrendingUp, RefreshCw } from 'lucide-react';
 import type { RootState } from '../store';
 
