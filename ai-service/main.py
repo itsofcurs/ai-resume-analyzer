@@ -988,3 +988,20 @@ async def skill_gap_analyze(req: dict):
     except Exception as e:
         logger.error(f"Error in skill gap analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/predictive-hiring/analyze", tags=["Predictive Hiring"])
+async def predictive_hiring_analyze(req: dict):
+    resume_id = req.get("resume_id")
+    if not resume_id:
+        raise HTTPException(status_code=400, detail="resume_id is required")
+
+    try:
+        from workflows.predictive_hiring_workflow import PredictiveHiringWorkflow
+        workflow = PredictiveHiringWorkflow()
+        result = await workflow.run(resume_id)
+        if result and "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return {"status": "success", "predictiveHiring": result}
+    except Exception as e:
+        logger.error(f"Error in predictive hiring analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

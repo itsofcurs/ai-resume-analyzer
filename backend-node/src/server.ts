@@ -15,6 +15,7 @@ import jobsRoutes from './routes/jobs';
 import interviewRoutes from './routes/interview';
 import fraudRoutes from './routes/fraud';
 import skillgapRoutes from './routes/skillgap';
+import predictiveRoutes from './routes/predictive';
 import path from 'path';
 
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/jobs', jobsRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/fraud', fraudRoutes);
 app.use('/api/skill-gap', skillgapRoutes);
+app.use('/api/predictive-hiring', predictiveRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: "AI Hiring Intelligence Backend is LIVE", status: "ok" });

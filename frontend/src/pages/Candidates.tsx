@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
-import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award } from 'lucide-react';
+import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award, TrendingUp } from 'lucide-react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import type { RootState } from '../store';
@@ -752,6 +752,72 @@ export const Candidates = () => {
                                 </ul>
                               </div>
                             )}
+                          </div>
+                        </div>
+                      )}
+                      {/* Phase 2C-D: Predictive Hiring & Workforce Intelligence */}
+                      {selectedCandidate.predictiveHiring && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <TrendingUp size={18} className="text-purple-600" />
+                              Workforce Intelligence Report
+                            </h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                selectedCandidate.predictiveHiring.successScore >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                selectedCandidate.predictiveHiring.successScore >= 50 ? 'bg-amber-100 text-amber-700' :
+                                'bg-rose-100 text-rose-700'
+                            }`}>
+                              {selectedCandidate.predictiveHiring.successScore}% SUCCESS PROBABILITY
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Retention Risk</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.predictiveHiring.retentionRisk === 'LOW' ? 'text-emerald-600' :
+                                selectedCandidate.predictiveHiring.retentionRisk === 'MEDIUM' ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.predictiveHiring.retentionRisk}</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Leadership</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                ['HIGH', 'EXCEPTIONAL'].includes(selectedCandidate.predictiveHiring.leadershipPotential) ? 'text-purple-600' :
+                                'text-slate-700'
+                              }`}>{selectedCandidate.predictiveHiring.leadershipPotential}</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Team Fit</div>
+                              <div className="text-lg font-black mt-1 text-blue-600">
+                                {selectedCandidate.predictiveHiring.teamFitScore}/100
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Onboarding</div>
+                              <div className="text-lg font-black mt-1 text-slate-700">
+                                {selectedCandidate.predictiveHiring.onboardingDifficulty}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <h5 className="font-bold text-slate-800 text-sm">Final Hiring Recommendation</h5>
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                    selectedCandidate.predictiveHiring.hiringDecision === 'Strong Hire' ? 'bg-emerald-100 text-emerald-700' :
+                                    selectedCandidate.predictiveHiring.hiringDecision === 'Hire' ? 'bg-blue-100 text-blue-700' :
+                                    selectedCandidate.predictiveHiring.hiringDecision === 'Conditional Hire' ? 'bg-amber-100 text-amber-700' :
+                                    'bg-rose-100 text-rose-700'
+                                }`}>
+                                    {selectedCandidate.predictiveHiring.hiringDecision}
+                                </span>
+                            </div>
+                            <p className="text-slate-600 text-sm">{selectedCandidate.predictiveHiring.explanation}</p>
+                            <div className="mt-3 text-xs text-slate-500 font-medium">
+                                Confidence Score: {selectedCandidate.predictiveHiring.hiringConfidence}/100
+                            </div>
                           </div>
                         </div>
                       )}

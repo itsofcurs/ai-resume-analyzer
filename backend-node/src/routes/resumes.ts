@@ -187,7 +187,7 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
     const failed = await Resume.countDocuments({ organizationId: orgId, status: 'FAILED' });
     
     // Aggregate unique skills and fraud metrics
-    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score fraudAnalysis skillGapAnalysis');
+    const resumes = await Resume.find({ organizationId: orgId, status: 'PROCESSED' }, 'parsedData.skills atsScores.overall_score fraudAnalysis skillGapAnalysis predictiveHiring');
     const allSkills = new Set();
     let totalAtsScore = 0;
     let atsCount = 0;
@@ -204,6 +204,13 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
     let growthPotentialCount = 0;
     let candidatesInterviewReady = 0;
     let candidatesRequiringUpskilling = 0;
+
+    let totalSuccessScore = 0;
+    let successScoreCount = 0;
+    let highPotentialCandidates = 0;
+    let lowRetentionRisk = 0;
+    let leadershipCandidates = 0;
+    let strongHireCandidates = 0;
 
     resumes.forEach(r => {
       if (r.parsedData?.skills && Array.isArray(r.parsedData.skills)) {
@@ -240,6 +247,16 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
           candidatesRequiringUpskilling++;
         }
       }
+      if (r.predictiveHiring) {
+        if (r.predictiveHiring.successScore != null) {
+          totalSuccessScore += r.predictiveHiring.successScore;
+          successScoreCount++;
+        }
+        if (r.predictiveHiring.successScore && r.predictiveHiring.successScore >= 80) highPotentialCandidates++;
+        if (r.predictiveHiring.retentionRisk === 'LOW') lowRetentionRisk++;
+        if (r.predictiveHiring.leadershipPotential === 'HIGH' || r.predictiveHiring.leadershipPotential === 'EXCEPTIONAL') leadershipCandidates++;
+        if (r.predictiveHiring.hiringDecision === 'Strong Hire') strongHireCandidates++;
+      }
     });
 
     res.json({
@@ -255,7 +272,12 @@ router.get('/stats', async (req: AuthRequest, res: any) => {
       averageHiringReadiness: hiringReadinessCount > 0 ? Math.round(totalHiringReadiness / hiringReadinessCount) : null,
       averageGrowthPotential: growthPotentialCount > 0 ? Math.round(totalGrowthPotential / growthPotentialCount) : null,
       candidatesInterviewReady,
-      candidatesRequiringUpskilling
+      candidatesRequiringUpskilling,
+      averageSuccessScore: successScoreCount > 0 ? Math.round(totalSuccessScore / successScoreCount) : null,
+      highPotentialCandidates,
+      lowRetentionRisk,
+      leadershipCandidates,
+      strongHireCandidates
     });
   } catch (error) {
     console.error("Stats error:", error);

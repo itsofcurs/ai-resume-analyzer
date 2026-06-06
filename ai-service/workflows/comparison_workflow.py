@@ -38,7 +38,9 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
     3. Education & Experience
     4. Authenticity, Trust, and Fraud Risk (compare Trust Scores, Fraud Risk, Consistency, and Recruiter Decision)
     5. Hiring Readiness & Growth Potential (compare their skill gaps, 30/60/90 day plans, readiness scores, and learning agility)
-    6. Final Recommendation (who is better and why)
+    6. Final ATS Score (0-100)
+    7. Final Recommended Hire Decision (from A, B, or Both)
+    8. Predictive Hiring Success Probability & Leadership Potential
     
     Return ONLY a valid JSON object matching this schema:
     {{
@@ -108,7 +110,8 @@ class ComparisonWorkflow:
                 "parsed": cand_a.get("parsedData", {}),
                 "ats": cand_a.get("atsScores", {}),
                 "ranking": cand_a.get("candidateRanking", {}),
-                "fraud": cand_a.get("fraudAnalysis", {})
+                "fraud": cand_a.get("fraudAnalysis", {}),
+                "predictive": cand_a.get("predictiveHiring", {})
             }
             state["candidate_b_data"] = {
                 "id": str(cand_b["_id"]),
@@ -116,7 +119,8 @@ class ComparisonWorkflow:
                 "parsed": cand_b.get("parsedData", {}),
                 "ats": cand_b.get("atsScores", {}),
                 "ranking": cand_b.get("candidateRanking", {}),
-                "fraud": cand_b.get("fraudAnalysis", {})
+                "fraud": cand_b.get("fraudAnalysis", {}),
+                "predictive": cand_b.get("predictiveHiring", {})
             }
         except Exception as e:
             state["error"] = str(e)

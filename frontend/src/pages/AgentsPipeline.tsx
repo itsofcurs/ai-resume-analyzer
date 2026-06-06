@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { 
   FileText, BarChart, ListOrdered, MessageSquare, 
-  BrainCircuit, ShieldAlert, Bot, Network 
+  BrainCircuit, ShieldAlert, Bot, Network, TrendingUp
 } from 'lucide-react';
 
 const agents = [
@@ -74,6 +74,16 @@ const agents = [
     bg: 'bg-cyan-50',
     textColor: 'text-cyan-600',
     delay: 0.7
+  },
+  {
+    id: 'predictive',
+    name: 'Predictive Hiring Agent',
+    description: 'Forecasts hiring success, retention risk, and leadership potential.',
+    icon: TrendingUp,
+    color: 'from-indigo-500 to-violet-600',
+    bg: 'bg-indigo-50',
+    textColor: 'text-indigo-600',
+    delay: 0.8
   }
 ];
 
@@ -196,6 +206,10 @@ export const AgentsPipeline = () => {
                 <div className="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" style={{ animationDelay: '1.5s' }}></div>
                   <span className="text-xs font-medium text-slate-300">Skill Gap Intelligence Enabled</span>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" style={{ animationDelay: '2.0s' }}></div>
+                  <span className="text-xs font-medium text-slate-300">Predictive Intelligence Active</span>
                 </div>
               </div>
             </div>

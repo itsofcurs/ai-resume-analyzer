@@ -281,6 +281,15 @@ class SkillGapWorkflow:
                 {"$set": {"skillGapAnalysis": state["skill_gap_analysis"]}}
             )
             await self._emit_event(state["resume_id"], "SKILL_GAP_COMPLETED")
+
+            # Fire and forget Predictive Hiring Analysis (Phase 2C-D)
+            try:
+                from workflows.predictive_hiring_workflow import PredictiveHiringWorkflow
+                predictive_workflow = PredictiveHiringWorkflow()
+                asyncio.create_task(predictive_workflow.run(state["resume_id"]))
+            except Exception as e:
+                logger.error(f"[SKILL_GAP] Failed to trigger predictive hiring automatically: {e}")
+
         except Exception as e:
             logger.error(f"[SKILL_GAP] Failed to persist: {e}")
             state["error"] = str(e)

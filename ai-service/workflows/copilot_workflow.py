@@ -32,14 +32,16 @@ INTENT_PROMPT = PromptTemplate.from_template(
     - "recommend": User wants top candidates based on a full job description.
     - "compare": User wants to compare two specific candidates (if they provided IDs or names).
     - "trust": User is asking about fraud risk, suspicious claims, trustworthy candidates, or contradictions (e.g. "Show suspicious candidates", "Explain trust scores").
-    - "skill_gap": User is asking about candidate hiring readiness, skill gaps, missing technologies, training needs, or growth potential (e.g. "Show candidates needing Docker training", "Which candidates are interview ready", "Who has highest growth potential", "Which candidates can become job ready within 30 days").
+    - "fraud_check": For questions about fraud risk, consistency, verification, authentication.
+    - "skill_gap": For questions about skill gaps, missing technologies, hiring readiness, growth potential, or learning plans.
+    - "predictive_hiring": For questions about future success, retention risk, team fit, leadership potential, or final hiring decisions.
     - "chat": General recruitment questions or follow-up questions.
     
     User Query: {query}
     
     Return ONLY a valid JSON:
     {{
-        "intent": "search|recommend|compare|trust|skill_gap|chat"
+        "intent": "search|recommend|compare|trust|fraud_check|skill_gap|predictive_hiring|chat"
     }}
     """
 )
@@ -81,6 +83,7 @@ class CopilotState(TypedDict):
     tool_data: Optional[Any]
     response: Optional[dict]
     error: Optional[str]
+    context_data: List[str]
 
 class CopilotWorkflow:
     def __init__(self):
@@ -91,7 +94,9 @@ class CopilotWorkflow:
         graph.add_node("tool_recommend", self._node_tool_recommend)
         graph.add_node("tool_compare", self._node_tool_compare)
         graph.add_node("tool_trust", self._node_tool_trust)
+        graph.add_node("tool_fraud_search", self._node_tool_fraud)
         graph.add_node("tool_skill_gap", self._node_tool_skill_gap)
+        graph.add_node("tool_predictive_hiring", self._node_tool_predictive_hiring)
         graph.add_node("tool_chat", self._node_tool_chat)
         graph.add_node("generate_response", self._node_generate_response)
         graph.add_node("handle_failure", self._node_handle_failure)
@@ -103,17 +108,16 @@ class CopilotWorkflow:
             if state.get("error"):
                 return "handle_failure"
             intent = state.get("intent", "chat")
-            if intent == "search":
-                return "tool_search"
-            elif intent == "recommend":
-                return "tool_recommend"
-            elif intent == "compare":
-                return "tool_compare"
-            elif intent == "trust":
-                return "tool_trust"
-            elif intent == "skill_gap":
-                return "tool_skill_gap"
-            return "tool_chat"
+            mapping = {
+                "search": "tool_search",
+                "recommend": "tool_recommend",
+                "compare": "tool_compare",
+                "trust": "tool_trust",
+                "fraud_check": "tool_fraud_search",
+                "skill_gap": "tool_skill_gap",
+                "predictive_hiring": "tool_predictive_hiring"
+            }
+            return mapping.get(intent, "tool_chat")
             
         graph.add_conditional_edges(
             "detect_intent",
@@ -121,7 +125,7 @@ class CopilotWorkflow:
         )
         
         # All tools route to generate_response
-        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_skill_gap", "tool_chat"]:
+        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_fraud_search", "tool_skill_gap", "tool_predictive_hiring", "tool_chat"]:
             graph.add_conditional_edges(
                 node,
                 lambda state: "handle_failure" if state.get("error") else "generate_response"
@@ -244,23 +248,55 @@ class CopilotWorkflow:
             state["error"] = str(e)
         return state
 
+    async def _node_tool_fraud(self, state: CopilotState) -> CopilotState:
+        return await self._node_tool_trust(state)
+
     async def _node_tool_skill_gap(self, state: CopilotState) -> CopilotState:
-        logger.info("[COPILOT] Tool - Skill Gap Intelligence")
+        logger.info("[COPILOT] Executing skill gap tool")
         try:
             collection = get_mongo_collection()
-            # Fetch candidates that have skillGapAnalysis
-            cursor = collection.find(
+            resumes = await collection.find(
                 {"skillGapAnalysis": {"$exists": True, "$ne": None}},
-                {"candidateName": 1, "skillGapAnalysis": 1}
-            ).limit(20)
+                {"parsedData.personalInfo.name": 1, "skillGapAnalysis": 1}
+            ).to_list(length=10)
             
-            candidates = []
-            async for doc in cursor:
-                doc["_id"] = str(doc["_id"])
-                candidates.append(doc)
-                
-            state["tool_data"] = {"candidates_with_skill_gap_data": candidates}
+            ctx = "Skill Gap Insights:\n"
+            for r in resumes:
+                name = r.get("parsedData", {}).get("personalInfo", {}).get("name", "Unknown")
+                sg = r.get("skillGapAnalysis", {})
+                hr = sg.get("hiringReadinessScore", "N/A")
+                gp = sg.get("growthPotentialScore", "N/A")
+                weak = sg.get("weaknesses", [])
+                ctx += f"- {name}: Readiness {hr}, Growth Potential {gp}. Weaknesses: {', '.join(weak[:3])}\n"
+            
+            state["tool_data"] = ctx
         except Exception as e:
+            logger.error(f"[COPILOT] Skill gap tool error: {e}")
+            state["error"] = str(e)
+        return state
+
+    async def _node_tool_predictive_hiring(self, state: CopilotState) -> CopilotState:
+        logger.info("[COPILOT] Executing predictive hiring tool")
+        try:
+            collection = get_mongo_collection()
+            resumes = await collection.find(
+                {"predictiveHiring": {"$exists": True, "$ne": None}},
+                {"parsedData.personalInfo.name": 1, "predictiveHiring": 1}
+            ).sort("predictiveHiring.successScore", -1).to_list(length=10)
+            
+            ctx = "Predictive Hiring Intelligence:\n"
+            for r in resumes:
+                name = r.get("parsedData", {}).get("personalInfo", {}).get("name", "Unknown")
+                ph = r.get("predictiveHiring", {})
+                score = ph.get("successScore", "N/A")
+                retention = ph.get("retentionRisk", "N/A")
+                leadership = ph.get("leadershipPotential", "N/A")
+                decision = ph.get("hiringDecision", "N/A")
+                ctx += f"- {name}: Success Score {score}, Retention Risk {retention}, Leadership {leadership}, Decision: {decision}\n"
+            
+            state["tool_data"] = ctx
+        except Exception as e:
+            logger.error(f"[COPILOT] Predictive hiring tool error: {e}")
             state["error"] = str(e)
         return state
 
