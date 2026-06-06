@@ -7,6 +7,7 @@ import { Candidates } from './pages/Candidates';
 import { Jobs } from './pages/Jobs';
 import { InterviewPrep } from './pages/InterviewPrep';
 import { AgentsPipeline } from './pages/AgentsPipeline';
+import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 
 function App() {
   return (
@@ -59,6 +60,16 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <AgentsPipeline />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/analytics" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AnalyticsDashboard />
               </DashboardLayout>
             </ProtectedRoute>
           } 

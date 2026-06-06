@@ -53,6 +53,7 @@ from workflows.comparison_workflow import ComparisonWorkflow
 from workflows.copilot_workflow import CopilotWorkflow
 from workflows.interview_workflow import InterviewQuestionGraph
 from workflows.interview_evaluation_workflow import InterviewEvaluationWorkflow
+from workflows.hiring_insights_workflow import HiringInsightsWorkflow
 from schemas.job_match_schema import JobMatchRequestSchema, FinalATSAnalysisSchema
 from schemas.ranking_schema import BatchRankingRequestSchema, BatchRankingResponseSchema
 from schemas.error_schema import ErrorResponseSchema
@@ -244,6 +245,7 @@ _comparison_workflow = ComparisonWorkflow()
 _copilot_workflow = CopilotWorkflow()
 _interview_workflow = InterviewQuestionGraph()
 _interview_evaluation_workflow = InterviewEvaluationWorkflow()
+_hiring_insights_workflow = HiringInsightsWorkflow()
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +293,7 @@ class CompareRequest(BaseModel):
 
 class CopilotRequest(BaseModel):
     query: str
+    analytics_summary: dict | None = None
 
 class InterviewRegenerateRequest(BaseModel):
     resume_id: str
@@ -299,6 +302,10 @@ class InterviewPrepRequest(BaseModel):
     resume_id: str
     topic: str
     mode: str
+
+class AnalyticsInsightsRequest(BaseModel):
+    organization_id: str
+    aggregated_stats: dict
 
 
 
@@ -601,7 +608,7 @@ async def compare_candidates(req: CompareRequest):
 async def copilot_chat(req: CopilotRequest):
     try:
         logger.info("POST /api/copilot/chat — query='%s'", req.query)
-        result = await _copilot_workflow.run(req.query)
+        result = await _copilot_workflow.run(req.query, req.analytics_summary)
         return result
     except Exception as exc:
         logger.error("POST /api/copilot/chat — failed: %s", exc)
@@ -660,6 +667,24 @@ async def evaluate_interview_answers(req: InterviewEvaluateRequest):
         raise
     except Exception as exc:
         logger.error("POST /api/interview/evaluate — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post(
+    "/api/analytics/insights",
+    summary="Generate Executive Hiring Insights",
+    tags=["Phase2D-B"],
+)
+async def generate_analytics_insights(req: AnalyticsInsightsRequest):
+    try:
+        logger.info("POST /api/analytics/insights — org='%s'", req.organization_id)
+        result = await _hiring_insights_workflow.run(req.organization_id, req.aggregated_stats)
+        if "error" in result and result["error"]:
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/analytics/insights — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

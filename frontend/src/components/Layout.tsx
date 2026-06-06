@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
-import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network, Menu } from 'lucide-react';
 import { logout } from '../store/authSlice';
 import { HeaderSearch } from './SemanticSearchWidget';
 import { CopilotPanel } from './CopilotPanel';
+import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network, Menu, Activity } from 'lucide-react';
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { path: '/jobs', label: 'Job Roles', icon: FileText },
   { path: '/interview-prep', label: 'Interview Prep', icon: BrainCircuit },
   { path: '/agents-pipeline', label: 'AI Pipeline', icon: Network },
+  { path: '/analytics', label: 'Intelligence', icon: Activity },
 ];
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {

@@ -35,13 +35,13 @@ INTENT_PROMPT = PromptTemplate.from_template(
     - "fraud_check": For questions about fraud risk, consistency, verification, authentication.
     - "skill_gap": For questions about skill gaps, missing technologies, hiring readiness, growth potential, or learning plans.
     - "predictive_hiring": For questions about future success, retention risk, team fit, leadership potential, or final hiring decisions.
-    - "chat": General recruitment questions or follow-up questions.
+    - "analytics": For questions about hiring trends, funnels, dashboards, or organization-level analytics.
     
     User Query: {query}
     
     Return ONLY a valid JSON:
     {{
-        "intent": "search|recommend|compare|trust|fraud_check|skill_gap|predictive_hiring|chat"
+        "intent": "search|recommend|compare|trust|fraud_check|skill_gap|predictive_hiring|analytics|chat"
     }}
     """
 )
@@ -65,6 +65,9 @@ RESPONSE_PROMPT = PromptTemplate.from_template(
     User Query: {query}
     Intent: {intent}
     
+    Analytics Summary (If available and relevant):
+    {analytics_summary}
+    
     Data retrieved from tools:
     {tool_data}
     
@@ -84,6 +87,7 @@ class CopilotState(TypedDict):
     response: Optional[dict]
     error: Optional[str]
     context_data: List[str]
+    analytics_summary: Optional[dict]
 
 class CopilotWorkflow:
     def __init__(self):
@@ -115,7 +119,8 @@ class CopilotWorkflow:
                 "trust": "tool_trust",
                 "fraud_check": "tool_fraud_search",
                 "skill_gap": "tool_skill_gap",
-                "predictive_hiring": "tool_predictive_hiring"
+                "predictive_hiring": "tool_predictive_hiring",
+                "analytics": "tool_chat"
             }
             return mapping.get(intent, "tool_chat")
             
@@ -313,6 +318,7 @@ class CopilotWorkflow:
             raw = await chain.ainvoke({
                 "query": state["query"],
                 "intent": state["intent"],
+                "analytics_summary": json.dumps(state.get("analytics_summary") or {}),
                 "tool_data": json.dumps(state["tool_data"], default=str)
             })
             cleaned = clean_json_str(raw)
@@ -334,13 +340,14 @@ class CopilotWorkflow:
         state["response"] = {"message": "Sorry, I encountered an error.", "data": None}
         return state
 
-    async def run(self, query: str) -> dict:
+    async def run(self, query: str, analytics_summary: dict | None = None) -> dict:
         state = {
             "query": query,
             "intent": None,
             "tool_data": None,
             "response": None,
-            "error": None
+            "error": None,
+            "analytics_summary": analytics_summary
         }
         final_state = await self._graph.ainvoke(state)
         return final_state.get("response", {"message": "Error processing query."})

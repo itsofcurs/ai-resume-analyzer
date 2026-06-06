@@ -120,11 +120,26 @@ router.post('/search', async (req: AuthRequest, res: any) => {
 router.post('/chat', async (req: AuthRequest, res: any) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: 'Query is required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
 
   io.emit('copilot_status', { status: 'COPILOT_SEARCHING', query });
 
   try {
-    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/chat`, { query });
+    let analytics_summary = null;
+    try {
+      const cached = await redisClient.get(`analytics_dashboard:${orgId}`);
+      if (cached) analytics_summary = JSON.parse(cached);
+    } catch (e) {
+      console.warn("Could not load analytics summary for copilot context");
+    }
+
+    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/chat`, { 
+      query,
+      analytics_summary 
+    });
+    
     io.emit('copilot_status', { status: 'COMPLETED' });
     return res.status(200).json(response.data);
   } catch (error: any) {
