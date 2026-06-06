@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
-import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network } from 'lucide-react';
 import { logout } from '../store/authSlice';
 import { HeaderSearch } from './SemanticSearchWidget';
 import { CopilotPanel } from './CopilotPanel';
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { path: '/candidates', label: 'Candidates', icon: Users },
   { path: '/jobs', label: 'Job Roles', icon: FileText },
   { path: '/interview-prep', label: 'Interview Prep', icon: BrainCircuit },
+  { path: '/agents-pipeline', label: 'AI Pipeline', icon: Network },
 ];
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
