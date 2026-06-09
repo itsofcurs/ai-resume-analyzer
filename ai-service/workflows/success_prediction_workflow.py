@@ -290,6 +290,9 @@ class SuccessPredictionWorkflow:
         try:
             llm = LLMRouter.get_llm("interview")
             chain = SUCCESS_PREDICTION_PROMPT | llm | StrOutputParser()
+            skill_graph = state.get("skill_graph") or {}
+            voice_video_analysis = state.get("voice_video_analysis") or []
+            
             raw = await ainvoke_with_retry(chain, {
                 "behavioral_signals": state.get("behavioral_signals", ""),
                 "learning_agility": str(state.get("learning_agility", 0)),
@@ -297,9 +300,9 @@ class SuccessPredictionWorkflow:
                 "communication_potential": str(state.get("communication_potential", 0)),
                 "retention_risk": state.get("retention_risk", "MEDIUM"),
                 "leadership_potential": state.get("leadership_potential", "MEDIUM"),
-                "technical_score": str(state.get("skill_graph", {}).get("overallTechnicalScore", 0)),
-                "soft_score": str(state.get("skill_graph", {}).get("overallSoftSkillScore", 0)),
-                "voice_video_json": json.dumps(state.get("voice_video_analysis", []), default=str)
+                "technical_score": str(skill_graph.get("overallTechnicalScore", 0)),
+                "soft_score": str(skill_graph.get("overallSoftSkillScore", 0)),
+                "voice_video_json": json.dumps(voice_video_analysis, default=str)
             })
             data = json.loads(clean_json_str(raw))
             state["success_probability"] = data.get("successProbability", 0)
