@@ -36,17 +36,23 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
     1. ATS Score comparison
     2. Skill Match & Depth
     3. Education & Experience
-    4. Authenticity, Trust, and Fraud Risk (compare Trust Scores, Fraud Risk, Consistency, and Recruiter Decision)
-    5. Hiring Readiness & Growth Potential (compare their skill gaps, 30/60/90 day plans, readiness scores, and learning agility)
-    6. Final ATS Score (0-100)
-    7. Final Recommended Hire Decision (from A, B, or Both)
-    8. Predictive Hiring Success Probability & Leadership Potential
+    4. Competency Intelligence (Compare Technical, Communication, Leadership, and Problem Solving competencies based on their Skill Graphs)
+    5. Strengths vs Weaknesses
+    6. Knowledge Graph Intelligence (Compare Clusters, Hidden Talents, Graph Scores, and Relationship Strengths)
+    7. Authenticity, Trust, and Fraud Risk (compare Trust Scores, Fraud Risk, Consistency, and Recruiter Decision)
+    8. Hiring Readiness & Growth Potential (compare their skill gaps, 30/60/90 day plans, readiness scores, and learning agility)
+    9. Final ATS Score (0-100)
+    10. Final Recommended Hire Decision (from A, B, or Both)
+    11. Predictive Hiring Success Probability & Leadership Potential
     
     Return ONLY a valid JSON object matching this schema:
     {{
         "winner_id": "Candidate A ID or Candidate B ID",
         "ats_comparison": "string",
         "skill_comparison": "string",
+        "competency_comparison": "string",
+        "strengths_weaknesses_comparison": "string",
+        "knowledge_graph_comparison": "string",
         "experience_comparison": "string",
         "fraud_comparison": "string",
         "readiness_comparison": "string",
@@ -109,6 +115,8 @@ class ComparisonWorkflow:
                 "name": cand_a.get("candidateName", "Unknown"),
                 "parsed": cand_a.get("parsedData", {}),
                 "ats": cand_a.get("atsScores", {}),
+                "skillGraph": cand_a.get("skillGraph", {}),
+                "knowledgeGraph": cand_a.get("knowledgeGraph", {}),
                 "ranking": cand_a.get("candidateRanking", {}),
                 "fraud": cand_a.get("fraudAnalysis", {}),
                 "predictive": cand_a.get("predictiveHiring", {})
@@ -118,6 +126,8 @@ class ComparisonWorkflow:
                 "name": cand_b.get("candidateName", "Unknown"),
                 "parsed": cand_b.get("parsedData", {}),
                 "ats": cand_b.get("atsScores", {}),
+                "skillGraph": cand_b.get("skillGraph", {}),
+                "knowledgeGraph": cand_b.get("knowledgeGraph", {}),
                 "ranking": cand_b.get("candidateRanking", {}),
                 "fraud": cand_b.get("fraudAnalysis", {}),
                 "predictive": cand_b.get("predictiveHiring", {})

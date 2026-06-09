@@ -8,6 +8,8 @@ import { Jobs } from './pages/Jobs';
 import { InterviewPrep } from './pages/InterviewPrep';
 import { AgentsPipeline } from './pages/AgentsPipeline';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
+import { HiringCommandCenter } from './pages/HiringCommandCenter';
+import { AdaptiveSimulator } from './pages/AdaptiveSimulator';
 
 function App() {
   return (
@@ -70,6 +72,26 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <AnalyticsDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/command-center" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <HiringCommandCenter />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/adaptive-interview" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AdaptiveSimulator />
               </DashboardLayout>
             </ProtectedRoute>
           } 

@@ -25,6 +25,8 @@ class FraudDetectionState(TypedDict):
     resume_id: str
     resume_data: Optional[dict]
     interview_evaluation: Optional[dict]
+    answer_authenticity: Optional[dict]
+    voice_video_analysis: Optional[list]
     skill_analysis: Optional[str]
     project_analysis: Optional[str]
     timeline_analysis: Optional[str]
@@ -84,11 +86,14 @@ SCORE_PROMPT = PromptTemplate.from_template(
     Project Analysis: {project_analysis}
     Timeline Analysis: {timeline_analysis}
     Contradictions: {contradictions}
+    Answer Authenticity: {authenticity_json}
+    Voice/Video Analysis (including Integrity Scores): {voice_video_json}
     
     CRITICAL RULES:
     1. If a resume claim was NOT discussed or asked about in the interview, do NOT mark it as suspicious or fraudulent.
     2. An absence of evidence in the interview is NOT evidence of fraud.
     3. Only mark a claim as suspicious if the candidate explicitly contradicted it or failed to answer a direct question about it.
+    4. If Voice/Video Analysis shows a LOW interviewIntegrityScore or HIGH scriptReadingRisk, heavily penalize the final trustScore.
     
     Return ONLY a JSON object with this exact schema:
     {{
@@ -158,6 +163,8 @@ class FraudDetectionWorkflow:
             
             state["resume_data"] = resume.get("parsedData", {})
             state["interview_evaluation"] = resume.get("interviewEvaluation", {})
+            state["answer_authenticity"] = resume.get("answerAuthenticity", {})
+            state["voice_video_analysis"] = resume.get("voiceVideoAnalysis", [])
             if not state["interview_evaluation"]:
                 state["error"] = "Interview Evaluation missing"
                 await self._emit_event(state["resume_id"], "FRAUD_FAILED")
@@ -245,7 +252,9 @@ class FraudDetectionWorkflow:
                     "skill_analysis": state.get("skill_analysis", ""),
                     "project_analysis": state.get("project_analysis", ""),
                     "timeline_analysis": state.get("timeline_analysis", ""),
-                    "contradictions": state.get("contradictions_detected", "")
+                    "contradictions": state.get("contradictions_detected", ""),
+                    "authenticity_json": json.dumps(state.get("answer_authenticity", {}), default=str),
+                    "voice_video_json": json.dumps(state.get("voice_video_analysis", []), default=str)
                 }
             )
             cleaned = clean_json_str(raw_response)

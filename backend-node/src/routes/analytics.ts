@@ -189,41 +189,59 @@ router.get('/trends', authenticateToken, async (req: AuthRequest, res: any) => {
   }
 });
 
-// 4. Skills Intelligence
+// 4. Skills Intelligence (Phase 3B)
 router.get('/skills', authenticateToken, async (req: AuthRequest, res: any) => {
   try {
     if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
     const orgId = req.user.organizationId;
-    const cacheKey = getOrgCacheKey(req, 'analytics_skills');
+    const cacheKey = getOrgCacheKey(req, 'analytics_skills_graph');
 
     if (req.query.refresh !== 'true') {
       const cached = await redisClient.get(cacheKey);
       if (cached) return res.json(JSON.parse(cached.toString()));
     }
 
-    // Candidate Extracted Skills
-    const topSkillsResult = await Resume.aggregate([
-      { $match: { organizationId: orgId, status: 'PROCESSED' } },
-      { $unwind: "$parsedData.skills" },
-      { $group: { _id: { $toLower: "$parsedData.skills" }, count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
+    // Top Technical Skills
+    const topTechnicalSkills = await Resume.aggregate([
+      { $match: { organizationId: orgId, "skillGraph.technicalSkills": { $exists: true } } },
+      { $unwind: "$skillGraph.technicalSkills" },
+      { $group: { 
+          _id: "$skillGraph.technicalSkills.skill", 
+          count: { $sum: 1 },
+          avgScore: { $avg: "$skillGraph.technicalSkills.score" },
+          totalEvidence: { $sum: "$skillGraph.technicalSkills.evidenceCount" }
+      }},
+      { $sort: { totalEvidence: -1, avgScore: -1 } },
+      { $limit: 15 }
+    ]);
+
+    // Top Soft Skills
+    const topSoftSkills = await Resume.aggregate([
+      { $match: { organizationId: orgId, "skillGraph.softSkills": { $exists: true } } },
+      { $unwind: "$skillGraph.softSkills" },
+      { $group: { 
+          _id: "$skillGraph.softSkills.skill", 
+          count: { $sum: 1 },
+          avgScore: { $avg: "$skillGraph.softSkills.score" },
+          totalEvidence: { $sum: "$skillGraph.softSkills.evidenceCount" }
+      }},
+      { $sort: { avgScore: -1 } },
       { $limit: 10 }
     ]);
 
-    // Missing Skills
-    const missingSkillsResult = await Resume.aggregate([
-      { $match: { organizationId: orgId } },
-      { $unwind: "$skillGapAnalysis.missingSkills" },
-      { $group: { _id: { $toLower: "$skillGapAnalysis.missingSkills" }, count: { $sum: 1 } } },
+    // Common Weaknesses
+    const commonWeaknesses = await Resume.aggregate([
+      { $match: { organizationId: orgId, "skillGraph.weaknesses": { $exists: true } } },
+      { $unwind: "$skillGraph.weaknesses" },
+      { $group: { _id: "$skillGraph.weaknesses", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 }
     ]);
 
     const data = {
-      topSkills: topSkillsResult.map(s => ({ name: s._id, count: s.count })),
-      missingSkills: missingSkillsResult.map(s => ({ name: s._id, count: s.count })),
-      emergingSkills: [], // Placeholder for complex cross-job comparison
-      decliningSkills: [] // Placeholder
+      topTechnicalSkills: topTechnicalSkills.map(s => ({ name: s._id, count: s.count, avgScore: Math.round(s.avgScore), evidence: s.totalEvidence })),
+      topSoftSkills: topSoftSkills.map(s => ({ name: s._id, count: s.count, avgScore: Math.round(s.avgScore), evidence: s.totalEvidence })),
+      commonSkillGaps: commonWeaknesses.map(s => ({ name: s._id, count: s.count })),
     };
 
     await redisClient.setEx(cacheKey, CACHE_TTL, JSON.stringify(data));
@@ -231,6 +249,211 @@ router.get('/skills', authenticateToken, async (req: AuthRequest, res: any) => {
   } catch (error) {
     console.error('Skills Analytics Error:', error);
     res.status(500).json({ error: 'Failed to fetch skill metrics' });
+  }
+});
+
+// 5. Success Predictions
+router.get('/success', authenticateToken, async (req: AuthRequest, res: any) => {
+  try {
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const orgId = req.user.organizationId;
+    const cacheKey = getOrgCacheKey(req, 'analytics_success');
+
+    if (req.query.refresh !== 'true') {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached.toString()));
+    }
+
+    const result = await Resume.aggregate([
+      { $match: { organizationId: orgId, successPrediction: { $exists: true } } },
+      {
+        $facet: {
+          metrics: [
+            {
+              $group: {
+                _id: null,
+                averageSuccessProbability: { $avg: '$successPrediction.successProbability' },
+                averageCulturalFit: { $avg: '$successPrediction.culturalFit' },
+                futureLeadersPipeline: {
+                  $sum: { $cond: [{ $in: ['$successPrediction.leadershipPotential', ['HIGH', 'EXCEPTIONAL']] }, 1, 0] }
+                },
+                highPotentialCandidates: {
+                  $sum: { $cond: [{ $gte: ['$successPrediction.successProbability', 80] }, 1, 0] }
+                }
+              }
+            }
+          ],
+          retentionRiskDistribution: [
+            {
+              $group: {
+                _id: '$successPrediction.retentionRisk',
+                count: { $sum: 1 }
+              }
+            }
+          ],
+          learningAgilityDistribution: [
+             {
+               $bucket: {
+                 groupBy: "$successPrediction.learningAgility",
+                 boundaries: [0, 50, 70, 85, 101],
+                 default: "Unknown",
+                 output: { count: { $sum: 1 } }
+               }
+             }
+          ],
+           culturalFitDistribution: [
+             {
+               $bucket: {
+                 groupBy: "$successPrediction.culturalFit",
+                 boundaries: [0, 50, 80, 101],
+                 default: "Unknown",
+                 output: { count: { $sum: 1 } }
+               }
+             }
+           ],
+           successVsCultureCorrelation: [
+             {
+               $project: {
+                 success: '$successPrediction.successProbability',
+                 culture: '$successPrediction.culturalFit'
+               }
+             },
+             { $match: { success: { $ne: null }, culture: { $ne: null } } }
+           ]
+        }
+      }
+    ]);
+
+    const data = {
+      metrics: result[0].metrics[0] || { averageSuccessProbability: 0, averageCulturalFit: 0, futureLeadersPipeline: 0, highPotentialCandidates: 0 },
+      retentionRiskDistribution: result[0].retentionRiskDistribution,
+      learningAgilityDistribution: result[0].learningAgilityDistribution,
+      culturalFitDistribution: result[0].culturalFitDistribution,
+      successVsCultureCorrelation: result[0].successVsCultureCorrelation
+    };
+    
+    // Clean up metrics._id
+    if (data.metrics._id !== undefined) delete data.metrics._id;
+    // Round
+    data.metrics.averageSuccessProbability = Math.round(data.metrics.averageSuccessProbability || 0);
+    data.metrics.averageCulturalFit = Math.round(data.metrics.averageCulturalFit || 0);
+
+    await redisClient.setEx(cacheKey, CACHE_TTL, JSON.stringify(data));
+    res.json(data);
+  } catch (error) {
+    console.error('Success Analytics Error:', error);
+    res.status(500).json({ error: 'Failed to fetch success metrics' });
+  }
+});
+
+// 6. Authenticity Metrics
+router.get('/authenticity', authenticateToken, async (req: AuthRequest, res: any) => {
+  try {
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const orgId = req.user.organizationId;
+    const cacheKey = getOrgCacheKey(req, 'analytics_authenticity');
+
+    if (req.query.refresh !== 'true') {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached.toString()));
+    }
+
+    const result = await Resume.aggregate([
+      { $match: { organizationId: orgId, answerAuthenticity: { $exists: true } } },
+      {
+        $facet: {
+          metrics: [
+            {
+              $group: {
+                _id: null,
+                averageAuthenticityScore: { $avg: '$answerAuthenticity.authenticityScore' },
+                highRiskInterviews: {
+                  $sum: { $cond: [{ $eq: ['$answerAuthenticity.copyPasteRisk', 'HIGH'] }, 1, 0] }
+                },
+                aiAssistedCandidates: {
+                  $sum: { $cond: [{ $gte: ['$answerAuthenticity.aiGeneratedProbability', 70] }, 1, 0] }
+                }
+              }
+            }
+          ],
+          similarityDistribution: [
+            {
+              $bucket: {
+                groupBy: "$answerAuthenticity.plagiarismSimilarity",
+                boundaries: [0, 20, 50, 80, 101],
+                default: "Unknown",
+                output: { count: { $sum: 1 } }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    const data = {
+      metrics: result[0].metrics[0] || { averageAuthenticityScore: 0, highRiskInterviews: 0, aiAssistedCandidates: 0 },
+      similarityDistribution: result[0].similarityDistribution
+    };
+    
+    if (data.metrics._id !== undefined) delete data.metrics._id;
+    data.metrics.averageAuthenticityScore = Math.round(data.metrics.averageAuthenticityScore || 0);
+
+    await redisClient.setEx(cacheKey, CACHE_TTL, JSON.stringify(data));
+    res.json(data);
+  } catch (error) {
+    console.error('Authenticity Analytics Error:', error);
+    res.status(500).json({ error: 'Failed to fetch authenticity metrics' });
+  }
+});
+
+// 7. Voice/Video Media Metrics
+router.get('/media', authenticateToken, async (req: AuthRequest, res: any) => {
+  try {
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const orgId = req.user.organizationId;
+    const cacheKey = getOrgCacheKey(req, 'analytics_media');
+
+    if (req.query.refresh !== 'true') {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached.toString()));
+    }
+
+    const result = await Resume.aggregate([
+      { $match: { organizationId: orgId, 'voiceVideoAnalysis.0': { $exists: true } } },
+      { $unwind: '$voiceVideoAnalysis' },
+      {
+        $group: {
+          _id: null,
+          averageCommunication: { $avg: '$voiceVideoAnalysis.communicationScore' },
+          averageLeadership: { $avg: '$voiceVideoAnalysis.leadershipPresenceScore' },
+          averageIntegrity: { $avg: '$voiceVideoAnalysis.interviewIntegrityScore' },
+          averageAuthenticity: { $avg: '$voiceVideoAnalysis.authenticityScore' },
+          totalRoundsAnalyzed: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const data = result[0] || { 
+      averageCommunication: 0, 
+      averageLeadership: 0, 
+      averageIntegrity: 0, 
+      averageAuthenticity: 0,
+      totalRoundsAnalyzed: 0
+    };
+    
+    if (data._id !== undefined) delete data._id;
+    
+    // Round
+    data.averageCommunication = Math.round(data.averageCommunication || 0);
+    data.averageLeadership = Math.round(data.averageLeadership || 0);
+    data.averageIntegrity = Math.round(data.averageIntegrity || 0);
+    data.averageAuthenticity = Math.round(data.averageAuthenticity || 0);
+
+    await redisClient.setEx(cacheKey, CACHE_TTL, JSON.stringify(data));
+    res.json(data);
+  } catch (error) {
+    console.error('Media Analytics Error:', error);
+    res.status(500).json({ error: 'Failed to fetch media metrics' });
   }
 });
 

@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { path: '/candidates', label: 'Candidates', icon: Users },
   { path: '/jobs', label: 'Job Roles', icon: FileText },
   { path: '/interview-prep', label: 'Interview Prep', icon: BrainCircuit },
+  { path: '/adaptive-interview', label: 'Adaptive Interview', icon: BrainCircuit },
   { path: '/agents-pipeline', label: 'AI Pipeline', icon: Network },
   { path: '/analytics', label: 'Intelligence', icon: Activity },
 ];

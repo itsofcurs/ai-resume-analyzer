@@ -285,19 +285,26 @@ class CopilotWorkflow:
         try:
             collection = get_mongo_collection()
             resumes = await collection.find(
-                {"predictiveHiring": {"$exists": True, "$ne": None}},
-                {"parsedData.personalInfo.name": 1, "predictiveHiring": 1}
+                {"$or": [{"predictiveHiring": {"$exists": True, "$ne": None}}, {"successPrediction": {"$exists": True, "$ne": None}}]},
+                {"parsedData.personalInfo.name": 1, "predictiveHiring": 1, "successPrediction": 1}
             ).sort("predictiveHiring.successScore", -1).to_list(length=10)
             
-            ctx = "Predictive Hiring Intelligence:\n"
+            ctx = "Predictive Hiring Intelligence & Success Predictions:\n"
             for r in resumes:
                 name = r.get("parsedData", {}).get("personalInfo", {}).get("name", "Unknown")
                 ph = r.get("predictiveHiring", {})
+                sp = r.get("successPrediction", {})
+                
                 score = ph.get("successScore", "N/A")
-                retention = ph.get("retentionRisk", "N/A")
-                leadership = ph.get("leadershipPotential", "N/A")
+                retention = sp.get("retentionRisk", ph.get("retentionRisk", "N/A"))
+                leadership = sp.get("leadershipPotential", ph.get("leadershipPotential", "N/A"))
                 decision = ph.get("hiringDecision", "N/A")
-                ctx += f"- {name}: Success Score {score}, Retention Risk {retention}, Leadership {leadership}, Decision: {decision}\n"
+                success_prob = sp.get("successProbability", "N/A")
+                agility = sp.get("learningAgility", "N/A")
+                culture = sp.get("culturalFit", "N/A")
+                dev_areas = ", ".join(sp.get("developmentAreas", [])) or "None"
+                
+                ctx += f"- {name}: Success Prob {success_prob}%, Predictive Score {score}, Retention Risk {retention}, Leadership {leadership}, Agility {agility}, Culture Fit {culture}, Dev Areas: {dev_areas}, Decision: {decision}\n"
             
             state["tool_data"] = ctx
         except Exception as e:

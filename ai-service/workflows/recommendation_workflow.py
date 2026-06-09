@@ -97,20 +97,67 @@ class RecommendationWorkflow:
                     continue
                 
                 ats_score_obj = doc.get("atsScores", {})
+                skill_graph = doc.get("skillGraph", {})
                 
                 # Extract scores
                 overall_ats = ats_score_obj.get("overall_score", 0)
                 skill_score = ats_score_obj.get("skill_completeness", 0)
                 exp_score = ats_score_obj.get("experience_score", 0)
                 
-                # Final Score = 40% ATS + 30% Semantic + 20% Skill + 10% Experience
-                # Semantic score is typically 0.0 to 1.0, scale to 100
+                overall_tech_score = skill_graph.get("overallTechnicalScore", 0)
+                competency_level = skill_graph.get("competencyLevel", {})
+                strengths = skill_graph.get("strengths", [])
+                weaknesses = skill_graph.get("weaknesses", [])
+                
+                knowledge_graph = doc.get("knowledgeGraph", {})
+                graph_score = knowledge_graph.get("graphScore", 0)
+                hidden_talents = knowledge_graph.get("hiddenTalents", [])
+                candidate_cluster = knowledge_graph.get("candidateCluster", "Unknown")
+                
+                voice_video_analysis = doc.get("voiceVideoAnalysis", [])
+                
+                # Assign competency points
+                comp_points = 0
+                for c_val in competency_level.values():
+                    if c_val == "Expert": comp_points += 5
+                    elif c_val == "Advanced": comp_points += 3
+                    elif c_val == "Intermediate": comp_points += 1
+                
+                # Final Score = 35% ATS + 25% Semantic + 15% ATS_Skill + 10% Experience + 15% SkillGraph_TechScore
                 scaled_semantic = semantic_score * 100
-                final_score = (overall_ats * 0.4) + (scaled_semantic * 0.3) + (skill_score * 0.2) + (exp_score * 0.1)
+                final_score = (overall_ats * 0.35) + (scaled_semantic * 0.25) + (skill_score * 0.15) + (exp_score * 0.1) + (overall_tech_score * 0.15)
+                
+                # Add competency intelligence bonus (up to 20 points)
+                final_score += min(comp_points, 20)
+                
+                # Add Knowledge Graph bonus (Phase 3C)
+                graph_bonus = 0
+                if graph_score > 75: graph_bonus += 5
+                if hidden_talents: graph_bonus += (len(hidden_talents) * 2)
+                
+                final_score += graph_bonus
+                
+                # Add Voice & Video Intelligence Bonus (Phase 3E)
+                voice_video_bonus = 0
+                if voice_video_analysis and len(voice_video_analysis) > 0:
+                    latest_vv = voice_video_analysis[-1]
+                    if (latest_vv.get("communicationScore", 0) > 80 and 
+                        latest_vv.get("leadershipPresenceScore", 0) > 80 and 
+                        latest_vv.get("interviewIntegrityScore", 0) > 80):
+                        voice_video_bonus += 10
+                
+                final_score += voice_video_bonus
+                final_score = min(final_score, 100) # Cap at 100
                 
                 reason = f"Strong match based on ATS ({overall_ats}) and semantic similarity ({scaled_semantic:.1f})."
-                if skill_score > 80:
-                    reason += f" Excellent skill coverage."
+                if overall_tech_score > 80:
+                    reason += f" Excellent technical competency intelligence ({overall_tech_score})."
+                if graph_bonus > 0:
+                    reason += f" Knowledge Graph Intelligence highlights strong '{candidate_cluster}' alignment and hidden talents."
+                if voice_video_bonus > 0:
+                    reason += f" Exceptional Voice/Video Intelligence (Communication & Leadership > 80)."
+                if strengths:
+                    reason += f" Key strengths: {', '.join(strengths[:2])}."
                 
                 ranked.append({
                     "resume_id": resume_id,

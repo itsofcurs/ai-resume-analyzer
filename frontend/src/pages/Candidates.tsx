@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
-import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award, TrendingUp } from 'lucide-react';
+import { FileText, ShieldAlert, ShieldCheck, Search, ChevronRight, X, Trash2, ExternalLink, Filter, Sparkles, BrainCircuit, Target, Award, TrendingUp, Cpu, Mic, UploadCloud, Video } from 'lucide-react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Cell } from 'recharts';
+import { GraphVisualization } from '../components/GraphVisualization';
+import { VoiceVideoAnalysis } from '../components/VoiceVideoAnalysis';
 import type { RootState } from '../store';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
@@ -22,7 +25,117 @@ export const Candidates = () => {
   const [summary, setSummary] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
 
+  // Phase 2E-B Success Prediction State
+  const [isGeneratingPrediction, setIsGeneratingPrediction] = useState(false);
+  const [predictionError, setPredictionError] = useState('');
 
+  // Phase 3E Media State
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isAnalyzingMedia, setIsAnalyzingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>, candidateId: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate type and size (50MB)
+    const validTypes = ['video/mp4', 'video/webm', 'audio/mpeg', 'audio/wav'];
+    if (!validTypes.includes(file.type)) {
+      setMediaError('Invalid file type. Only MP4, WEBM, MPEG, and WAV are allowed.');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setMediaError('File size exceeds 50MB limit.');
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    setMediaError('');
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append('media', file);
+    formData.append('resumeId', candidateId);
+    formData.append('roundType', 'TECHNICAL'); // Default to technical round
+
+    try {
+      const res = await axios.post(`${API_URL}/media/upload`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        }
+      });
+      
+      // Refresh candidate data to show pending status
+      const candidatesRes = await axios.get(`${API_URL}/resumes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCandidates(candidatesRes.data);
+      const updated = candidatesRes.data.find((c: any) => (c._id || c.id) === candidateId);
+      if (updated) setSelectedCandidate(updated);
+    } catch (err: any) {
+      setMediaError(err.response?.data?.error || "Failed to upload media");
+    } finally {
+      setIsUploadingMedia(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleMediaAnalyze = async (candidateId: string, mediaUrl: string, roundType: string) => {
+    setIsAnalyzingMedia(true);
+    setMediaError('');
+    try {
+      await axios.post(`${API_URL}/media/analyze`, { 
+        resumeId: candidateId,
+        mediaUrl: mediaUrl,
+        roundType: roundType
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Refresh candidate data
+      const res = await axios.get(`${API_URL}/resumes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCandidates(res.data);
+      const updated = res.data.find((c: any) => (c._id || c.id) === candidateId);
+      if (updated) setSelectedCandidate(updated);
+    } catch (err: any) {
+      setMediaError(err.response?.data?.error || "Failed to analyze media");
+    } finally {
+      setIsUploadingMedia(false);
+      setIsAnalyzingMedia(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const generatePrediction = async (resumeId: string) => {
+    setIsGeneratingPrediction(true);
+    setPredictionError('');
+    try {
+      await axios.post(`${API_URL}/success/predict`, { resumeId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Fetch fresh data and update selected candidate
+      const res = await axios.get(`${API_URL}/resumes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCandidates(res.data);
+      const updated = res.data.find((c: any) => (c._id || c.id) === resumeId);
+      if (updated) setSelectedCandidate(updated);
+    } catch (err: any) {
+      setPredictionError(err.response?.data?.error || "Failed to generate prediction");
+    } finally {
+      setIsGeneratingPrediction(false);
+    }
+  };
 
   const token = useSelector((state: RootState) => state.auth.token);
 
@@ -820,6 +933,402 @@ export const Candidates = () => {
                           </div>
                         </div>
                       )}
+                      
+                      {/* Phase 2E-A: Candidate Success Prediction */}
+                      {selectedCandidate.successPrediction ? (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <Target size={18} className="text-emerald-600" />
+                              Future Success Prediction
+                            </h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                selectedCandidate.successPrediction.successProbability >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                selectedCandidate.successPrediction.successProbability >= 60 ? 'bg-blue-100 text-blue-700' :
+                                selectedCandidate.successPrediction.successProbability >= 40 ? 'bg-amber-100 text-amber-700' :
+                                'bg-rose-100 text-rose-700'
+                            }`}>
+                              {selectedCandidate.successPrediction.successProbability}% LIKELIHOOD
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Retention Risk</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.successPrediction.retentionRisk === 'LOW' ? 'text-emerald-600' :
+                                selectedCandidate.successPrediction.retentionRisk === 'MEDIUM' ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.successPrediction.retentionRisk}</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Leadership</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                ['HIGH', 'EXCEPTIONAL'].includes(selectedCandidate.successPrediction.leadershipPotential) ? 'text-purple-600' :
+                                'text-slate-700'
+                              }`}>{selectedCandidate.successPrediction.leadershipPotential}</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Agility</div>
+                              <div className="text-lg font-black mt-1 text-blue-600">
+                                {selectedCandidate.successPrediction.learningAgility}/100
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Adaptability</div>
+                              <div className="text-lg font-black mt-1 text-slate-700">
+                                {selectedCandidate.successPrediction.adaptabilityScore}/100
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Culture Fit</div>
+                              <div className="text-lg font-black mt-1 text-teal-600">
+                                {selectedCandidate.successPrediction.culturalFit || 0}/100
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-4">
+                            <h5 className="font-bold text-slate-800 text-sm mb-2">Executive Summary</h5>
+                            <p className="text-slate-600 text-sm">{selectedCandidate.successPrediction.executiveSummary}</p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedCandidate.successPrediction.strengths?.length > 0 && (
+                              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                                <h5 className="font-bold text-emerald-800 text-sm mb-2">Success Drivers</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-emerald-700">
+                                  {selectedCandidate.successPrediction.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {(selectedCandidate.successPrediction.developmentAreas || selectedCandidate.successPrediction.risks)?.length > 0 && (
+                              <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                                <h5 className="font-bold text-rose-800 text-sm mb-2">Development Areas</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-rose-700">
+                                  {(selectedCandidate.successPrediction.developmentAreas || selectedCandidate.successPrediction.risks).map((w: string, i: number) => <li key={i}>{w}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400 text-right">
+                             Predicted at: {new Date(selectedCandidate.successPrediction.predictedAt || selectedCandidate.successPrediction.generatedAt).toLocaleString()}
+                          </div>
+                          
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 flex flex-col items-center justify-center text-center space-y-4 py-8">
+                          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
+                            <Target size={32} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-lg">Future Success Prediction</h4>
+                            <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Run our predictive AI to evaluate retention risk, leadership potential, learning agility, and cultural fit.</p>
+                          </div>
+                          
+                          {predictionError && (
+                            <div className="bg-rose-50 text-rose-600 text-sm py-2 px-4 rounded-xl border border-rose-100 flex items-center gap-2">
+                              <ShieldAlert size={16} />
+                              {predictionError}
+                            </div>
+                          )}
+
+                          <button 
+                            onClick={() => generatePrediction(selectedCandidate._id || selectedCandidate.id)}
+                            disabled={isGeneratingPrediction}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 mt-2"
+                          >
+                            {isGeneratingPrediction ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                  Analyzing Candidate...
+                                </>
+                            ) : (
+                                <>Generate Prediction</>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Phase 2F-B: Interview Authenticity */}
+                      {selectedCandidate.answerAuthenticity && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <ShieldCheck size={18} className="text-indigo-600" />
+                              Interview Authenticity
+                            </h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                selectedCandidate.answerAuthenticity.authenticityScore >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                selectedCandidate.answerAuthenticity.authenticityScore >= 50 ? 'bg-amber-100 text-amber-700' :
+                                'bg-rose-100 text-rose-700'
+                            }`}>
+                              {selectedCandidate.answerAuthenticity.authenticityScore}% SCORE
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">AI Probability</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.answerAuthenticity.aiGeneratedProbability >= 80 ? 'text-rose-600' :
+                                selectedCandidate.answerAuthenticity.aiGeneratedProbability >= 50 ? 'text-amber-600' :
+                                'text-emerald-600'
+                              }`}>{selectedCandidate.answerAuthenticity.aiGeneratedProbability}%</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Similarity</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.answerAuthenticity.plagiarismSimilarity >= 80 ? 'text-rose-600' :
+                                selectedCandidate.answerAuthenticity.plagiarismSimilarity >= 50 ? 'text-amber-600' :
+                                'text-emerald-600'
+                              }`}>{selectedCandidate.answerAuthenticity.plagiarismSimilarity}%</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Consistency</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.answerAuthenticity.behavioralConsistency >= 80 ? 'text-emerald-600' :
+                                selectedCandidate.answerAuthenticity.behavioralConsistency >= 50 ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.answerAuthenticity.behavioralConsistency}/100</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Copy-Paste Risk</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.answerAuthenticity.copyPasteRisk === 'HIGH' ? 'text-rose-600' :
+                                selectedCandidate.answerAuthenticity.copyPasteRisk === 'MEDIUM' ? 'text-amber-600' :
+                                'text-emerald-600'
+                              }`}>{selectedCandidate.answerAuthenticity.copyPasteRisk}</div>
+                            </div>
+                          </div>
+                          
+                          {selectedCandidate.answerAuthenticity.recruiterAlert && (
+                            <div className="mb-4 bg-rose-50 text-rose-700 p-3 rounded-xl text-sm border border-rose-100 flex gap-2">
+                              <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+                              <div>
+                                <strong>Alert:</strong> {selectedCandidate.answerAuthenticity.recruiterAlert}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-4">
+                            <h5 className="font-bold text-slate-800 text-sm mb-2">Final Assessment</h5>
+                            <p className="text-slate-600 text-sm">{selectedCandidate.answerAuthenticity.finalAssessment}</p>
+                          </div>
+                          </div>
+                          
+                        </div>
+                      )}
+                      
+                      {/* Phase 3B: Competency Intelligence (Skill Graph) */}
+                      {selectedCandidate.skillGraph && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <Cpu size={18} className="text-blue-600" />
+                              Competency Intelligence
+                            </h4>
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                              {selectedCandidate.skillGraph.overallTechnicalScore}/100 TECHNICAL
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                            {/* Radar Chart for Tech Skills */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <h5 className="font-bold text-slate-700 text-sm text-center mb-2">Technical Competencies</h5>
+                                <div className="h-48 w-full flex-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedCandidate.skillGraph.technicalSkills?.slice(0, 6) || []}>
+                                            <PolarGrid stroke="#e2e8f0" />
+                                            <PolarAngleAxis dataKey="skill" tick={{ fill: '#64748b', fontSize: 10 }} />
+                                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                            <Radar name="Candidate" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
+                                            <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Bar Chart for Soft Skills */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <h5 className="font-bold text-slate-700 text-sm text-center mb-2">Soft Skills & Leadership</h5>
+                                <div className="h-48 w-full flex-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={selectedCandidate.skillGraph.softSkills?.slice(0, 5) || []} layout="vertical" margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                                            <XAxis type="number" domain={[0, 100]} hide />
+                                            <YAxis dataKey="skill" type="category" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
+                                            <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                            <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={16}>
+                                                {(selectedCandidate.skillGraph.softSkills?.slice(0, 5) || []).map((entry: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.score >= 80 ? '#10b981' : entry.score >= 60 ? '#3b82f6' : '#f59e0b'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 border-t border-slate-100 pt-4 flex gap-4 text-xs font-medium">
+                            <span className="text-slate-500">Validation: <span className="text-blue-700">{selectedCandidate.skillGraph.validationConfidence} Confidence</span></span>
+                            <span className="text-slate-500">Last updated: <span className="text-slate-800">{new Date(selectedCandidate.skillGraph.updatedAt).toLocaleString()}</span></span>
+                          </div>
+                        </div>
+                      )}
+                      {/* Phase 3C: Knowledge Graph Intelligence */}
+                      {selectedCandidate.knowledgeGraph && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <Target size={18} className="text-violet-600" />
+                              Knowledge Graph Intelligence
+                            </h4>
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
+                              {selectedCandidate.knowledgeGraph.candidateCluster || 'Unclustered'}
+                            </span>
+                          </div>
+                          <div className="mb-4">
+                            <GraphVisualization 
+                              knowledgeGraph={selectedCandidate.knowledgeGraph} 
+                              candidateName={selectedCandidate.candidateName || 'Candidate'} 
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-sm mt-4">
+                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1">
+                               <div className="text-xs text-slate-500 font-medium">Graph Score</div>
+                               <div className="text-lg font-black mt-1 text-violet-600">{selectedCandidate.knowledgeGraph.graphScore}/100</div>
+                             </div>
+                             {selectedCandidate.knowledgeGraph.hiddenTalents?.length > 0 && (
+                               <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 flex-1">
+                                 <div className="text-xs text-amber-600 font-medium mb-1">Hidden Talents</div>
+                                 <div className="flex flex-wrap gap-1">
+                                    {selectedCandidate.knowledgeGraph.hiddenTalents.map((ht: string) => (
+                                        <span key={ht} className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded">{ht}</span>
+                                    ))}
+                                 </div>
+                               </div>
+                             )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Phase 3E: Voice & Video Intelligence */}
+                      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <Video size={18} className="text-teal-600" />
+                            Voice & Video Intelligence
+                          </h4>
+                        </div>
+                        
+                        {mediaError && (
+                          <div className="mb-4 bg-rose-50 text-rose-700 p-3 rounded-xl text-sm border border-rose-100 flex gap-2">
+                            <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+                            <div>{mediaError}</div>
+                          </div>
+                        )}
+
+                        {selectedCandidate.voiceVideoAnalysis && selectedCandidate.voiceVideoAnalysis.length > 0 ? (
+                          <>
+                            <VoiceVideoAnalysis analysisData={selectedCandidate.voiceVideoAnalysis} />
+                            
+                            {/* Analysis Controls for PENDING or FAILED status */}
+                            {selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1]?.analysisStatus && ['PENDING', 'FAILED'].includes(selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].analysisStatus) && (
+                              <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="font-bold text-slate-800 text-sm">Analysis Status</h5>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                      selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].analysisStatus === 'FAILED' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                                    }`}>
+                                      {selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].analysisStatus}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 mt-1">
+                                    {selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].analysisStatus === 'FAILED' 
+                                      ? 'The previous analysis attempt failed. You can retry without re-uploading.' 
+                                      : 'Media uploaded successfully. Click analyze to start processing.'}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleMediaAnalyze(selectedCandidate._id || selectedCandidate.id, selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].mediaUrl, selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].roundType)}
+                                  disabled={isAnalyzingMedia}
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 text-sm"
+                                >
+                                  {isAnalyzingMedia ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                      Analyzing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <BrainCircuit size={16} />
+                                      {selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1].analysisStatus === 'FAILED' ? 'Retry Analysis' : 'Analyze Interview'}
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Processing Status Indicator */}
+                            {selectedCandidate.voiceVideoAnalysis[selectedCandidate.voiceVideoAnalysis.length - 1]?.analysisStatus === 'PROCESSING' && (
+                              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                                  <div>
+                                    <h5 className="font-bold text-blue-800 text-sm">Analysis in Progress</h5>
+                                    <p className="text-xs text-blue-600 mt-1">Our AI is processing the video and generating insights. This might take a minute.</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-8">
+                            <Mic size={48} className="mx-auto text-slate-200 mb-3" />
+                            <h5 className="text-slate-700 font-medium mb-1">No Interview Recordings</h5>
+                            <p className="text-slate-500 text-sm mb-4">Upload an interview recording (MP4/WAV) to unlock behavioral and communication insights.</p>
+                          </div>
+                        )}
+
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex justify-center">
+                          <input 
+                            type="file" 
+                            id="media-upload" 
+                            className="hidden" 
+                            accept="video/mp4,video/webm,audio/mpeg,audio/wav"
+                            onChange={(e) => handleMediaUpload(e, selectedCandidate._id || selectedCandidate.id)}
+                            disabled={isUploadingMedia || isAnalyzingMedia}
+                          />
+                          <label 
+                            htmlFor="media-upload"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                              isUploadingMedia || isAnalyzingMedia 
+                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                              : 'bg-teal-50 text-teal-700 hover:bg-teal-100 cursor-pointer'
+                            }`}
+                          >
+                            {isAnalyzingMedia ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-teal-600"></div>
+                                Analyzing Intelligence...
+                              </>
+                            ) : isUploadingMedia ? (
+                              <>
+                                <UploadCloud size={16} />
+                                Uploading ({uploadProgress}%)...
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud size={16} />
+                                Upload Interview Recording
+                              </>
+                            )}
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

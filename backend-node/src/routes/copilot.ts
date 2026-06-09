@@ -149,6 +149,60 @@ router.post('/chat', async (req: AuthRequest, res: any) => {
   }
 });
 
+router.post('/agent', async (req: AuthRequest, res: any) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: 'Message is required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
+
+  io.emit('COPILOT_THINKING', { message });
+
+  try {
+    io.emit('COPILOT_TOOL_RUNNING', { tool: 'autonomous_planner' });
+    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/agent`, { 
+      message,
+      organization_id: orgId 
+    });
+    
+    io.emit('COPILOT_TOOL_COMPLETED', { tool: 'autonomous_planner' });
+    io.emit('COPILOT_FINISHED', { success: true });
+    
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Copilot Agent Error:", error.message);
+    io.emit('COPILOT_FINISHED', { success: false, error: 'Agent failed' });
+    return res.status(500).json({ error: 'Failed to process copilot agent request' });
+  }
+});
+
+router.post('/autonomous', async (req: AuthRequest, res: any) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: 'Message is required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
+
+  io.emit('COPILOT_THINKING', { message });
+
+  try {
+    io.emit('COPILOT_TOOL_RUNNING', { tool: 'autonomous_recruiter' });
+    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/agent`, { 
+      message,
+      organization_id: orgId 
+    });
+    
+    io.emit('COPILOT_TOOL_COMPLETED', { tool: 'autonomous_recruiter' });
+    io.emit('COPILOT_FINISHED', { success: true });
+    
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Copilot Autonomous Error:", error.message);
+    io.emit('COPILOT_FINISHED', { success: false, error: 'Agent failed' });
+    return res.status(500).json({ error: 'Failed to process autonomous request' });
+  }
+});
+
 router.post('/recommend', async (req: AuthRequest, res: any) => {
   const { job_description, top_k = 5 } = req.body;
   if (!job_description) return res.status(400).json({ error: 'Job description is required' });

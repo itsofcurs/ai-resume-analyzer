@@ -54,6 +54,14 @@ from workflows.copilot_workflow import CopilotWorkflow
 from workflows.interview_workflow import InterviewQuestionGraph
 from workflows.interview_evaluation_workflow import InterviewEvaluationWorkflow
 from workflows.hiring_insights_workflow import HiringInsightsWorkflow
+from workflows.success_prediction_workflow import SuccessPredictionWorkflow
+from workflows.autonomous_copilot_workflow import AutonomousCopilotWorkflow
+from workflows.autonomous_recruiter_workflow import AutonomousRecruiterWorkflow
+from workflows.authenticity_workflow import AuthenticityWorkflow
+from workflows.adaptive_interview_workflow import AdaptiveInterviewWorkflow
+from workflows.skill_graph_workflow import SkillGraphWorkflow
+from workflows.knowledge_graph_workflow import KnowledgeGraphWorkflow
+from workflows.voice_video_intelligence_workflow import VoiceVideoIntelligenceWorkflow
 from schemas.job_match_schema import JobMatchRequestSchema, FinalATSAnalysisSchema
 from schemas.ranking_schema import BatchRankingRequestSchema, BatchRankingResponseSchema
 from schemas.error_schema import ErrorResponseSchema
@@ -246,6 +254,12 @@ _copilot_workflow = CopilotWorkflow()
 _interview_workflow = InterviewQuestionGraph()
 _interview_evaluation_workflow = InterviewEvaluationWorkflow()
 _hiring_insights_workflow = HiringInsightsWorkflow()
+_success_prediction_workflow = SuccessPredictionWorkflow()
+_autonomous_copilot_workflow = AutonomousCopilotWorkflow()
+_authenticity_workflow = AuthenticityWorkflow()
+_knowledge_graph_workflow = KnowledgeGraphWorkflow()
+_autonomous_recruiter_workflow = AutonomousRecruiterWorkflow()
+_voice_video_workflow = VoiceVideoIntelligenceWorkflow()
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +307,17 @@ class CompareRequest(BaseModel):
 
 class CopilotRequest(BaseModel):
     query: str
-    analytics_summary: dict | None = None
+    organizationId: str
+
+class AdaptiveInterviewRequest(BaseModel):
+    currentTopic: str
+    conversationHistory: list
+    resumeId: Optional[str] = "test_resume"
+    organizationId: Optional[str] = "org_test"
+
+class CopilotAgentRequest(BaseModel):
+    message: str
+    organization_id: str | None = None
 
 class InterviewRegenerateRequest(BaseModel):
     resume_id: str
@@ -306,6 +330,22 @@ class InterviewPrepRequest(BaseModel):
 class AnalyticsInsightsRequest(BaseModel):
     organization_id: str
     aggregated_stats: dict
+
+class SuccessPredictionRequest(BaseModel):
+    resume_id: str
+
+class AuthenticityRequest(BaseModel):
+    resume_id: str
+
+class KnowledgeGraphRequest(BaseModel):
+    resume_id: str
+    organization_id: str
+
+class VoiceVideoAnalyzeRequest(BaseModel):
+    resume_id: str
+    organization_id: str
+    round_type: str = "TECHNICAL"
+    media_url: str = ""
 
 
 
@@ -608,10 +648,28 @@ async def compare_candidates(req: CompareRequest):
 async def copilot_chat(req: CopilotRequest):
     try:
         logger.info("POST /api/copilot/chat — query='%s'", req.query)
-        result = await _copilot_workflow.run(req.query, req.analytics_summary)
+        result = await _copilot_workflow.run(req.query, req.organizationId)
         return result
     except Exception as exc:
         logger.error("POST /api/copilot/chat — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post(
+    "/api/copilot/agent",
+    summary="Autonomous Recruiter Copilot",
+    tags=["Phase2F-A"],
+)
+async def copilot_agent(req: CopilotAgentRequest):
+    try:
+        logger.info("POST /api/copilot/agent — message='%s'", req.message)
+        result = await _autonomous_recruiter_workflow.run(req.message, req.organization_id)
+        if "error" in result and result.get("error"):
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/copilot/agent — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -630,6 +688,34 @@ async def regenerate_interview(req: InterviewRegenerateRequest, background_tasks
     except Exception as exc:
         logger.error("POST /api/interview/regenerate — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post("/api/interview/authenticity")
+async def analyze_authenticity(request: ProcessRequest, background_tasks: BackgroundTasks):
+    """Phase 2F-B: Interview Answer Authenticity"""
+    workflow = AuthenticityWorkflow()
+    background_tasks.add_task(workflow.run, request.resume_id)
+    return {"status": "authenticity_analysis_started", "resumeId": request.resume_id}
+
+@app.post("/api/interview/adaptive/next")
+async def generate_adaptive_question(request: AdaptiveInterviewRequest):
+    """Phase 3A: Adaptive Interview Engine"""
+    workflow = AdaptiveInterviewWorkflow()
+    result = await workflow.run(
+        current_topic=request.currentTopic,
+        conversation_history=request.conversationHistory,
+        resume_id=request.resumeId,
+        organization_id=request.organizationId
+    )
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+@app.post("/api/skill-graph/generate")
+async def generate_skill_graph(request: ProcessRequest, background_tasks: BackgroundTasks):
+    """Phase 3B: Skill Graph & Competency Intelligence"""
+    workflow = SkillGraphWorkflow()
+    background_tasks.add_task(workflow.run, request.resume_id)
+    return {"status": "skill_graph_generation_started", "resumeId": request.resume_id}
 
 
 @app.post(
@@ -686,6 +772,62 @@ async def generate_analytics_insights(req: AnalyticsInsightsRequest):
     except Exception as exc:
         logger.error("POST /api/analytics/insights — failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post(
+    "/api/predict-success",
+    summary="Generate candidate success prediction",
+    tags=["Phase2E-A"],
+)
+async def generate_success_prediction(req: SuccessPredictionRequest):
+    try:
+        logger.info(f"POST /api/predict-success — resume_id='{{req.resume_id}}'")
+        result = await _success_prediction_workflow.run(req.resume_id)
+        if "error" in result and result["error"]:
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/predict-success — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post(
+    "/api/interview/authenticity",
+    summary="Generate answer authenticity and plagiarism intelligence",
+    tags=["Phase2F-B"],
+)
+async def generate_authenticity(req: AuthenticityRequest):
+    try:
+        logger.info(f"POST /api/interview/authenticity — resume_id='{{req.resume_id}}'")
+        result = await _authenticity_workflow.run(req.resume_id)
+        if "error" in result and result["error"]:
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("POST /api/interview/authenticity — failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post(
+    "/api/knowledge-graph/generate",
+    summary="Generate Knowledge Graph Intelligence",
+    tags=["Phase3C"],
+)
+async def generate_knowledge_graph(req: KnowledgeGraphRequest, background_tasks: BackgroundTasks):
+    logger.info(f"POST /api/knowledge-graph/generate — resume_id='{req.resume_id}'")
+    background_tasks.add_task(_knowledge_graph_workflow.run, req.resume_id, req.organization_id)
+    return {"message": "Knowledge graph generation started"}
+
+@app.post(
+    "/api/media/analyze",
+    summary="Generate Voice and Video Intelligence",
+    tags=["Phase3E"],
+)
+async def analyze_media(req: VoiceVideoAnalyzeRequest, background_tasks: BackgroundTasks):
+    logger.info(f"POST /api/media/analyze — resume_id='{req.resume_id}' round='{req.round_type}'")
+    background_tasks.add_task(_voice_video_workflow.run, req.resume_id, req.organization_id, req.round_type, req.media_url)
+    return {"message": "Voice and Video analysis started"}
 
 
 
