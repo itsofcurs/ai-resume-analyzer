@@ -158,176 +158,147 @@ export const Dashboard = () => {
   const hasMoreCandidates = candidates.length > VISIBLE_COUNT;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 relative animate-fade-in">
+    <div className="p-4 md:p-6 lg:p-8 max-w-[1440px] mx-auto space-y-5 relative animate-fade-in">
       {/* Header */}
-      <header>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">AI Hiring Intelligence</h2>
-        <p className="text-slate-500 text-sm mt-1">Semantic search, fraud detection, and candidate insights.</p>
+      <header className="flex justify-between items-end mb-2">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">AI Hiring Intelligence</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Semantic search, fraud detection, and candidate insights.</p>
+        </div>
       </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
-          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Users size={64} />
-          </div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Resumes</p>
-          <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.total_resumes}</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium flex items-center gap-1">
-            <TrendingUp size={12} /> live tracking
-          </p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
-          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <FileText size={64} />
-          </div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Processed</p>
-          <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.processed}</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium flex items-center gap-1">
-            <TrendingUp size={12} /> NLP Pipeline Active
-          </p>
-        </div>
-        <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-5 border border-indigo-500 shadow-[0_4px_20px_rgb(79,70,229,0.2)] text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-10">
-            <BrainCircuit size={64} />
-          </div>
-          <p className="text-xs font-semibold text-indigo-200 uppercase tracking-wider mb-1">Semantic Vectors</p>
-          <h3 className="text-3xl font-black tracking-tight">{stats.unique_skills}</h3>
-          <p className="text-xs text-indigo-200 mt-2 font-medium flex items-center gap-1">
-            <CheckCircle size={12} /> MongoDB Atlas Ready
-          </p>
-        </div>
-        {stats.avg_ats_score != null && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-blue-200 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Target size={64} />
+      {/* Row 1: KPI Panels (12-col grid) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 xl:grid-cols-12 gap-5">
+        
+        {/* Panel 1: AI Processing */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm col-span-1 md:col-span-4 lg:col-span-4 xl:col-span-4 flex flex-col justify-between">
+          <h3 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2 uppercase tracking-wider">
+            <BrainCircuit size={14} className="text-indigo-600" /> AI Processing
+          </h3>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-blue-50 text-blue-600"><Users size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.total_resumes}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Total</div>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg ATS Score</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.avg_ats_score}</h3>
-            <p className="text-xs text-blue-600 mt-2 font-medium flex items-center gap-1">
-              <TrendingUp size={12} /> AI Quality Index
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-emerald-50 text-emerald-600"><FileText size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.processed}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Processed</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-indigo-50 text-indigo-600"><BrainCircuit size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.unique_skills}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Vectors</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-purple-50 text-purple-600"><Target size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.avg_ats_score || 0}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Avg ATS</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 col-span-2 mt-1">
+              <div className="p-1.5 rounded-md bg-amber-50 text-amber-600"><TrendingUp size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.candidatesRequiringUpskilling}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Needs Upskilling</div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Fraud Detection Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.averageTrustScore != null && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <ShieldCheck size={64} />
+        {/* Panel 2: Hiring Intelligence */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm col-span-1 md:col-span-4 lg:col-span-4 xl:col-span-4 flex flex-col justify-between">
+          <h3 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2 uppercase tracking-wider">
+            <Award size={14} className="text-emerald-600" /> Hiring Intelligence
+          </h3>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-3 h-full content-start">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-emerald-50 text-emerald-600"><CheckCircle size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.strongHireCandidates}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Strong Hires</div>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Trust Score</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.averageTrustScore}</h3>
-            <p className="text-xs text-emerald-600 mt-2 font-medium flex items-center gap-1">
-              <TrendingUp size={12} /> Fraud Detection Agent
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-blue-50 text-blue-600"><TrendingUp size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.highPotentialCandidates}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">High Potential</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-purple-50 text-purple-600"><Users size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.leadershipCandidates}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Leadership</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-teal-50 text-teal-600"><Target size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.candidatesInterviewReady}</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Ready</div>
+              </div>
+            </div>
           </div>
-        )}
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-rose-200 transition-colors">
-          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <ShieldAlert size={64} />
-          </div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">High Risk</p>
-          <h3 className="text-3xl font-black text-rose-600 tracking-tight">{stats.highRiskCandidates}</h3>
-          <p className="text-xs text-rose-600 mt-2 font-medium">Flagged candidates</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-amber-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Medium Risk</p>
-          <h3 className="text-3xl font-black text-amber-500 tracking-tight">{stats.mediumRiskCandidates}</h3>
-          <p className="text-xs text-amber-600 mt-2 font-medium">Contradictions found</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Verified (Low Risk)</p>
-          <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.verifiedCandidates}</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium">Clean profiles</p>
-        </div>
-      </div>
 
-      {/* Career Intelligence Metrics (Skill Gap Phase 2C-C) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
-        {stats.averageHiringReadiness != null && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <BrainCircuit size={64} />
+        {/* Panel 3: Risk & Fraud */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm col-span-1 md:col-span-4 lg:col-span-4 xl:col-span-4 flex flex-col justify-between">
+          <h3 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2 uppercase tracking-wider">
+            <ShieldAlert size={14} className="text-rose-600" /> Risk & Fraud
+          </h3>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-3 h-full content-start">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-slate-100 text-slate-600"><ShieldCheck size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-slate-800 leading-none">{stats.averageTrustScore || 0}%</div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Avg Trust</div>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Hiring Readiness</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.averageHiringReadiness}%</h3>
-            <p className="text-xs text-indigo-600 mt-2 font-medium flex items-center gap-1">
-              <TrendingUp size={12} /> Career Intelligence
-            </p>
-          </div>
-        )}
-        {stats.averageGrowthPotential != null && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-blue-200 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <TrendingUp size={64} />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-rose-50 text-rose-600"><ShieldAlert size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-rose-600 leading-none">{stats.highRiskCandidates}</div>
+                <div className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">High Risk</div>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Growth Potential</p>
-            <h3 className="text-3xl font-black text-blue-600 tracking-tight">{stats.averageGrowthPotential}%</h3>
-            <p className="text-xs text-blue-600 mt-2 font-medium flex items-center gap-1">
-              Future Leaders
-            </p>
-          </div>
-        )}
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Interview Ready</p>
-          <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.candidatesInterviewReady}</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium">Ready to hire</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-amber-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Needs Upskilling</p>
-          <h3 className="text-3xl font-black text-amber-500 tracking-tight">{stats.candidatesRequiringUpskilling}</h3>
-          <p className="text-xs text-amber-600 mt-2 font-medium">Have missing skills</p>
-        </div>
-      </div>
-
-      {/* Workforce Intelligence Metrics (Predictive Hiring Phase 2C-D) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4">
-        {stats.averageSuccessScore != null && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <BrainCircuit size={64} />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-amber-50 text-amber-600"><ShieldAlert size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-amber-600 leading-none">{stats.mediumRiskCandidates}</div>
+                <div className="text-[9px] font-bold text-amber-500 uppercase tracking-wider mt-0.5">Med Risk</div>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Avg Success Score</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{stats.averageSuccessScore}%</h3>
-            <p className="text-xs text-indigo-600 mt-2 font-medium flex items-center gap-1">
-              <TrendingUp size={12} /> Predictive Engine
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-emerald-50 text-emerald-600"><CheckCircle size={14} /></div>
+              <div>
+                <div className="text-sm font-black text-emerald-600 leading-none">{stats.verifiedCandidates}</div>
+                <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mt-0.5">Verified</div>
+              </div>
+            </div>
           </div>
-        )}
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Strong Hires</p>
-          <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.strongHireCandidates}</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium">Top recommendation</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-blue-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">High Potential</p>
-          <h3 className="text-3xl font-black text-blue-600 tracking-tight">{stats.highPotentialCandidates}</h3>
-          <p className="text-xs text-blue-600 mt-2 font-medium">&gt;80% Success Prob</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Low Retention Risk</p>
-          <h3 className="text-3xl font-black text-indigo-600 tracking-tight">{stats.lowRetentionRisk}</h3>
-          <p className="text-xs text-indigo-600 mt-2 font-medium">Likely to stay long</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative overflow-hidden group hover:border-purple-200 transition-colors">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Leadership Material</p>
-          <h3 className="text-3xl font-black text-purple-600 tracking-tight">{stats.leadershipCandidates}</h3>
-          <p className="text-xs text-purple-600 mt-2 font-medium">High/Exceptional</p>
         </div>
       </div>
 
       {/* Pipeline Status Strip (only when processing) */}
       <AgentVisualizer status={activeStatus} />
 
-      {/* Main Content Area — 2 column */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Row 2: Main Content Area (12-col grid) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 xl:grid-cols-12 gap-5">
+        
         {/* Left: Recent Candidates */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="col-span-1 md:col-span-4 lg:col-span-5 xl:col-span-8">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+            <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-bold text-slate-800 text-sm">
                 Recent Candidates
                 {candidates.length > 0 && <span className="ml-2 text-slate-400 font-medium">({candidates.length})</span>}
@@ -335,43 +306,43 @@ export const Dashboard = () => {
               <button className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 transition-colors" onClick={fetchData}>Refresh</button>
             </div>
             
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 flex-1">
               {loading ? (
-                <div className="p-6 text-center text-slate-400 text-sm">Loading data from Database...</div>
+                <div className="p-6 text-center text-slate-400 text-xs">Loading data from Database...</div>
               ) : candidates.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 text-sm">No resumes uploaded yet. Upload one to see it here!</div>
+                <div className="p-6 text-center text-slate-400 text-xs">No resumes uploaded yet. Upload one to see it here!</div>
               ) : visibleCandidates.map((candidate) => {
                 const authScore = candidate.aiAnalysis?.authenticity_score;
                 const isSuspicious = authScore && authScore < 70;
                 
                 return (
-                  <div key={candidate._id || candidate.id} onClick={() => openCandidate(candidate)} className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors cursor-pointer group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-200/60">
+                  <div key={candidate._id || candidate.id} onClick={() => openCandidate(candidate)} className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-8 h-8 shrink-0 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-[10px] border border-slate-200/60">
                         {candidate.candidateName?.substring(0,2).toUpperCase() || 'UN'}
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                      <div className="truncate">
+                        <h4 className="font-bold text-xs text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5 truncate">
                           {candidate.candidateName || candidate.filename}
                           {isSuspicious && (
-                            <span title="Low Authenticity Score">
-                              <ShieldAlert size={13} className="text-rose-500" />
+                            <span title="Low Authenticity Score" className="shrink-0">
+                              <ShieldAlert size={12} className="text-rose-500" />
                             </span>
                           )}
                         </h4>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
+                        <p className="text-[10px] text-slate-500 mt-0.5 truncate">
                           {candidate.candidateEmail || 'Status: ' + candidate.status}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 shrink-0 ml-2">
                       <div className="text-right">
-                        <p className={`text-xs font-semibold ${candidate.status === 'PROCESSED' ? 'text-emerald-600' : (candidate.status === 'PROCESSING' || candidate.status === 'EXTRACTING' || candidate.status === 'PENDING' || candidate.status === 'SCORING' || candidate.status === 'RANKING' ? 'text-indigo-500 animate-pulse' : 'text-amber-500')}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${candidate.status === 'PROCESSED' ? 'text-emerald-600' : (candidate.status === 'PROCESSING' || candidate.status === 'EXTRACTING' || candidate.status === 'PENDING' || candidate.status === 'SCORING' || candidate.status === 'RANKING' ? 'text-indigo-500 animate-pulse' : 'text-amber-500')}`}>
                           {candidate.status}
                         </p>
                         {candidate.atsScores?.overall_score != null && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                          <div className="flex items-center justify-end gap-1 mt-0.5">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${
                               candidate.atsScores.overall_score >= 80 ? 'bg-emerald-100 text-emerald-700' :
                               candidate.atsScores.overall_score >= 60 ? 'bg-blue-100 text-blue-700' :
                               candidate.atsScores.overall_score >= 40 ? 'bg-amber-100 text-amber-700' :
@@ -379,27 +350,17 @@ export const Dashboard = () => {
                             }`}>
                               ATS {candidate.atsScores.overall_score}
                             </span>
-                            {candidate.candidateRanking?.grade && (
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                                ['A+', 'A'].includes(candidate.candidateRanking.grade) ? 'bg-emerald-100 text-emerald-700' :
-                                ['B+', 'B'].includes(candidate.candidateRanking.grade) ? 'bg-blue-100 text-blue-700' :
-                                ['C+', 'C'].includes(candidate.candidateRanking.grade) ? 'bg-amber-100 text-amber-700' :
-                                'bg-rose-100 text-rose-700'
-                              }`}>
-                                {candidate.candidateRanking.grade}
-                              </span>
-                            )}
                           </div>
                         )}
                       </div>
                       <button
                         onClick={(e) => handleDeleteCandidate(candidate._id || candidate.id, e)}
-                        className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                        className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100 shrink-0"
                         title="Delete Candidate"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
-                      <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-500" />
+                      <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-500 shrink-0" />
                     </div>
                   </div>
                 );
@@ -408,15 +369,15 @@ export const Dashboard = () => {
 
             {/* Show More / Show Less */}
             {hasMoreCandidates && (
-              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/30">
+              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/30 shrink-0">
                 <button
                   onClick={() => setShowAllCandidates(!showAllCandidates)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors mx-auto"
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-700 transition-colors mx-auto"
                 >
                   {showAllCandidates ? (
-                    <><ChevronUp size={14} /> Show Less</>
+                    <><ChevronUp size={12} /> Show Less</>
                   ) : (
-                    <><ChevronDown size={14} /> Show {candidates.length - VISIBLE_COUNT} More Candidates</>
+                    <><ChevronDown size={12} /> Show {candidates.length - VISIBLE_COUNT} More Candidates</>
                   )}
                 </button>
               </div>
@@ -425,7 +386,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Right column: Upload + Fraud Protection */}
-        <div className="space-y-5">
+        <div className="col-span-1 md:col-span-4 lg:col-span-3 xl:col-span-4 space-y-5">
           {/* Upload Widget */}
           <input 
             type="file" 
@@ -436,21 +397,21 @@ export const Dashboard = () => {
             multiple
           />
           <div 
-            className={`bg-white rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-200 cursor-pointer shadow-sm ${
-              isDragging ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+            className={`bg-indigo-50/30 rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200 cursor-pointer shadow-sm ${
+              isDragging ? 'border-indigo-500 bg-indigo-100' : 'border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50'
             }`}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={onDrop}
             onClick={() => fileInputRef.current?.click()}
           >
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md">
               <UploadCloud size={24} />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-0.5">Ingest Resumes</h3>
-            <p className="text-xs text-slate-500 mb-3">Drag & drop PDF, DOCX, or TXT</p>
+            <h3 className="text-sm font-bold text-slate-900 mb-0.5">Ingest Resumes</h3>
+            <p className="text-[11px] text-slate-500 mb-3">Drag & drop PDF, DOCX, or TXT</p>
             <button 
-              className="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-5 rounded-xl transition-colors text-xs shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-5 rounded-lg transition-colors text-xs shadow-sm disabled:opacity-70 disabled:cursor-not-allowed w-full"
               disabled={isUploading}
               onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
             >
@@ -459,17 +420,17 @@ export const Dashboard = () => {
           </div>
 
           {/* Fraud Protection */}
-          <div className="bg-gradient-to-b from-white to-slate-50 rounded-2xl border border-slate-200/80 p-5 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-3 opacity-5">
-              <ShieldAlert size={80} />
+          <div className="bg-gradient-to-br from-slate-50 to-rose-50/30 rounded-xl border border-slate-200/80 p-4 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-5">
+              <ShieldAlert size={60} />
             </div>
-            <div className="flex items-center gap-2.5 mb-2 relative z-10">
-              <div className="bg-rose-100 text-rose-600 p-1.5 rounded-lg">
-                <ShieldAlert size={16} />
+            <div className="flex items-center gap-2 mb-1.5 relative z-10">
+              <div className="bg-rose-100 text-rose-600 p-1.5 rounded-md">
+                <ShieldAlert size={14} />
               </div>
-              <h3 className="font-bold text-sm text-slate-800">Fraud Protection</h3>
+              <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Fraud Protection</h3>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed relative z-10">
+            <p className="text-[11px] text-slate-600 leading-relaxed relative z-10 font-medium">
               AI actively scanning for keyword stuffing, perfect phrasing, and impossible timeline claims.
             </p>
           </div>
