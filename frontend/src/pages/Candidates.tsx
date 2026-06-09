@@ -60,7 +60,7 @@ export const Candidates = () => {
     formData.append('roundType', 'TECHNICAL'); // Default to technical round
 
     try {
-      const res = await axios.post(`${API_URL}/media/upload`, formData, {
+      await axios.post(`${API_URL}/media/upload`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -1115,7 +1115,6 @@ export const Candidates = () => {
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-4">
                             <h5 className="font-bold text-slate-800 text-sm mb-2">Final Assessment</h5>
                             <p className="text-slate-600 text-sm">{selectedCandidate.answerAuthenticity.finalAssessment}</p>
-                          </div>
                           </div>
                           
                         </div>

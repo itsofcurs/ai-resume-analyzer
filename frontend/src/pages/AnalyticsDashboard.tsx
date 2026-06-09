@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, ScatterChart, Scatter, CartesianGrid, ZAxis, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, ScatterChart, Scatter, CartesianGrid, ZAxis, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Cell } from 'recharts';
 import { BrainCircuit, Target, Activity, CheckCircle, ShieldAlert, Users, TrendingUp, RefreshCw, Video, Mic } from 'lucide-react';
 import type { RootState } from '../store';
 
@@ -30,7 +30,7 @@ export const AnalyticsDashboard = () => {
       if (forceRefresh) setRefreshing(true);
       const suffix = forceRefresh ? '?refresh=true' : '';
       
-      const [dashRes, funnelRes, trendsRes, skillsRes, successRes, authRes] = await Promise.all([
+      const [dashRes, funnelRes, trendsRes, skillsRes, successRes, authRes, mediaRes] = await Promise.all([
         axios.get(`${API_URL}/analytics/dashboard${suffix}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/analytics/funnel${suffix}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/analytics/trends${suffix}`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -562,7 +562,7 @@ export const AnalyticsDashboard = () => {
                 <YAxis type="category" dataKey="cluster" axisLine={false} tickLine={false} className="text-xs font-medium" width={100} />
                 <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                 <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={24}>
-                  {(skills?.skillClusterDistribution || []).map((entry: any, index: number) => (
+                  {(skills?.skillClusterDistribution || []).map((_: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={['#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#f97316'][index % 6]} />
                   ))}
                 </Bar>

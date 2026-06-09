@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import type { RootState } from '../store';
 import { MessageSquare, Send, BrainCircuit, Target, AlertTriangle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';

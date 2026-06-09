@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, X, MessageCircle, CheckCircle2, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, X, CheckCircle2, ChevronRight, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
@@ -56,7 +56,7 @@ export const CopilotPanel = () => {
       auth: { token }
     });
 
-    socket.on('COPILOT_THINKING', (data) => {
+    socket.on('COPILOT_THINKING', () => {
       setIsAgentRunning(true);
       setAgentStatus('Analyzing intent...');
       setExecutionTrace([]);
@@ -71,7 +71,7 @@ export const CopilotPanel = () => {
       setExecutionTrace(prev => [...prev, `Completed: ${data.tool.replace('tool_', '')}`]);
     });
 
-    socket.on('COPILOT_FINISHED', (data) => {
+    socket.on('COPILOT_FINISHED', () => {
       setIsAgentRunning(false);
       setAgentStatus('');
     });

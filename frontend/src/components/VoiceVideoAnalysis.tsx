@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip } from 'recharts';
 
 interface VoiceVideoAnalysisProps {
   analysisData: any[]; // Array of rounds
