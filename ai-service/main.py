@@ -32,6 +32,7 @@ import uuid
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi import Response
 from fastapi.exceptions import RequestValidationError
+from typing import Optional
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel

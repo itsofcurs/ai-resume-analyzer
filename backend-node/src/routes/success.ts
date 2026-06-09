@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAuth } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { Resume } from '../models/Resume';
 import axios from 'axios';
 
@@ -11,7 +11,7 @@ const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'default-internal-key';
 // @route   POST /api/success/predict
 // @desc    Generate a candidate success prediction
 // @access  Private
-router.post('/predict', requireAuth, async (req, res) => {
+router.post('/predict', authenticateToken, async (req: AuthRequest, res: any) => {
   try {
     const { resumeId } = req.body;
     

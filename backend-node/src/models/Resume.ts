@@ -63,6 +63,7 @@ export interface IResume extends Document {
   };
   voiceVideoAnalysis?: Array<{
     roundType: string;
+    mediaUrl?: string;
     analysisStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
     transcriptVersion?: string;
     transcriptionStatus?: 'PENDING' | 'COMPLETED' | 'FAILED';
