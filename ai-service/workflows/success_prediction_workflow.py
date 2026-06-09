@@ -243,7 +243,7 @@ class SuccessPredictionWorkflow:
                 "behavioral_signals": state.get("behavioral_signals", ""),
                 "skill_gap_json": json.dumps(state.get("skill_gap_analysis", {}), default=str)
             })
-            data = json.loads(clean_json_str(raw))
+            data = json.loads(clean_json_str(raw), strict=False)
             state["learning_agility"] = data.get("learningAgility", 0)
             state["adaptability_score"] = data.get("adaptabilityScore", 0)
             state["communication_potential"] = data.get("communicationPotential", 0)
@@ -262,7 +262,7 @@ class SuccessPredictionWorkflow:
                 "learning_agility": str(state.get("learning_agility", 0)),
                 "authenticity_json": json.dumps(state.get("answer_authenticity", {}), default=str)
             })
-            data = json.loads(clean_json_str(raw))
+            data = json.loads(clean_json_str(raw), strict=False)
             state["retention_risk"] = data.get("retentionRisk", "MEDIUM")
             state["leadership_potential"] = data.get("leadershipPotential", "MEDIUM")
         except Exception as e:
@@ -279,7 +279,7 @@ class SuccessPredictionWorkflow:
                 "fraud_json": json.dumps(state.get("fraud_analysis", {}), default=str),
                 "ats_json": json.dumps(state.get("ats_scores", {}), default=str)
             })
-            data = json.loads(clean_json_str(raw))
+            data = json.loads(clean_json_str(raw), strict=False)
             state["cultural_fit"] = data.get("culturalFit", 0)
         except Exception as e:
             state["error"] = str(e)
@@ -304,7 +304,7 @@ class SuccessPredictionWorkflow:
                 "soft_score": str(skill_graph.get("overallSoftSkillScore", 0)),
                 "voice_video_json": json.dumps(voice_video_analysis, default=str)
             })
-            data = json.loads(clean_json_str(raw))
+            data = json.loads(clean_json_str(raw), strict=False)
             state["success_probability"] = data.get("successProbability", 0)
             state["growth_trajectory"] = data.get("growthTrajectory", "")
             state["recommended_career_path"] = data.get("recommendedCareerPath", "")
