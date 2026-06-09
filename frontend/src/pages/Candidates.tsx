@@ -611,6 +611,216 @@ export const Candidates = () => {
                           )) || <p className="text-xs text-slate-500 italic">No skills extracted</p>}
                         </div>
                       </div>
+                      {/* Phase 2E-A: Candidate Success Prediction */}
+                      {selectedCandidate.successPrediction ? (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <Target size={18} className="text-emerald-600" />
+                              Future Success Prediction
+                            </h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                selectedCandidate.successPrediction.successProbability >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                selectedCandidate.successPrediction.successProbability >= 60 ? 'bg-blue-100 text-blue-700' :
+                                selectedCandidate.successPrediction.successProbability >= 40 ? 'bg-amber-100 text-amber-700' :
+                                'bg-rose-100 text-rose-700'
+                            }`}>
+                              {selectedCandidate.successPrediction.successProbability}% LIKELIHOOD
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Retention Risk</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                selectedCandidate.successPrediction.retentionRisk === 'LOW' ? 'text-emerald-600' :
+                                selectedCandidate.successPrediction.retentionRisk === 'MEDIUM' ? 'text-amber-600' :
+                                'text-rose-600'
+                              }`}>{selectedCandidate.successPrediction.retentionRisk}</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Leadership</div>
+                              <div className={`text-lg font-black mt-1 ${
+                                ['HIGH', 'EXCEPTIONAL'].includes(selectedCandidate.successPrediction.leadershipPotential) ? 'text-purple-600' :
+                                'text-slate-700'
+                              }`}>{selectedCandidate.successPrediction.leadershipPotential}</div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Agility</div>
+                              <div className="text-lg font-black mt-1 text-blue-600">
+                                {selectedCandidate.successPrediction.learningAgility}/100
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Adaptability</div>
+                              <div className="text-lg font-black mt-1 text-slate-700">
+                                {selectedCandidate.successPrediction.adaptabilityScore}/100
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <div className="text-xs text-slate-500 font-medium">Culture Fit</div>
+                              <div className="text-lg font-black mt-1 text-teal-600">
+                                {selectedCandidate.successPrediction.culturalFit || 0}/100
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-4">
+                            <h5 className="font-bold text-slate-800 text-sm mb-2">Executive Summary</h5>
+                            <p className="text-slate-600 text-sm">{selectedCandidate.successPrediction.executiveSummary}</p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedCandidate.successPrediction.strengths?.length > 0 && (
+                              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                                <h5 className="font-bold text-emerald-800 text-sm mb-2">Success Drivers</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-emerald-700">
+                                  {selectedCandidate.successPrediction.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {(selectedCandidate.successPrediction.developmentAreas || selectedCandidate.successPrediction.risks)?.length > 0 && (
+                              <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                                <h5 className="font-bold text-rose-800 text-sm mb-2">Development Areas</h5>
+                                <ul className="list-disc pl-4 space-y-1 text-xs text-rose-700">
+                                  {(selectedCandidate.successPrediction.developmentAreas || selectedCandidate.successPrediction.risks).map((w: string, i: number) => <li key={i}>{w}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400 text-right">
+                             Predicted at: {new Date(selectedCandidate.successPrediction.predictedAt || selectedCandidate.successPrediction.generatedAt).toLocaleString()}
+                          </div>
+                          
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 flex flex-col items-center justify-center text-center space-y-4 py-8">
+                          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
+                            <Target size={32} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-lg">Future Success Prediction</h4>
+                            <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Run our predictive AI to evaluate retention risk, leadership potential, learning agility, and cultural fit.</p>
+                          </div>
+                          
+                          {predictionError && (
+                            <div className="bg-rose-50 text-rose-600 text-sm py-2 px-4 rounded-xl border border-rose-100 flex items-center gap-2">
+                              <ShieldAlert size={16} />
+                              {predictionError}
+                            </div>
+                          )}
+
+                          <button 
+                            onClick={() => generatePrediction(selectedCandidate._id || selectedCandidate.id)}
+                            disabled={isGeneratingPrediction}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 mt-2"
+                          >
+                            {isGeneratingPrediction ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                  Analyzing Candidate...
+                                </>
+                            ) : (
+                                <>Generate Prediction</>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Phase 3B: Competency Intelligence (Skill Graph) */}
+                      {selectedCandidate.skillGraph && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <Cpu size={18} className="text-blue-600" />
+                              Competency Intelligence
+                            </h4>
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                              {selectedCandidate.skillGraph.overallTechnicalScore}/100 TECHNICAL
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                            {/* Radar Chart for Tech Skills */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <h5 className="font-bold text-slate-700 text-sm text-center mb-2">Technical Competencies</h5>
+                                <div className="h-48 w-full flex-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedCandidate.skillGraph.technicalSkills?.slice(0, 6) || []}>
+                                            <PolarGrid stroke="#e2e8f0" />
+                                            <PolarAngleAxis dataKey="skill" tick={{ fill: '#64748b', fontSize: 10 }} />
+                                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                            <Radar name="Candidate" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
+                                            <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Bar Chart for Soft Skills */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <h5 className="font-bold text-slate-700 text-sm text-center mb-2">Soft Skills & Leadership</h5>
+                                <div className="h-48 w-full flex-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={selectedCandidate.skillGraph.softSkills?.slice(0, 5) || []} layout="vertical" margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                                            <XAxis type="number" domain={[0, 100]} hide />
+                                            <YAxis dataKey="skill" type="category" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
+                                            <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                            <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={16}>
+                                                {(selectedCandidate.skillGraph.softSkills?.slice(0, 5) || []).map((entry: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.score >= 80 ? '#10b981' : entry.score >= 60 ? '#3b82f6' : '#f59e0b'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 border-t border-slate-100 pt-4 flex gap-4 text-xs font-medium">
+                            <span className="text-slate-500">Validation: <span className="text-blue-700">{selectedCandidate.skillGraph.validationConfidence} Confidence</span></span>
+                            <span className="text-slate-500">Last updated: <span className="text-slate-800">{new Date(selectedCandidate.skillGraph.updatedAt).toLocaleString()}</span></span>
+                          </div>
+                        </div>
+                      )}
+                      {/* Phase 3C: Knowledge Graph Intelligence */}
+                      {selectedCandidate.knowledgeGraph && (
+                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                              <Target size={18} className="text-violet-600" />
+                              Knowledge Graph Intelligence
+                            </h4>
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
+                              {selectedCandidate.knowledgeGraph.candidateCluster || 'Unclustered'}
+                            </span>
+                          </div>
+                          <div className="mb-4">
+                            <GraphVisualization 
+                              knowledgeGraph={selectedCandidate.knowledgeGraph} 
+                              candidateName={selectedCandidate.candidateName || 'Candidate'} 
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-sm mt-4">
+                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1">
+                               <div className="text-xs text-slate-500 font-medium">Graph Score</div>
+                               <div className="text-lg font-black mt-1 text-violet-600">{selectedCandidate.knowledgeGraph.graphScore}/100</div>
+                             </div>
+                             {selectedCandidate.knowledgeGraph.hiddenTalents?.length > 0 && (
+                               <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 flex-1">
+                                 <div className="text-xs text-amber-600 font-medium mb-1">Hidden Talents</div>
+                                 <div className="flex flex-wrap gap-1">
+                                    {selectedCandidate.knowledgeGraph.hiddenTalents.map((ht: string) => (
+                                        <span key={ht} className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded">{ht}</span>
+                                    ))}
+                                 </div>
+                               </div>
+                             )}
+                          </div>
+                        </div>
+                      )}
+                      
                     </div>
 
                     {/* Right: Authenticity & Trust Report */}
@@ -934,123 +1144,6 @@ export const Candidates = () => {
                         </div>
                       )}
                       
-                      {/* Phase 2E-A: Candidate Success Prediction */}
-                      {selectedCandidate.successPrediction ? (
-                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                              <Target size={18} className="text-emerald-600" />
-                              Future Success Prediction
-                            </h4>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                selectedCandidate.successPrediction.successProbability >= 80 ? 'bg-emerald-100 text-emerald-700' :
-                                selectedCandidate.successPrediction.successProbability >= 60 ? 'bg-blue-100 text-blue-700' :
-                                selectedCandidate.successPrediction.successProbability >= 40 ? 'bg-amber-100 text-amber-700' :
-                                'bg-rose-100 text-rose-700'
-                            }`}>
-                              {selectedCandidate.successPrediction.successProbability}% LIKELIHOOD
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <div className="text-xs text-slate-500 font-medium">Retention Risk</div>
-                              <div className={`text-lg font-black mt-1 ${
-                                selectedCandidate.successPrediction.retentionRisk === 'LOW' ? 'text-emerald-600' :
-                                selectedCandidate.successPrediction.retentionRisk === 'MEDIUM' ? 'text-amber-600' :
-                                'text-rose-600'
-                              }`}>{selectedCandidate.successPrediction.retentionRisk}</div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <div className="text-xs text-slate-500 font-medium">Leadership</div>
-                              <div className={`text-lg font-black mt-1 ${
-                                ['HIGH', 'EXCEPTIONAL'].includes(selectedCandidate.successPrediction.leadershipPotential) ? 'text-purple-600' :
-                                'text-slate-700'
-                              }`}>{selectedCandidate.successPrediction.leadershipPotential}</div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <div className="text-xs text-slate-500 font-medium">Agility</div>
-                              <div className="text-lg font-black mt-1 text-blue-600">
-                                {selectedCandidate.successPrediction.learningAgility}/100
-                              </div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <div className="text-xs text-slate-500 font-medium">Adaptability</div>
-                              <div className="text-lg font-black mt-1 text-slate-700">
-                                {selectedCandidate.successPrediction.adaptabilityScore}/100
-                              </div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <div className="text-xs text-slate-500 font-medium">Culture Fit</div>
-                              <div className="text-lg font-black mt-1 text-teal-600">
-                                {selectedCandidate.successPrediction.culturalFit || 0}/100
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-4">
-                            <h5 className="font-bold text-slate-800 text-sm mb-2">Executive Summary</h5>
-                            <p className="text-slate-600 text-sm">{selectedCandidate.successPrediction.executiveSummary}</p>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedCandidate.successPrediction.strengths?.length > 0 && (
-                              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                                <h5 className="font-bold text-emerald-800 text-sm mb-2">Success Drivers</h5>
-                                <ul className="list-disc pl-4 space-y-1 text-xs text-emerald-700">
-                                  {selectedCandidate.successPrediction.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                                </ul>
-                              </div>
-                            )}
-                            {(selectedCandidate.successPrediction.developmentAreas || selectedCandidate.successPrediction.risks)?.length > 0 && (
-                              <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
-                                <h5 className="font-bold text-rose-800 text-sm mb-2">Development Areas</h5>
-                                <ul className="list-disc pl-4 space-y-1 text-xs text-rose-700">
-                                  {(selectedCandidate.successPrediction.developmentAreas || selectedCandidate.successPrediction.risks).map((w: string, i: number) => <li key={i}>{w}</li>)}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400 text-right">
-                             Predicted at: {new Date(selectedCandidate.successPrediction.predictedAt || selectedCandidate.successPrediction.generatedAt).toLocaleString()}
-                          </div>
-                          
-                        </div>
-                      ) : (
-                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 flex flex-col items-center justify-center text-center space-y-4 py-8">
-                          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
-                            <Target size={32} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-800 text-lg">Future Success Prediction</h4>
-                            <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Run our predictive AI to evaluate retention risk, leadership potential, learning agility, and cultural fit.</p>
-                          </div>
-                          
-                          {predictionError && (
-                            <div className="bg-rose-50 text-rose-600 text-sm py-2 px-4 rounded-xl border border-rose-100 flex items-center gap-2">
-                              <ShieldAlert size={16} />
-                              {predictionError}
-                            </div>
-                          )}
-
-                          <button 
-                            onClick={() => generatePrediction(selectedCandidate._id || selectedCandidate.id)}
-                            disabled={isGeneratingPrediction}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 mt-2"
-                          >
-                            {isGeneratingPrediction ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                                  Analyzing Candidate...
-                                </>
-                            ) : (
-                                <>Generate Prediction</>
-                            )}
-                          </button>
-                        </div>
-                      )}
-                      
                       {/* Phase 2F-B: Interview Authenticity */}
                       {selectedCandidate.answerAuthenticity && (
                         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
@@ -1117,99 +1210,6 @@ export const Candidates = () => {
                             <p className="text-slate-600 text-sm">{selectedCandidate.answerAuthenticity.finalAssessment}</p>
                           </div>
                           
-                        </div>
-                      )}
-                      
-                      {/* Phase 3B: Competency Intelligence (Skill Graph) */}
-                      {selectedCandidate.skillGraph && (
-                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                              <Cpu size={18} className="text-blue-600" />
-                              Competency Intelligence
-                            </h4>
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                              {selectedCandidate.skillGraph.overallTechnicalScore}/100 TECHNICAL
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                            {/* Radar Chart for Tech Skills */}
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col">
-                                <h5 className="font-bold text-slate-700 text-sm text-center mb-2">Technical Competencies</h5>
-                                <div className="h-48 w-full flex-1">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={selectedCandidate.skillGraph.technicalSkills?.slice(0, 6) || []}>
-                                            <PolarGrid stroke="#e2e8f0" />
-                                            <PolarAngleAxis dataKey="skill" tick={{ fill: '#64748b', fontSize: 10 }} />
-                                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                            <Radar name="Candidate" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                                            <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                        </RadarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Bar Chart for Soft Skills */}
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col">
-                                <h5 className="font-bold text-slate-700 text-sm text-center mb-2">Soft Skills & Leadership</h5>
-                                <div className="h-48 w-full flex-1">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={selectedCandidate.skillGraph.softSkills?.slice(0, 5) || []} layout="vertical" margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                                            <XAxis type="number" domain={[0, 100]} hide />
-                                            <YAxis dataKey="skill" type="category" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
-                                            <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={16}>
-                                                {(selectedCandidate.skillGraph.softSkills?.slice(0, 5) || []).map((entry: any, index: number) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.score >= 80 ? '#10b981' : entry.score >= 60 ? '#3b82f6' : '#f59e0b'} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-4 border-t border-slate-100 pt-4 flex gap-4 text-xs font-medium">
-                            <span className="text-slate-500">Validation: <span className="text-blue-700">{selectedCandidate.skillGraph.validationConfidence} Confidence</span></span>
-                            <span className="text-slate-500">Last updated: <span className="text-slate-800">{new Date(selectedCandidate.skillGraph.updatedAt).toLocaleString()}</span></span>
-                          </div>
-                        </div>
-                      )}
-                      {/* Phase 3C: Knowledge Graph Intelligence */}
-                      {selectedCandidate.knowledgeGraph && (
-                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6 relative">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                              <Target size={18} className="text-violet-600" />
-                              Knowledge Graph Intelligence
-                            </h4>
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
-                              {selectedCandidate.knowledgeGraph.candidateCluster || 'Unclustered'}
-                            </span>
-                          </div>
-                          <div className="mb-4">
-                            <GraphVisualization 
-                              knowledgeGraph={selectedCandidate.knowledgeGraph} 
-                              candidateName={selectedCandidate.candidateName || 'Candidate'} 
-                            />
-                          </div>
-                          <div className="flex flex-wrap gap-4 text-sm mt-4">
-                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1">
-                               <div className="text-xs text-slate-500 font-medium">Graph Score</div>
-                               <div className="text-lg font-black mt-1 text-violet-600">{selectedCandidate.knowledgeGraph.graphScore}/100</div>
-                             </div>
-                             {selectedCandidate.knowledgeGraph.hiddenTalents?.length > 0 && (
-                               <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 flex-1">
-                                 <div className="text-xs text-amber-600 font-medium mb-1">Hidden Talents</div>
-                                 <div className="flex flex-wrap gap-1">
-                                    {selectedCandidate.knowledgeGraph.hiddenTalents.map((ht: string) => (
-                                        <span key={ht} className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded">{ht}</span>
-                                    ))}
-                                 </div>
-                               </div>
-                             )}
-                          </div>
                         </div>
                       )}
                       

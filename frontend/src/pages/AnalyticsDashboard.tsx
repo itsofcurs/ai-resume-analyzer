@@ -410,7 +410,7 @@ export const AnalyticsDashboard = () => {
       </div>
 
       {/* Skills Intelligence & AI Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         
         {/* Top Technical Skills */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm col-span-1">
