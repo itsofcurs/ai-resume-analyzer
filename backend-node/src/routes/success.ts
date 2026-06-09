@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const router = express.Router();
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'default-internal-key';
 
 // @route   POST /api/success/predict
@@ -27,7 +27,7 @@ router.post('/predict', authenticateToken, async (req: AuthRequest, res: any) =>
 
     // Call Python AI Service
     const response = await axios.post(
-      `${PYTHON_SERVICE_URL}/api/predict-success`,
+      `${AI_SERVICE_URL}/api/predict-success`,
       { resume_id: resumeId },
       {
         headers: {
