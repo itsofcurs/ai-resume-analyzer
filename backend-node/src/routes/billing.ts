@@ -180,4 +180,44 @@ export const webhookHandler = async (req: Request, res: Response) => {
   }
 };
 
+// Subscription Lifecycle
+router.post('/upgrade', async (req, res) => {
+  const { organizationId, newPlan } = req.body;
+  try {
+    const sub = await prisma.subscription.update({
+      where: { organizationId },
+      data: { planTier: newPlan || 'PRO' }
+    });
+    res.json({ success: true, subscription: sub });
+  } catch (error) {
+    res.status(500).json({ error: 'Upgrade failed' });
+  }
+});
+
+router.post('/downgrade', async (req, res) => {
+  const { organizationId, newPlan } = req.body;
+  try {
+    const sub = await prisma.subscription.update({
+      where: { organizationId },
+      data: { planTier: newPlan || 'STARTER' }
+    });
+    res.json({ success: true, subscription: sub });
+  } catch (error) {
+    res.status(500).json({ error: 'Downgrade failed' });
+  }
+});
+
+router.post('/cancel', async (req, res) => {
+  const { organizationId } = req.body;
+  try {
+    const sub = await prisma.subscription.update({
+      where: { organizationId },
+      data: { status: 'canceled' }
+    });
+    res.json({ success: true, subscription: sub });
+  } catch (error) {
+    res.status(500).json({ error: 'Cancellation failed' });
+  }
+});
+
 export default router;

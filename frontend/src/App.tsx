@@ -18,6 +18,13 @@ import { AuditCenter } from './pages/AuditCenter';
 import { AICostCenter } from './pages/AICostCenter';
 import { BillingDashboard } from './pages/BillingDashboard';
 import { LaunchCertificationCenter } from './pages/LaunchCertificationCenter';
+import { OnboardingWizard } from './pages/OnboardingWizard';
+import { BillingCenter } from './pages/BillingCenter';
+import { CustomerSuccess } from './pages/CustomerSuccess';
+import { AdminPortal } from './pages/AdminPortal';
+import { ReportsCenter } from './pages/ReportsCenter';
+import { FinOpsCenter } from './pages/FinOpsCenter';
+import { KnowledgeBase } from './pages/KnowledgeBase';
 import { useSelector } from 'react-redux';
 import type { RootState } from './store';
 
@@ -182,6 +189,47 @@ function App() {
               <RoleRoute allowedRoles={['executive', 'admin']}>
                 <DashboardLayout><LaunchCertificationCenter /></DashboardLayout>
               </RoleRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/onboarding-wizard" element={
+            <ProtectedRoute>
+              <DashboardLayout><OnboardingWizard /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/billing-center" element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['executive', 'admin']}>
+                <DashboardLayout><BillingCenter /></DashboardLayout>
+              </RoleRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/customer-success" element={
+            <ProtectedRoute>
+              <DashboardLayout><CustomerSuccess /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin-portal" element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['executive', 'admin']}>
+                <DashboardLayout><AdminPortal /></DashboardLayout>
+              </RoleRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/reports-center" element={
+            <ProtectedRoute>
+              <DashboardLayout><ReportsCenter /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/finops-center" element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['executive', 'admin']}>
+                <DashboardLayout><FinOpsCenter /></DashboardLayout>
+              </RoleRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/knowledge-base" element={
+            <ProtectedRoute>
+              <DashboardLayout><KnowledgeBase /></DashboardLayout>
             </ProtectedRoute>
           } />
         {/* Fallback */}

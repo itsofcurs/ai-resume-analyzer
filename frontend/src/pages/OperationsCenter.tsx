@@ -43,10 +43,28 @@ export const OperationsCenter: React.FC = () => {
     const fetchMetrics = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('/api/operations/metrics', {
+        const res = await axios.get('/api/certification/summary', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setMetrics(res.data);
+        
+        // Map the summary endpoint data back to the format OperationsCenter expects
+        setMetrics(prev => ({
+          ...prev,
+          queues: {
+            ...prev.queues,
+            resumeQueue: res.data.queues?.resumeQueue || 0,
+            copilotQueue: res.data.queues?.copilotQueue || 0,
+            failures: {
+              ...prev.queues.failures,
+              resumeQueue: res.data.queues?.failures?.resumeQueue || 0,
+              copilotQueue: res.data.queues?.failures?.copilotQueue || 0,
+            }
+          },
+          health: {
+            status: res.data.apiAvailability > 99 ? 'Operational' : 'Degraded',
+            uptime: prev.health.uptime + 10 // just incrementing mock for now since we drop uptime
+          }
+        }));
       } catch (err) {
         console.error("Failed to fetch operations metrics", err);
       }

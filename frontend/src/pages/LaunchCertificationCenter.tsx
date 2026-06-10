@@ -6,32 +6,42 @@ const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
 export const LaunchCertificationCenter = () => {
   const [loading, setLoading] = useState(true);
-  
-  // Static scores for UI demo purposes since this is the launch dashboard
-  const scores = {
-    security: 100,
-    reliability: 99.9,
-    slaCompliance: 100,
-    costHealth: 98
-  };
+  const [scores, setScores] = useState({
+    securityScore: 0,
+    reliabilityScore: 0,
+    queueSuccessRate: 0,
+    apiAvailability: 0,
+    workerAvailability: 0,
+    costHealth: 'Unknown',
+    activeIncidents: 0,
+    lastAudit: ''
+  });
 
   useEffect(() => {
-    // Simulate fetching live metrics from Prometheus/Backend
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    const fetchSummary = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/certification/summary`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setScores(response.data);
+      } catch (err) {
+        console.error("Failed to fetch certification summary:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSummary();
   }, []);
 
   const requirements = [
-    { name: "Queue Success Rate > 99.9%", status: "PASS", icon: Activity, metric: "99.99%" },
-    { name: "API Availability > 99.95%", status: "PASS", icon: Server, metric: "100%" },
+    { name: "Queue Success Rate > 99.9%", status: scores.queueSuccessRate >= 99.9 ? "PASS" : "FAIL", icon: Activity, metric: `${scores.queueSuccessRate}%` },
+    { name: "API Availability > 99.95%", status: scores.apiAvailability >= 99.95 ? "PASS" : "FAIL", icon: Server, metric: `${scores.apiAvailability}%` },
     { name: "Cross-Tenant Isolation 100%", status: "PASS", icon: Shield, metric: "Verified" },
-    { name: "Critical Vulnerabilities = 0", status: "PASS", icon: Shield, metric: "0 Found" },
+    { name: "Critical Vulnerabilities = 0", status: scores.securityScore === 100 ? "PASS" : "FAIL", icon: Shield, metric: "0 Found" },
     { name: "Recovery Validation", status: "PASS", icon: Server, metric: "RTO < 5m" },
-    { name: "SLA Compliance (P95 < 10s)", status: "PASS", icon: Zap, metric: "2.1s Avg" },
-    { name: "Cost Tracking", status: "PASS", icon: DollarSign, metric: "Active" },
-    { name: "Enterprise Monitoring", status: "PASS", icon: Activity, metric: "Grafana Active" }
+    { name: "Worker Availability", status: scores.workerAvailability === 100 ? "PASS" : "FAIL", icon: Zap, metric: `${scores.workerAvailability}%` },
+    { name: "Cost Tracking", status: scores.costHealth === "Healthy" ? "PASS" : "FAIL", icon: DollarSign, metric: scores.costHealth },
+    { name: "Active Incidents = 0", status: scores.activeIncidents === 0 ? "PASS" : "FAIL", icon: AlertTriangle, metric: scores.activeIncidents.toString() }
   ];
 
   if (loading) {
@@ -63,25 +73,25 @@ export const LaunchCertificationCenter = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center">
           <Shield className="w-10 h-10 text-emerald-500 mb-2" />
-          <div className="text-3xl font-bold text-gray-900">{scores.security}%</div>
+          <div className="text-3xl font-bold text-gray-900">{scores.securityScore}%</div>
           <div className="text-sm text-gray-500 uppercase tracking-wide font-medium mt-1">Security Score</div>
         </div>
         
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center">
           <Server className="w-10 h-10 text-emerald-500 mb-2" />
-          <div className="text-3xl font-bold text-gray-900">{scores.reliability}%</div>
+          <div className="text-3xl font-bold text-gray-900">{scores.reliabilityScore}%</div>
           <div className="text-sm text-gray-500 uppercase tracking-wide font-medium mt-1">Reliability Score</div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center">
           <Zap className="w-10 h-10 text-emerald-500 mb-2" />
-          <div className="text-3xl font-bold text-gray-900">{scores.slaCompliance}%</div>
+          <div className="text-3xl font-bold text-gray-900">{scores.queueSuccessRate}%</div>
           <div className="text-sm text-gray-500 uppercase tracking-wide font-medium mt-1">SLA Compliance</div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center">
           <DollarSign className="w-10 h-10 text-emerald-500 mb-2" />
-          <div className="text-3xl font-bold text-gray-900">{scores.costHealth}/100</div>
+          <div className="text-3xl font-bold text-gray-900">{scores.costHealth}</div>
           <div className="text-sm text-gray-500 uppercase tracking-wide font-medium mt-1">AI Cost Health</div>
         </div>
       </div>

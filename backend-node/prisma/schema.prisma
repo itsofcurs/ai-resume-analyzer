@@ -20,6 +20,7 @@ model Organization {
   usageQuota    UsageQuota?
   invoices         Invoice[]
   aiGovernanceLogs AIGovernanceLog[]
+  supportTickets   SupportTicket[]
 }
 
 model User {
@@ -33,6 +34,7 @@ model User {
   updatedAt      DateTime      @updatedAt
   organization   Organization? @relation(fields: [organizationId], references: [id])
   auditLogs      AuditLog[]
+  supportTickets SupportTicket[]
 }
 
 model JobDescription {
@@ -144,3 +146,17 @@ model AIGovernanceLog {
   @@index([organizationId, createdAt])
 }
 
+model SupportTicket {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  subject        String
+  description    String
+  status         String       @default("OPEN")
+  priority       String       @default("MEDIUM")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+}

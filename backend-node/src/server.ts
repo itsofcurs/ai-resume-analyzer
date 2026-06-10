@@ -31,6 +31,7 @@ import auditRoutes from './routes/audit';
 import costRoutes from './routes/cost';
 import searchRoutes from './routes/search';
 import operationsRoutes from './routes/operations';
+import certificationRoutes from './routes/certification';
 import path from 'path';
 import { requestContextMiddleware, requestContext } from './middleware/requestContext';
 import { regionRoutingMiddleware } from './middleware/regionRouting';
@@ -124,6 +125,7 @@ const userRateLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { ip: false },
   keyGenerator: (req: any) => {
     return req.user?.id || req.ip;
   }
@@ -154,6 +156,12 @@ app.use('/api/cost', costRoutes);
 app.use('/api/billing', userRateLimiter, billingRouter);
 app.use('/api/memory', userRateLimiter, memoryRoutes);
 app.use('/api/operations', operationsRoutes);
+import onboardingRoutes from './routes/onboarding';
+import reportsRoutes from './routes/reports';
+
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/certification', certificationRoutes);
 
 // Internal endpoint for Python to report timeouts
 app.post('/api/internal/timeout', express.json(), async (req, res) => {
