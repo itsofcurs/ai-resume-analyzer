@@ -9,8 +9,8 @@ export interface AlertPayload {
 }
 
 export const emitAlert = (alert: AlertPayload) => {
-  // Emit to all connected clients. In a real app, we'd scope this by organizationId using socket rooms.
-  io.emit('PROACTIVE_ALERT', alert);
+  // Emit strictly scoped by organizationId using socket rooms.
+  io.to(alert.organizationId).emit('PROACTIVE_ALERT', alert);
 };
 
 export const evaluateCandidateAlerts = (candidate: any) => {

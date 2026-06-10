@@ -25,6 +25,36 @@ export interface IResume extends Document {
   predictiveHiring?: any; // Phase 2C-D: Predictive Hiring Intelligence
   successPrediction?: any; // Phase 2E-A: Candidate Success Prediction
   answerAuthenticity?: any; // Phase 2F-B: Interview Answer Authenticity
+  candidateEngagement?: {
+    lastContacted?: Date;
+    responseRate?: number;
+    outreachCount?: number;
+    engagementScore?: number;
+  }; // Phase 4C Module 2: AI Talent CRM
+  // --- Phase 4A: ATS Pipeline & Workspace ---
+  pipelineStage: string;
+  stageEnteredAt: Date;
+  pipelineHistory: Array<{
+    stage: string;
+    changedAt: Date;
+    changedBy: string;
+  }>;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  currentOwner?: string; // Recruiter/User ID
+  statusUpdatedAt: Date;
+  tags: string[];
+  recruiterNotes: Array<{
+    text: string;
+    addedAt: Date;
+    addedBy: string;
+  }>;
+  activityLog: Array<{
+    action: string;
+    performedBy: string;
+    timestamp: Date;
+    metadata?: any;
+  }>;
+  // ----------------------------------------
   skillGraph?: {
     technicalSkills: Array<{ skill: string; score: number; confidence: number; evidenceCount: number }>;
     softSkills: Array<{ skill: string; score: number; confidence: number; evidenceCount: number }>;
@@ -130,6 +160,40 @@ const ResumeSchema: Schema = new Schema(
     predictiveHiring: { type: Schema.Types.Mixed }, // Phase 2C-D
     successPrediction: { type: Schema.Types.Mixed }, // Phase 2E-A
     answerAuthenticity: { type: Schema.Types.Mixed }, // Phase 2F-B
+    candidateEngagement: {
+      lastContacted: { type: Date },
+      responseRate: { type: Number, default: 0 },
+      outreachCount: { type: Number, default: 0 },
+      engagementScore: { type: Number, default: 0 }
+    }, // Phase 4C Module 2
+    // --- Phase 4A: ATS Pipeline ---
+    pipelineStage: { type: String, default: 'Applied' },
+    stageEnteredAt: { type: Date, default: Date.now },
+    pipelineHistory: [{
+      stage: { type: String },
+      changedAt: { type: Date, default: Date.now },
+      changedBy: { type: String }
+    }],
+    priority: { 
+      type: String, 
+      enum: ['Low', 'Medium', 'High', 'Critical'], 
+      default: 'Medium' 
+    },
+    currentOwner: { type: String },
+    statusUpdatedAt: { type: Date, default: Date.now },
+    tags: [{ type: String }],
+    recruiterNotes: [{
+      text: { type: String },
+      addedAt: { type: Date, default: Date.now },
+      addedBy: { type: String }
+    }],
+    activityLog: [{
+      action: { type: String, required: true },
+      performedBy: { type: String, required: true },
+      timestamp: { type: Date, default: Date.now },
+      metadata: { type: Schema.Types.Mixed }
+    }],
+    // ----------------------------------------
     skillGraph: { type: Schema.Types.Mixed }, // Phase 3B
     knowledgeGraph: { type: Schema.Types.Mixed }, // Phase 3C
     voiceVideoAnalysis: [{ type: Schema.Types.Mixed }], // Phase 3E
@@ -154,5 +218,10 @@ ResumeSchema.index({ organizationId: 1, "knowledgeGraph.candidateCluster": 1 });
 ResumeSchema.index({ organizationId: 1, "knowledgeGraph.graphScore": -1 });
 ResumeSchema.index({ organizationId: 1, "knowledgeGraph.hiddenTalents": 1 });
 ResumeSchema.index({ organizationId: 1, "knowledgeGraph.similarCandidates.resumeId": 1 });
+ResumeSchema.index({ organizationId: 1, pipelineStage: 1 });
+ResumeSchema.index({ organizationId: 1, priority: 1 });
+ResumeSchema.index({ organizationId: 1, currentOwner: 1 });
+ResumeSchema.index({ organizationId: 1, stageEnteredAt: 1 });
+ResumeSchema.index({ organizationId: 1, tags: 1 });
 
 export const Resume = mongoose.model<IResume>('Resume', ResumeSchema);

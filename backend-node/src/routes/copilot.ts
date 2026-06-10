@@ -94,7 +94,10 @@ router.get('/summary/:id', async (req: AuthRequest, res: any) => {
 router.post('/search', async (req: AuthRequest, res: any) => {
   try {
     const { query, top_k = 5 } = req.body;
-    io.emit('copilot_status', { status: 'SEMANTIC_MATCHING', query });
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const orgId = req.user.organizationId;
+
+    io.to(orgId).emit('copilot_status', { status: 'SEMANTIC_MATCHING', query });
     
     // Call Python Semantic Search Engine
     const pythonRes = await axios.post(`${AI_SERVICE_URL}/api/search`, {
@@ -108,11 +111,11 @@ router.post('/search', async (req: AuthRequest, res: any) => {
 
     const matches = pythonRes.data.matches;
     
-    io.emit('copilot_status', { status: 'COMPLETED' });
+    io.to(orgId).emit('copilot_status', { status: 'COMPLETED' });
     res.json({ query, matches });
   } catch (error) {
     console.error("Semantic search error:", error);
-    io.emit('copilot_status', { status: 'FAILED' });
+    if (req.user?.organizationId) io.to(req.user.organizationId).emit('copilot_status', { status: 'FAILED' });
     res.status(500).json({ error: 'Failed to perform semantic search' });
   }
 });
@@ -124,7 +127,7 @@ router.post('/chat', async (req: AuthRequest, res: any) => {
   if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
   const orgId = req.user.organizationId;
 
-  io.emit('copilot_status', { status: 'COPILOT_SEARCHING', query });
+  io.to(orgId).emit('copilot_status', { status: 'COPILOT_SEARCHING', query });
 
   try {
     let analytics_summary = null;
@@ -140,11 +143,11 @@ router.post('/chat', async (req: AuthRequest, res: any) => {
       analytics_summary 
     });
     
-    io.emit('copilot_status', { status: 'COMPLETED' });
+    io.to(orgId).emit('copilot_status', { status: 'COMPLETED' });
     return res.status(200).json(response.data);
   } catch (error: any) {
     console.error("Copilot Chat Error:", error.message);
-    io.emit('copilot_status', { status: 'FAILED' });
+    io.to(orgId).emit('copilot_status', { status: 'FAILED' });
     return res.status(500).json({ error: 'Failed to process copilot request' });
   }
 });
@@ -156,22 +159,22 @@ router.post('/agent', async (req: AuthRequest, res: any) => {
   if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
   const orgId = req.user.organizationId;
 
-  io.emit('COPILOT_THINKING', { message });
+  io.to(orgId).emit('COPILOT_THINKING', { message });
 
   try {
-    io.emit('COPILOT_TOOL_RUNNING', { tool: 'autonomous_planner' });
+    io.to(orgId).emit('COPILOT_TOOL_RUNNING', { tool: 'autonomous_planner' });
     const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/agent`, { 
       message,
       organization_id: orgId 
     });
     
-    io.emit('COPILOT_TOOL_COMPLETED', { tool: 'autonomous_planner' });
-    io.emit('COPILOT_FINISHED', { success: true });
+    io.to(orgId).emit('COPILOT_TOOL_COMPLETED', { tool: 'autonomous_planner' });
+    io.to(orgId).emit('COPILOT_FINISHED', { success: true });
     
     return res.status(200).json(response.data);
   } catch (error: any) {
     console.error("Copilot Agent Error:", error.message);
-    io.emit('COPILOT_FINISHED', { success: false, error: 'Agent failed' });
+    io.to(orgId).emit('COPILOT_FINISHED', { success: false, error: 'Agent failed' });
     return res.status(500).json({ error: 'Failed to process copilot agent request' });
   }
 });
@@ -183,39 +186,165 @@ router.post('/autonomous', async (req: AuthRequest, res: any) => {
   if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
   const orgId = req.user.organizationId;
 
-  io.emit('COPILOT_THINKING', { message });
+  io.to(orgId).emit('COPILOT_THINKING', { message });
 
   try {
-    io.emit('COPILOT_TOOL_RUNNING', { tool: 'autonomous_recruiter' });
+    io.to(orgId).emit('COPILOT_TOOL_RUNNING', { tool: 'autonomous_recruiter' });
     const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/agent`, { 
       message,
       organization_id: orgId 
     });
     
-    io.emit('COPILOT_TOOL_COMPLETED', { tool: 'autonomous_recruiter' });
-    io.emit('COPILOT_FINISHED', { success: true });
+    io.to(orgId).emit('COPILOT_TOOL_COMPLETED', { tool: 'autonomous_recruiter' });
+    io.to(orgId).emit('COPILOT_FINISHED', { success: true });
     
     return res.status(200).json(response.data);
   } catch (error: any) {
     console.error("Copilot Autonomous Error:", error.message);
-    io.emit('COPILOT_FINISHED', { success: false, error: 'Agent failed' });
+    io.to(orgId).emit('COPILOT_FINISHED', { success: false, error: 'Agent failed' });
     return res.status(500).json({ error: 'Failed to process autonomous request' });
+  }
+});
+
+// Phase 4C Module 4 & 8: Interactive Recruiter Copilot
+router.post('/recruiter', async (req: AuthRequest, res: any) => {
+  const { candidateId, jobId, recruiterPrompt } = req.body;
+  if (!candidateId || !recruiterPrompt) return res.status(400).json({ error: 'candidateId and recruiterPrompt are required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/recruiter`, { 
+      candidate_id: candidateId,
+      job_id: jobId,
+      recruiter_prompt: recruiterPrompt,
+      organization_id: orgId 
+    }, {
+      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' },
+      timeout: 60000
+    });
+    
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Interactive Recruiter Copilot Error:", error.message);
+    return res.status(500).json({ error: 'Failed to process recruiter copilot request' });
+  }
+});
+
+// Phase 4C Module 1: Rediscovery Engine
+router.post('/rediscovery/search', async (req: AuthRequest, res: any) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: 'Job ID is required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/rediscovery/search`, { 
+      job_id: jobId,
+      organization_id: orgId 
+    }, {
+      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' },
+      timeout: 60000
+    });
+    
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Rediscovery Error:", error.message);
+    return res.status(500).json({ error: 'Failed to perform rediscovery search' });
+  }
+});
+
+// Phase 4C Module 3: AI Outreach Generator
+router.post('/outreach/generate', async (req: AuthRequest, res: any) => {
+  const { candidateId, jobId, outreachType, notes } = req.body;
+  if (!candidateId) return res.status(400).json({ error: 'Candidate ID is required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/api/outreach/generate`, { 
+      candidate_id: candidateId,
+      job_id: jobId,
+      outreach_type: outreachType,
+      notes: notes,
+      organization_id: orgId 
+    }, {
+      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' },
+      timeout: 30000
+    });
+    
+    // Update candidateEngagement metrics
+    const resume = await Resume.findOne({ _id: candidateId, organizationId: orgId });
+    if (resume) {
+      if (!resume.candidateEngagement) {
+        resume.candidateEngagement = {
+          outreachCount: 0,
+          responseRate: 0,
+          engagementScore: 0
+        };
+      }
+      resume.candidateEngagement.outreachCount = (resume.candidateEngagement.outreachCount || 0) + 1;
+      resume.candidateEngagement.lastContacted = new Date();
+      await resume.save();
+    }
+
+    return res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error("Outreach Generation Error:", error.message);
+    return res.status(500).json({ error: 'Failed to generate outreach' });
+  }
+});
+
+// Phase 4C Module 2: CRM Response tracking
+router.post('/outreach/responded', async (req: AuthRequest, res: any) => {
+  const { candidateId } = req.body;
+  if (!candidateId) return res.status(400).json({ error: 'Candidate ID is required' });
+  
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
+
+  try {
+    const resume = await Resume.findOne({ _id: candidateId, organizationId: orgId });
+    if (!resume) return res.status(404).json({ error: 'Candidate not found' });
+
+    if (!resume.candidateEngagement) {
+      resume.candidateEngagement = { outreachCount: 1, responseRate: 0, engagementScore: 0 };
+    }
+    
+    // Simulate updating response metrics (simplistic calculation)
+    const currentOutreaches = resume.candidateEngagement.outreachCount || 1;
+    // Assume 1 response for this demo endpoint
+    const responses = 1; 
+    resume.candidateEngagement.responseRate = Math.round((responses / currentOutreaches) * 100);
+    resume.candidateEngagement.engagementScore = Math.min(100, (resume.candidateEngagement.engagementScore || 0) + 25);
+    
+    await resume.save();
+
+    return res.status(200).json({ message: 'Response recorded', metrics: resume.candidateEngagement });
+  } catch (error: any) {
+    console.error("Outreach Response Error:", error.message);
+    return res.status(500).json({ error: 'Failed to record response' });
   }
 });
 
 router.post('/recommend', async (req: AuthRequest, res: any) => {
   const { job_description, top_k = 5 } = req.body;
   if (!job_description) return res.status(400).json({ error: 'Job description is required' });
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
 
-  io.emit('copilot_status', { status: 'RECOMMENDING' });
+  io.to(orgId).emit('copilot_status', { status: 'RECOMMENDING' });
 
   try {
     const response = await axios.post(`${AI_SERVICE_URL}/api/recommend`, { job_description, top_k });
-    io.emit('copilot_status', { status: 'COMPLETED' });
+    io.to(orgId).emit('copilot_status', { status: 'COMPLETED' });
     return res.status(200).json(response.data);
   } catch (error: any) {
     console.error("Recommend Error:", error.message);
-    io.emit('copilot_status', { status: 'FAILED' });
+    io.to(orgId).emit('copilot_status', { status: 'FAILED' });
     return res.status(500).json({ error: 'Failed to generate recommendations' });
   }
 });
@@ -223,17 +352,69 @@ router.post('/recommend', async (req: AuthRequest, res: any) => {
 router.post('/compare', async (req: AuthRequest, res: any) => {
   const { candidate_a_id, candidate_b_id } = req.body;
   if (!candidate_a_id || !candidate_b_id) return res.status(400).json({ error: 'Both candidate IDs required' });
+  if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+  const orgId = req.user.organizationId;
 
-  io.emit('copilot_status', { status: 'COMPARING' });
+  io.to(orgId).emit('copilot_status', { status: 'COMPARING' });
 
   try {
     const response = await axios.post(`${AI_SERVICE_URL}/api/compare`, { candidate_a_id, candidate_b_id });
-    io.emit('copilot_status', { status: 'COMPLETED' });
+    io.to(orgId).emit('copilot_status', { status: 'COMPLETED' });
     return res.status(200).json(response.data);
   } catch (error: any) {
     console.error("Compare Error:", error.message);
-    io.emit('copilot_status', { status: 'FAILED' });
+    io.to(orgId).emit('copilot_status', { status: 'FAILED' });
     return res.status(500).json({ error: 'Failed to generate comparison' });
+  }
+});
+
+router.post('/compare_multi', async (req: AuthRequest, res: any) => {
+  try {
+    const { candidateIds } = req.body;
+    const user = req.user!;
+    if (!candidateIds || !Array.isArray(candidateIds) || candidateIds.length < 2) {
+      return res.status(400).json({ error: 'At least 2 candidate IDs are required' });
+    }
+
+    const resumes = await Resume.find({ _id: { $in: candidateIds }, organizationId: user.organizationId });
+    if (resumes.length !== candidateIds.length) {
+      return res.status(404).json({ error: 'One or more candidates not found' });
+    }
+
+    const prompt = `You are an expert technical recruiter comparing ${resumes.length} candidates.
+    Provide a detailed, side-by-side comparison in JSON format.
+    
+    Candidates:
+    ${resumes.map((r, i) => `
+    Candidate ${i + 1}:
+    ID: ${r._id}
+    Name: ${r.candidateName || r.filename}
+    Data: ${JSON.stringify(r.parsedData)}
+    `).join('\n')}
+    
+    Return ONLY valid JSON with this exact structure:
+    {
+      "matrix": [
+        {
+          "candidateId": "id string",
+          "candidateName": "name string",
+          "strengths": ["...", "..."],
+          "weaknesses": ["...", "..."],
+          "superlative": "Short phrase like 'Best Technical Fit' or 'Most Experienced'"
+        }
+      ],
+      "recommendation": "Overall recommendation on who to hire and why."
+    }`;
+
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    let text = result.response.text();
+    text = text.replace(/```json\s?/g, '').replace(/```/g, '').trim();
+
+    return res.status(200).json(JSON.parse(text));
+  } catch (error: any) {
+    console.error("Multi-Compare Error:", error.message);
+    return res.status(500).json({ error: 'Failed to generate multi-candidate comparison' });
   }
 });
 
@@ -297,6 +478,111 @@ router.post('/analyze_fit', async (req: AuthRequest, res: any) => {
       return res.status(503).json({ error: 'Gemini API is currently experiencing high demand. Please try again later.' });
     }
     res.status(500).json({ error: 'Failed to analyze fit' });
+  }
+});
+
+router.post('/recruiter', async (req: AuthRequest, res: any) => {
+  try {
+    const { candidateId, jobId, recruiterPrompt } = req.body;
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const organizationId = req.user.organizationId;
+    
+    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/recruiter`, {
+      candidate_id: candidateId,
+      job_id: jobId,
+      recruiter_prompt: recruiterPrompt,
+      organization_id: organizationId
+    }, {
+      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' }
+    });
+    
+    res.json(response.data);
+  } catch (error: any) {
+    console.error("Recruiter Copilot Error:", error.message);
+    res.status(500).json({ error: 'Failed to execute recruiter copilot' });
+  }
+});
+
+router.post('/outreach', async (req: AuthRequest, res: any) => {
+  try {
+    const { candidateId, notes } = req.body;
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    
+    // In a real scenario, this endpoint might generate an email. For CRM purposes, we just log it.
+    await Resume.findOneAndUpdate(
+      { _id: candidateId, organizationId: req.user.organizationId },
+      { 
+        $inc: { "candidateEngagement.outreachCount": 1 },
+        $set: { "candidateEngagement.lastContacted": new Date() }
+      }
+    );
+    
+    res.json({ status: "success", message: "Outreach logged successfully" });
+  } catch (error: any) {
+    console.error("Outreach Error:", error.message);
+    res.status(500).json({ error: 'Failed to log outreach' });
+  }
+});
+
+router.post('/outreach/responded', async (req: AuthRequest, res: any) => {
+  try {
+    const { candidateId } = req.body;
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    
+    const candidate = await Resume.findOne({ _id: candidateId, organizationId: req.user.organizationId });
+    if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+    
+    const engagement = candidate.candidateEngagement || { outreachCount: 0, responseRate: 0, engagementScore: 0 };
+    
+    // Simulate candidate responding
+    const totalResponses = Math.round((engagement.responseRate || 0) / 100 * (engagement.outreachCount || 0)) + 1;
+    const newCount = Math.max(engagement.outreachCount || 1, 1);
+    const newRate = Math.min((totalResponses / newCount) * 100, 100);
+    const newScore = Math.min((engagement.engagementScore || 50) + 20, 100);
+    
+    await Resume.updateOne(
+      { _id: candidateId },
+      {
+        $set: {
+          "candidateEngagement.responseRate": newRate,
+          "candidateEngagement.engagementScore": newScore
+        }
+      }
+    );
+    
+    res.json({ status: "success", responseRate: newRate, engagementScore: newScore });
+  } catch (error: any) {
+    console.error("Outreach Response Error:", error.message);
+    res.status(500).json({ error: 'Failed to log response' });
+  }
+});
+router.post('/explain', async (req: AuthRequest, res: any) => {
+  try {
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    
+    // Proxy request to python
+    const response = await axios.post(`${AI_SERVICE_URL}/api/explain/recommendation`, req.body);
+    const data = response.data;
+    
+    // Persist to Governance Log
+    await prisma.aIGovernanceLog.create({
+      data: {
+        organizationId: req.user.organizationId,
+        userId: req.user.id,
+        candidateId: req.body.candidateId || null,
+        recommendation: req.body.recommendation || 'unknown',
+        confidence: data.confidence || 0,
+        reasoning: data.reasoning || {},
+        contributingFactors: data.contributingFactors || [],
+        negativeFactors: data.negativeFactors || [],
+        auditTrail: data.auditTrail || {}
+      }
+    });
+
+    res.json(data);
+  } catch (error: any) {
+    console.error("Explainability Proxy Error:", error.message);
+    res.status(500).json({ error: 'Failed to process explainability request' });
   }
 });
 

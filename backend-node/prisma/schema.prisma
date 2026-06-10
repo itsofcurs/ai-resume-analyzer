@@ -13,7 +13,13 @@ model Organization {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   jobs      JobDescription[]
-  users     User[]
+  users         User[]
+  auditLogs     AuditLog[]
+  aiCosts       AICost[]
+  subscription  Subscription?
+  usageQuota    UsageQuota?
+  invoices         Invoice[]
+  aiGovernanceLogs AIGovernanceLog[]
 }
 
 model User {
@@ -26,6 +32,7 @@ model User {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  auditLogs      AuditLog[]
 }
 
 model JobDescription {
@@ -38,3 +45,96 @@ model JobDescription {
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id])
 }
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  userId         String
+  organizationId String
+  action         String
+  resource       String
+  ipAddress      String?
+  beforeState    Json?
+  afterState     Json?
+  timestamp      DateTime     @default(now())
+  
+  user           User         @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model AICost {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String?
+  workflowName   String
+  department     String?
+  tokensUsed     Int          @default(0)
+  promptCost     Float        @default(0.0)
+  completionCost Float        @default(0.0)
+  totalCost      Float        @default(0.0)
+  createdAt      DateTime     @default(now())
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Subscription {
+  id                   String       @id @default(uuid())
+  organizationId       String       @unique
+  stripeCustomerId     String?      @unique
+  stripeSubscriptionId String?      @unique
+  planTier             String       @default("STARTER")
+  status               String       @default("inactive")
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  organization         Organization @relation(fields: [organizationId], references: [id])
+}
+
+model UsageQuota {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  seatsUsed      Int          @default(1)
+  seatsLimit     Int          @default(5)
+  apiUsage       Int          @default(0)
+  apiLimit       Int          @default(1000)
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Invoice {
+  id               String       @id @default(uuid())
+  organizationId   String
+  stripeInvoiceId  String       @unique
+  amount           Float
+  status           String
+  invoiceDate      DateTime
+  createdAt        DateTime     @default(now())
+
+  organization     Organization @relation(fields: [organizationId], references: [id])
+}
+
+model AIGovernanceLog {
+  id                String   @id @default(cuid())
+
+  organizationId    String
+  candidateId       String?
+  userId            String?
+
+  recommendation    String
+  confidence        Float
+
+  reasoning         Json
+  contributingFactors Json
+  negativeFactors   Json
+  auditTrail        Json
+
+  createdAt         DateTime @default(now())
+
+  organization      Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([candidateId])
+  @@index([createdAt])
+}
+

@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest, requireExecutiveRole } from '../middleware/auth';
 import { Resume } from '../models/Resume';
 import { redisClient } from '../server';
 
@@ -454,6 +454,121 @@ router.get('/media', authenticateToken, async (req: AuthRequest, res: any) => {
   } catch (error) {
     console.error('Media Analytics Error:', error);
     res.status(500).json({ error: 'Failed to fetch media metrics' });
+  }
+});
+
+// 8. Executive Overview
+router.get('/executive', authenticateToken, requireExecutiveRole, async (req: AuthRequest, res: any) => {
+  try {
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const orgId = req.user.organizationId;
+    const cacheKey = getOrgCacheKey(req, 'analytics_executive');
+
+    if (req.query.refresh !== 'true') {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached.toString()));
+    }
+
+    // High level aggregation
+    const result = await Resume.aggregate([
+      { $match: { organizationId: orgId } },
+      {
+        $group: {
+          _id: null,
+          totalCandidates: { $sum: 1 },
+          avgTrustScore: { $avg: '$fraudAnalysis.trustScore' },
+          avgSuccessProbability: { $avg: '$successPrediction.successProbability' },
+          highFraudRiskCount: {
+            $sum: { $cond: [{ $lt: ['$fraudAnalysis.trustScore', 60] }, 1, 0] }
+          },
+          avgAtsScore: { $avg: '$scores.total' },
+          avgFlightRisk: { $avg: '$predictiveHiring.flightRisk' },
+          avgOfferAcceptance: { $avg: '$predictiveHiring.offerAcceptance' }
+        }
+      }
+    ]);
+
+    const data = result[0] || {
+      totalCandidates: 0,
+      avgTrustScore: 0,
+      avgSuccessProbability: 0,
+      highFraudRiskCount: 0,
+      avgAtsScore: 0,
+      avgFlightRisk: 0,
+      avgOfferAcceptance: 0
+    };
+
+    if (data._id !== undefined) delete data._id;
+
+    data.avgTrustScore = Math.round(data.avgTrustScore || 0);
+    data.avgSuccessProbability = Math.round(data.avgSuccessProbability || 0);
+    data.avgAtsScore = Math.round((data.avgAtsScore || 0) * 100);
+    data.avgFlightRisk = Math.round(data.avgFlightRisk || 0);
+    data.avgOfferAcceptance = Math.round(data.avgOfferAcceptance || 0);
+
+    await redisClient.setEx(cacheKey, CACHE_TTL, JSON.stringify(data));
+    res.json(data);
+  } catch (error) {
+    console.error('Executive Analytics Error:', error);
+    res.status(500).json({ error: 'Failed to fetch executive metrics' });
+  }
+});
+
+// Phase 4C Module 6: Workforce Intelligence
+router.get('/workforce', authenticateToken, requireExecutiveRole, async (req: AuthRequest, res: any) => {
+  try {
+    if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
+    const orgId = req.user.organizationId;
+    const cacheKey = getOrgCacheKey(req, 'analytics_workforce');
+
+    if (req.query.refresh !== 'true') {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached.toString()));
+    }
+
+    // High level aggregation for Workforce Intelligence
+    const result = await Resume.aggregate([
+      { $match: { organizationId: orgId } },
+      {
+        $group: {
+          _id: null,
+          totalEmployees: { $sum: { $cond: [{ $eq: ['$pipelineStage', 'Hired'] }, 1, 0] } },
+          totalCandidates: { $sum: 1 },
+          avgFlightRisk: { $avg: '$predictiveHiring.flightRisk' },
+          diversityScore: { $sum: 0 }, // Removed hardcoded diversity score, requires real aggregation implementation
+        }
+      }
+    ]);
+
+    // Top Weaknesses across all candidates/hires
+    const commonWeaknesses = await Resume.aggregate([
+      { $match: { organizationId: orgId, "skillGraph.weaknesses": { $exists: true } } },
+      { $unwind: "$skillGraph.weaknesses" },
+      { $group: { _id: "$skillGraph.weaknesses", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    const data = {
+      metrics: result[0] || {
+        totalEmployees: 0,
+        totalCandidates: 0,
+        avgFlightRisk: 0,
+        diversityScore: null
+      },
+      skillGaps: commonWeaknesses.map(s => ({ skill: s._id, count: s.count })),
+      attritionRisk: Math.round(result[0]?.avgFlightRisk || 0)
+    };
+
+    if (data.metrics._id !== undefined) delete data.metrics._id;
+    data.metrics.avgFlightRisk = Math.round(data.metrics.avgFlightRisk || 0);
+    if (data.metrics.diversityScore === 0) data.metrics.diversityScore = null;
+
+    await redisClient.setEx(cacheKey, CACHE_TTL, JSON.stringify(data));
+    res.json(data);
+  } catch (error) {
+    console.error('Workforce Analytics Error:', error);
+    res.status(500).json({ error: 'Failed to fetch workforce intelligence metrics' });
   }
 });
 

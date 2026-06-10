@@ -38,4 +38,64 @@ router.post('/analyze', async (req: AuthRequest, res: any) => {
   }
 });
 
+router.post('/offer-acceptance', async (req: AuthRequest, res: any) => {
+  try {
+    const user = req.user!;
+    const { candidateId, offeredSalary } = req.body;
+    
+    const resume = await Resume.findOne({ _id: candidateId, organizationId: user.organizationId });
+    if (!resume) return res.status(404).json({ error: 'Candidate not found' });
+
+    const prompt = `You are a recruitment analytics AI. Predict the probability that this candidate will accept a job offer of ${offeredSalary || 'market rate'}, based on their resume data: ${JSON.stringify(resume.parsedData)}. 
+    Return ONLY a raw integer between 0 and 100 representing the percentage likelihood. Do not explain.`;
+
+    const { getGenAI } = require('../services/gemini');
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const score = parseInt(result.response.text().replace(/\D/g, '')) || 50;
+    const probability = Math.min(100, Math.max(0, score));
+
+    if (!resume.predictiveHiring) resume.predictiveHiring = {};
+    resume.predictiveHiring.offerAcceptance = probability;
+    resume.predictiveHiring.lastCalculatedAt = new Date();
+    resume.markModified('predictiveHiring');
+    await resume.save();
+
+    res.json({ probability });
+  } catch (error: any) {
+    console.error("Offer Prediction error", error);
+    res.status(500).json({ error: 'Failed to calculate offer prediction' });
+  }
+});
+
+router.post('/flight-risk', async (req: AuthRequest, res: any) => {
+  try {
+    const user = req.user!;
+    const { candidateId } = req.body;
+    
+    const resume = await Resume.findOne({ _id: candidateId, organizationId: user.organizationId });
+    if (!resume) return res.status(404).json({ error: 'Candidate not found' });
+
+    const prompt = `You are a workforce analytics AI. Evaluate the flight risk (probability of leaving within 6 months) for this candidate based on their job tenure history, job hopping patterns, and career progression in this data: ${JSON.stringify(resume.parsedData)}.
+    Return ONLY a raw integer between 0 and 100 representing the flight risk percentage. Do not explain.`;
+
+    const { getGenAI } = require('../services/gemini');
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const score = parseInt(result.response.text().replace(/\D/g, '')) || 30;
+    const probability = Math.min(100, Math.max(0, score));
+
+    if (!resume.predictiveHiring) resume.predictiveHiring = {};
+    resume.predictiveHiring.flightRisk = probability;
+    resume.predictiveHiring.lastCalculatedAt = new Date();
+    resume.markModified('predictiveHiring');
+    await resume.save();
+
+    res.json({ probability });
+  } catch (error: any) {
+    console.error("Flight risk prediction error", error);
+    res.status(500).json({ error: 'Failed to calculate flight risk' });
+  }
+});
+
 export default router;

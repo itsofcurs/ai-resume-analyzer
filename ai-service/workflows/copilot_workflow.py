@@ -101,6 +101,7 @@ class CopilotWorkflow:
         graph.add_node("tool_fraud_search", self._node_tool_fraud)
         graph.add_node("tool_skill_gap", self._node_tool_skill_gap)
         graph.add_node("tool_predictive_hiring", self._node_tool_predictive_hiring)
+        graph.add_node("tool_pipeline_analytics", self._node_tool_pipeline_analytics)
         graph.add_node("tool_chat", self._node_tool_chat)
         graph.add_node("generate_response", self._node_generate_response)
         graph.add_node("handle_failure", self._node_handle_failure)
@@ -120,7 +121,7 @@ class CopilotWorkflow:
                 "fraud_check": "tool_fraud_search",
                 "skill_gap": "tool_skill_gap",
                 "predictive_hiring": "tool_predictive_hiring",
-                "analytics": "tool_chat"
+                "analytics": "tool_pipeline_analytics"
             }
             return mapping.get(intent, "tool_chat")
             
@@ -130,7 +131,7 @@ class CopilotWorkflow:
         )
         
         # All tools route to generate_response
-        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_fraud_search", "tool_skill_gap", "tool_predictive_hiring", "tool_chat"]:
+        for node in ["tool_search", "tool_recommend", "tool_compare", "tool_trust", "tool_fraud_search", "tool_skill_gap", "tool_predictive_hiring", "tool_pipeline_analytics", "tool_chat"]:
             graph.add_conditional_edges(
                 node,
                 lambda state: "handle_failure" if state.get("error") else "generate_response"
@@ -309,6 +310,52 @@ class CopilotWorkflow:
             state["tool_data"] = ctx
         except Exception as e:
             logger.error(f"[COPILOT] Predictive hiring tool error: {e}")
+            state["error"] = str(e)
+        return state
+
+    async def _node_tool_pipeline_analytics(self, state: CopilotState) -> CopilotState:
+        logger.info("[COPILOT] Executing pipeline analytics tool")
+        try:
+            collection = get_mongo_collection()
+            
+            # Aggregate to get pipeline counts
+            pipeline_aggregate = await collection.aggregate([
+                {"$group": {"_id": "$pipelineStage", "count": {"$sum": 1}}}
+            ]).to_list(length=20)
+            
+            # Fetch candidates who are stuck or need attention (high priority / old stageEnteredAt)
+            # For simplicity, we just fetch a few candidates with their stage and days in stage
+            import datetime
+            now = datetime.datetime.utcnow()
+            
+            resumes = await collection.find(
+                {"pipelineStage": {"$nin": ["Hired", "Rejected"]}},
+                {"candidateName": 1, "pipelineStage": 1, "stageEnteredAt": 1, "createdAt": 1, "priority": 1}
+            ).to_list(length=20)
+            
+            ctx = "Pipeline Analytics Overview:\n"
+            for p in pipeline_aggregate:
+                ctx += f"- Stage '{p.get('_id', 'Unknown')}': {p['count']} candidates\n"
+                
+            ctx += "\nCandidate Status:\n"
+            for r in resumes:
+                name = r.get("candidateName", "Unknown")
+                stage = r.get("pipelineStage", "Applied")
+                priority = r.get("priority", "Medium")
+                entered_at = r.get("stageEnteredAt", r.get("createdAt"))
+                
+                days_in_stage = 0
+                if entered_at:
+                    try:
+                        days_in_stage = (now - entered_at).days
+                    except:
+                        pass
+                        
+                ctx += f"- {name} is in '{stage}' (Priority: {priority}). Days in stage: {days_in_stage}\n"
+                
+            state["tool_data"] = ctx
+        except Exception as e:
+            logger.error(f"[COPILOT] Pipeline analytics tool error: {e}")
             state["error"] = str(e)
         return state
 

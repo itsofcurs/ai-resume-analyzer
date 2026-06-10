@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import path from 'path';
 import { uploadCloudinary } from '../services/cloudinary';
+import { autonomousAgentQueue } from '../lib/queue';
 import { Resume } from '../models/Resume';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { io } from '../server';
@@ -19,9 +21,19 @@ router.post('/webhook/status', async (req: any, res: any) => {
     return res.status(400).json({ error: 'Missing id or status' });
   }
 
-  // Emit to all connected clients
-  io.emit('resume_status_update', { id, status });
-  res.status(200).json({ success: true });
+  try {
+    const resume = await Resume.findById(id);
+    if (!resume) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+    
+    // Emit only to the organization's room
+    io.to(resume.organizationId.toString()).emit('resume_status_update', { id, status });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Webhook processing error:", error);
+    res.status(500).json({ error: 'Failed to process webhook' });
+  }
 });
 
 // Apply auth middleware to all resume routes
@@ -72,7 +84,7 @@ router.post('/upload', (req: AuthRequest, res: any) => {
     });
 
     // Notify clients that a new resume is pending
-    io.emit('resume_status_update', { id: resume._id, status: "PENDING" });
+    io.to(user.organizationId).emit('resume_status_update', { id: resume._id, status: "PENDING" });
 
     // Trigger AI Service Pipeline (Sprint 3)
     try {
@@ -86,8 +98,14 @@ router.post('/upload', (req: AuthRequest, res: any) => {
         headers: {
           'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
         }
+      }).then(() => {
+        // Phase 5A: Queue Autonomous Agent after successful core processing
+        autonomousAgentQueue.add('agent-upload-trigger', {
+          candidateId: resume._id.toString(),
+          triggerSource: "upload"
+        });
       }).catch(err => {
-        console.error("Webhook trigger failed:", err.message);
+        console.error("Webhook or Autonomous Agent trigger failed:", err.message);
         if (err.response) {
           console.error("Webhook error response:", err.response.data);
         }
@@ -144,7 +162,7 @@ router.post('/upload/batch', (req: AuthRequest, res: any) => {
 
         await resume.save();
         results.push({ id: resume._id, filename: file.originalname });
-        io.emit('resume_status_update', { id: resume._id, status: "PENDING" });
+        io.to(user.organizationId).emit('resume_status_update', { id: resume._id, status: "PENDING" });
 
         // Trigger AI asynchronously
         const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';

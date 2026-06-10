@@ -28,17 +28,22 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/sdk-node": "^0.218.0",
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.108.0",
     "@types/node": "^20.0.0",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.16.0",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.78.0",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
+    "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
     "multer": "^2.1.1",
@@ -46,7 +51,10 @@
     "pg": "^8.20.0",
     "redis": "^5.12.1",
     "socket.io": "^4.8.3",
+    "stripe": "^22.2.0",
     "typescript": "^5.4.5",
+    "uuid": "^14.0.0",
+    "winston": "^3.19.0",
     "zod": "^4.4.3"
   }
 }

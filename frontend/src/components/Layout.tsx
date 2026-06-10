@@ -6,7 +6,7 @@ import type { RootState } from '../store';
 import { logout } from '../store/authSlice';
 import { HeaderSearch } from './SemanticSearchWidget';
 import { CopilotPanel } from './CopilotPanel';
-import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network, Menu, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BrainCircuit, LogOut, PanelLeftClose, PanelLeftOpen, Network, Menu, Activity, TrendingUp, GitCompare, Building, ShieldAlert, BadgeDollarSign, CreditCard } from 'lucide-react';
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
@@ -22,6 +22,13 @@ const NAV_ITEMS = [
   { path: '/adaptive-interview', label: 'Adaptive Interview', icon: BrainCircuit },
   { path: '/agents-pipeline', label: 'AI Pipeline', icon: Network },
   { path: '/analytics', label: 'Intelligence', icon: Activity },
+  { path: '/executive', label: 'Executive Dashboard', icon: Building },
+  { path: '/audit', label: 'Audit Center', icon: ShieldAlert },
+  { path: '/cost', label: 'AI Cost Center', icon: BadgeDollarSign },
+  { path: '/billing', label: 'Billing & Quotas', icon: CreditCard },
+  { path: '/compare', label: 'Compare Candidates', icon: GitCompare },
+  { path: '/pipeline', label: 'Pipeline Board', icon: Users },
+  { path: '/pipeline-analytics', label: 'Pipeline Analytics', icon: TrendingUp },
 ];
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -37,6 +44,13 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   }, [collapsed]);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const role = useSelector((state: RootState) => state.auth.role);
+  const isExecutive = role === 'executive' || role === 'admin';
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (['/executive', '/audit', '/cost', '/billing'].includes(item.path)) return isExecutive;
+    return true;
+  });
 
   const pageTitle = NAV_ITEMS.find(i => i.path === location.pathname)?.label || 'Dashboard';
 
@@ -73,8 +87,8 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => (
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {filteredNavItems.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}

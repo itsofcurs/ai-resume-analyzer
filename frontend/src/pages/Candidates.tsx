@@ -7,6 +7,8 @@ import axios from 'axios';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Cell } from 'recharts';
 import { GraphVisualization } from '../components/GraphVisualization';
 import { VoiceVideoAnalysis } from '../components/VoiceVideoAnalysis';
+import { CandidateTimeline } from '../components/CandidateTimeline';
+import { CandidateActionCenter } from '../components/CandidateActionCenter';
 import type { RootState } from '../store';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
@@ -1327,6 +1329,18 @@ export const Candidates = () => {
                             )}
                           </label>
                         </div>
+                      </div>
+                      
+                      {/* SIDEBAR FOR PHASE 4A: Action Center & Timeline */}
+                      <div className="w-[30%] min-w-[300px]">
+                        <CandidateActionCenter 
+                          candidate={selectedCandidate} 
+                          onUpdate={() => {
+                            // Quick refresh
+                            fetchCandidates();
+                          }} 
+                        />
+                        <CandidateTimeline candidateId={selectedCandidate._id || selectedCandidate.id} />
                       </div>
                     </div>
                   </div>

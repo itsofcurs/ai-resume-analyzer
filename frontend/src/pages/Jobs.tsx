@@ -4,6 +4,8 @@ import { useSelector } from 'react-redux';
 import { Plus, Trash2, Sparkles, BrainCircuit, X, Briefcase } from 'lucide-react';
 import axios from 'axios';
 import type { RootState } from '../store';
+import { CandidateRankingEngine } from '../components/CandidateRankingEngine';
+import { RediscoveryCenter } from '../components/RediscoveryCenter';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
@@ -375,6 +377,11 @@ export const Jobs = () => {
                     </div>
                   )}
                 </div>
+
+                <CandidateRankingEngine jobId={selectedJob.id} token={token || ''} />
+
+                {/* Rediscovery Center */}
+                <RediscoveryCenter jobId={selectedJob.id} />
               </div>
             ) : (
               <div className="p-8 text-center bg-white border border-slate-100 rounded-3xl text-slate-500">
