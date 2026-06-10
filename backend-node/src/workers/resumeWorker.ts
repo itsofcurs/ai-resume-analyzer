@@ -17,7 +17,9 @@ export const resumeWorker = createWorker('resume-processing', async (job: Job) =
   });
 
   try {
-    const response = await axios.post(`${AI_SERVICE_URL}/api/resumes/parse`, job.data);
+    const response = await axios.post(`${AI_SERVICE_URL}/api/process`, job.data, {
+      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' }
+    });
     
     io.to(job.data.organizationId).emit('job:completed', {
       jobId: job.id,
