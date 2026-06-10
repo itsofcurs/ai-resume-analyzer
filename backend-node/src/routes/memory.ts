@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { quotaMiddleware } from '../middleware/quota';
 import axios from 'axios';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 const router = Router();
 router.use(authenticateToken as any);
 
-router.post('/store', async (req: AuthRequest, res: any) => {
+router.post('/store', quotaMiddleware, async (req: AuthRequest, res: any) => {
   try {
     if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
     const payload = { ...req.body, organizationId: req.user.organizationId };
@@ -18,7 +19,7 @@ router.post('/store', async (req: AuthRequest, res: any) => {
   }
 });
 
-router.get('/candidate/:id', async (req: AuthRequest, res: any) => {
+router.get('/candidate/:id', quotaMiddleware, async (req: AuthRequest, res: any) => {
   try {
     if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
     const response = await axios.get(`${AI_SERVICE_URL}/api/memory/candidate/${req.params.id}?organizationId=${req.user.organizationId}`);
@@ -29,7 +30,7 @@ router.get('/candidate/:id', async (req: AuthRequest, res: any) => {
   }
 });
 
-router.get('/recruiter/:id', async (req: AuthRequest, res: any) => {
+router.get('/recruiter/:id', quotaMiddleware, async (req: AuthRequest, res: any) => {
   try {
     if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
     const response = await axios.get(`${AI_SERVICE_URL}/api/memory/recruiter/${req.params.id}?organizationId=${req.user.organizationId}`);

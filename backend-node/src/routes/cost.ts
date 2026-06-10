@@ -5,10 +5,18 @@ import { prisma } from '../server';
 const router = Router();
 router.use(authenticateToken as any);
 
+import { getCache, setCache, CacheKeys, invalidateCache } from '../cache/cacheManager';
+
 router.get('/analytics', requireExecutiveRole, async (req: AuthRequest, res: any) => {
   try {
     const user = req.user!;
     const organizationId = user.organizationId;
+    const cacheKey = CacheKeys.cost(organizationId);
+
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
     
     // Aggregate AI costs for the organization
     const totalCosts = await prisma.aICost.aggregate({
@@ -30,7 +38,7 @@ router.get('/analytics', requireExecutiveRole, async (req: AuthRequest, res: any
       }
     });
 
-    res.json({
+    const responseData = {
       totals: {
         tokens: totalCosts._sum.tokensUsed || 0,
         prompt: totalCosts._sum.promptCost || 0,
@@ -38,7 +46,11 @@ router.get('/analytics', requireExecutiveRole, async (req: AuthRequest, res: any
         total: totalCosts._sum.totalCost || 0
       },
       byWorkflow: workflowCosts
-    });
+    };
+
+    await setCache(cacheKey, responseData, 300); // 5 minutes TTL
+
+    res.json(responseData);
   } catch (error: any) {
     console.error("Cost analytics error:", error.message);
     res.status(500).json({ error: 'Failed to fetch AI cost analytics' });
@@ -66,6 +78,9 @@ export const logAICost = async (
         totalCost: promptCost + completionCost
       }
     });
+
+    // Invalidate cost analytics cache
+    await invalidateCache(CacheKeys.cost(organizationId));
   } catch (error) {
     console.error("Failed to write AI cost:", error);
   }

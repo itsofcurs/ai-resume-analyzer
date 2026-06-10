@@ -4,7 +4,9 @@ import { uploadCloudinary } from '../services/cloudinary';
 import { autonomousAgentQueue } from '../lib/queue';
 import { Resume } from '../models/Resume';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { quotaMiddleware } from '../middleware/quota';
 import { io } from '../server';
+import { enqueueResumeJob } from '../queues/resumeQueue';
 import axios from 'axios';
 
 const router = Router();
@@ -39,7 +41,7 @@ router.post('/webhook/status', async (req: any, res: any) => {
 // Apply auth middleware to all resume routes
 router.use(authenticateToken as any);
 
-router.post('/upload', (req: AuthRequest, res: any) => {
+router.post('/upload', quotaMiddleware, (req: AuthRequest, res: any) => {
   uploadCloudinary.single('file')(req, res, async (err) => {
     if (err) {
       console.error("Multer Error:", err);
@@ -77,43 +79,28 @@ router.post('/upload', (req: AuthRequest, res: any) => {
 
     await resume.save();
 
-    res.status(202).json({ 
-      message: "Upload successful, processing started", 
-      id: resume._id,
-      cloudinaryUrl: localUrl
-    });
-
-    // Notify clients that a new resume is pending
-    io.to(user.organizationId).emit('resume_status_update', { id: resume._id, status: "PENDING" });
-
-    // Trigger AI Service Pipeline (Sprint 3)
+    // Trigger AI Service Pipeline
+    let job;
     try {
-      // Don't await this, let it run in the background
-      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
-      axios.post(`${aiServiceUrl}/api/process`, {
+      job = await enqueueResumeJob(resume._id.toString(), user.organizationId, {
         resume_id: resume._id.toString(),
         cloudinary_url: resume.cloudinaryUrl,
-        filename: resume.filename
-      }, {
-        headers: {
-          'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key'
-        }
-      }).then(() => {
-        // Phase 5A: Queue Autonomous Agent after successful core processing
-        autonomousAgentQueue.add('agent-upload-trigger', {
-          candidateId: resume._id.toString(),
-          triggerSource: "upload"
-        });
-      }).catch(err => {
-        console.error("Webhook or Autonomous Agent trigger failed:", err.message);
-        if (err.response) {
-          console.error("Webhook error response:", err.response.data);
-        }
+        filename: resume.filename,
+        organizationId: user.organizationId
       });
+      
+      // Notify clients that a new resume is pending
+      io.to(user.organizationId).emit('resume_status_update', { id: resume._id, status: "PENDING" });
     } catch (e) {
-      console.error("Failed to initiate webhook:", e);
+      console.error("Failed to enqueue resume job:", e);
+      return res.status(500).json({ error: 'Failed to enqueue processing task' });
     }
 
+    return res.status(202).json({
+      accepted: true,
+      jobId: job.id,
+      status: 'queued'
+    });
   } catch (error) {
     console.error("Upload error:", error);
     res.status(500).json({ error: 'Upload failed' });
@@ -121,7 +108,7 @@ router.post('/upload', (req: AuthRequest, res: any) => {
   });
 });
 
-router.post('/upload/batch', (req: AuthRequest, res: any) => {
+router.post('/upload/batch', quotaMiddleware, (req: AuthRequest, res: any) => {
   uploadCloudinary.array('files', 20)(req, res, async (err) => {
     if (err) {
       console.error("Multer Error:", err);

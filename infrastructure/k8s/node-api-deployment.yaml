@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talentai-node-api
+  namespace: talentai-prod
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: talentai-node-api
+  template:
+    metadata:
+      labels:
+        app: talentai-node-api
+    spec:
+      containers:
+      - name: node-api
+        image: talentai/node-api:latest
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: node-api-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health/live
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /api/health/ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-api-service
+  namespace: talentai-prod
+spec:
+  selector:
+    app: talentai-node-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: node-api-hpa
+  namespace: talentai-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: talentai-node-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

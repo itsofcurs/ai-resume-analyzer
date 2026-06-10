@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma, redisClient } from '../server';
 import { Resume } from '../models/Resume';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { quotaMiddleware } from '../middleware/quota';
+import { copilotQueue } from '../queues/copilotQueue';
 import { io } from '../server';
 import axios from 'axios';
 
@@ -207,7 +209,7 @@ router.post('/autonomous', async (req: AuthRequest, res: any) => {
 });
 
 // Phase 4C Module 4 & 8: Interactive Recruiter Copilot
-router.post('/recruiter', async (req: AuthRequest, res: any) => {
+router.post('/recruiter', quotaMiddleware, async (req: AuthRequest, res: any) => {
   const { candidateId, jobId, recruiterPrompt } = req.body;
   if (!candidateId || !recruiterPrompt) return res.status(400).json({ error: 'candidateId and recruiterPrompt are required' });
   
@@ -215,20 +217,23 @@ router.post('/recruiter', async (req: AuthRequest, res: any) => {
   const orgId = req.user.organizationId;
 
   try {
-    const response = await axios.post(`${AI_SERVICE_URL}/api/copilot/recruiter`, { 
+    const job = await copilotQueue.add('recruiter-copilot', {
       candidate_id: candidateId,
       job_id: jobId,
       recruiter_prompt: recruiterPrompt,
       organization_id: orgId 
     }, {
-      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' },
-      timeout: 60000
+      jobId: `recruiter-${candidateId}-${Date.now()}`
     });
     
-    return res.status(200).json(response.data);
+    return res.status(202).json({
+      accepted: true,
+      jobId: job.id,
+      status: 'queued'
+    });
   } catch (error: any) {
     console.error("Interactive Recruiter Copilot Error:", error.message);
-    return res.status(500).json({ error: 'Failed to process recruiter copilot request' });
+    return res.status(500).json({ error: 'Failed to queue recruiter copilot request' });
   }
 });
 
@@ -257,7 +262,7 @@ router.post('/rediscovery/search', async (req: AuthRequest, res: any) => {
 });
 
 // Phase 4C Module 3: AI Outreach Generator
-router.post('/outreach/generate', async (req: AuthRequest, res: any) => {
+router.post('/outreach/generate', quotaMiddleware, async (req: AuthRequest, res: any) => {
   const { candidateId, jobId, outreachType, notes } = req.body;
   if (!candidateId) return res.status(400).json({ error: 'Candidate ID is required' });
   
@@ -265,15 +270,14 @@ router.post('/outreach/generate', async (req: AuthRequest, res: any) => {
   const orgId = req.user.organizationId;
 
   try {
-    const response = await axios.post(`${AI_SERVICE_URL}/api/outreach/generate`, { 
+    const job = await copilotQueue.add('outreach-generate', {
       candidate_id: candidateId,
       job_id: jobId,
       outreach_type: outreachType,
       notes: notes,
       organization_id: orgId 
     }, {
-      headers: { 'x-api-key': process.env.INTERNAL_API_KEY || 'default-internal-key' },
-      timeout: 30000
+      jobId: `outreach-${candidateId}-${Date.now()}`
     });
     
     // Update candidateEngagement metrics
@@ -291,10 +295,14 @@ router.post('/outreach/generate', async (req: AuthRequest, res: any) => {
       await resume.save();
     }
 
-    return res.status(200).json(response.data);
+    return res.status(202).json({
+      accepted: true,
+      jobId: job.id,
+      status: 'queued'
+    });
   } catch (error: any) {
     console.error("Outreach Generation Error:", error.message);
-    return res.status(500).json({ error: 'Failed to generate outreach' });
+    return res.status(500).json({ error: 'Failed to queue outreach generation' });
   }
 });
 
@@ -556,33 +564,27 @@ router.post('/outreach/responded', async (req: AuthRequest, res: any) => {
     res.status(500).json({ error: 'Failed to log response' });
   }
 });
-router.post('/explain', async (req: AuthRequest, res: any) => {
+router.post('/explain', quotaMiddleware, async (req: AuthRequest, res: any) => {
   try {
     if (!req.user?.organizationId) return res.status(403).json({ error: 'Organization ID required' });
     
-    // Proxy request to python
-    const response = await axios.post(`${AI_SERVICE_URL}/api/explain/recommendation`, req.body);
-    const data = response.data;
-    
-    // Persist to Governance Log
-    await prisma.aIGovernanceLog.create({
-      data: {
-        organizationId: req.user.organizationId,
-        userId: req.user.id,
-        candidateId: req.body.candidateId || null,
-        recommendation: req.body.recommendation || 'unknown',
-        confidence: data.confidence || 0,
-        reasoning: data.reasoning || {},
-        contributingFactors: data.contributingFactors || [],
-        negativeFactors: data.negativeFactors || [],
-        auditTrail: data.auditTrail || {}
-      }
+    // Proxy request to python via queue
+    const job = await copilotQueue.add('explain-recommendation', {
+      ...req.body,
+      organizationId: req.user.organizationId,
+      userId: req.user.id
+    }, {
+      jobId: `explain-${req.user.organizationId}-${Date.now()}`
     });
-
-    res.json(data);
+    
+    res.status(202).json({
+      accepted: true,
+      jobId: job.id,
+      status: 'queued'
+    });
   } catch (error: any) {
-    console.error("Explainability Proxy Error:", error.message);
-    res.status(500).json({ error: 'Failed to process explainability request' });
+    console.error("Explainability Queue Error:", error.message);
+    res.status(500).json({ error: 'Failed to queue explainability request' });
   }
 });
 

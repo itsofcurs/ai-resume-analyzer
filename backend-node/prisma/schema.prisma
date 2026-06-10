@@ -59,6 +59,9 @@ model AuditLog {
   
   user           User         @relation(fields: [userId], references: [id])
   organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, timestamp])
+  @@index([action, resource])
 }
 
 model AICost {
@@ -74,6 +77,8 @@ model AICost {
   createdAt      DateTime     @default(now())
   
   organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, department, workflowName])
 }
 
 model Subscription {
@@ -136,5 +141,6 @@ model AIGovernanceLog {
   @@index([organizationId])
   @@index([candidateId])
   @@index([createdAt])
+  @@index([organizationId, createdAt])
 }
 

@@ -4,7 +4,7 @@ import { Notification } from '../models/Notification';
 import { authenticateToken, AuthRequest, requireExecutiveRole } from '../middleware/auth';
 import { io, prisma } from '../server';
 import axios from 'axios';
-import { autonomousAgentQueue } from '../lib/queue';
+import { autonomousQueue } from '../queues/autonomousQueue';
 
 const router = Router();
 
@@ -118,12 +118,14 @@ router.post('/move', async (req: AuthRequest, res: any) => {
     // Phase 5A: Queue Autonomous Agent asynchronously on key pipeline stages
     const triggerStages = ['Screening', 'Interview Scheduled', 'Offer Extended'];
     if (triggerStages.includes(newStage)) {
-      candidateIds.forEach((id: string) => {
-        autonomousAgentQueue.add('agent-pipeline-trigger', {
+      for (const id of candidateIds) {
+        await autonomousQueue.add('agent-pipeline-trigger', {
           candidateId: id,
           triggerSource: `stage_change_${newStage.replace(/\s+/g, '_').toLowerCase()}`
+        }, {
+          jobId: `autonomous-${id}-${Date.now()}`
         });
-      });
+      }
     }
 
     res.json({ success: true, message: `Moved ${candidateIds.length} candidates to ${newStage}` });

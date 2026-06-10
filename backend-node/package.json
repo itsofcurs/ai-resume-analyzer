@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@opensearch-project/opensearch": "^3.6.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/sdk-node": "^0.218.0",
     "@prisma/client": "^6.19.3",

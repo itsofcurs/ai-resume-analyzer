@@ -29,6 +29,8 @@ import scorecardsRoutes from './routes/scorecards';
 import forecastRoutes from './routes/forecast';
 import auditRoutes from './routes/audit';
 import costRoutes from './routes/cost';
+import searchRoutes from './routes/search';
+import operationsRoutes from './routes/operations';
 import path from 'path';
 import { requestContextMiddleware, requestContext } from './middleware/requestContext';
 import { regionRoutingMiddleware } from './middleware/regionRouting';
@@ -147,9 +149,11 @@ app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/scorecards', scorecardsRoutes);
 app.use('/api/forecast', forecastRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/cost', costRoutes);
 app.use('/api/billing', userRateLimiter, billingRouter);
 app.use('/api/memory', userRateLimiter, memoryRoutes);
+app.use('/api/operations', operationsRoutes);
 
 // Internal endpoint for Python to report timeouts
 app.post('/api/internal/timeout', express.json(), async (req, res) => {

@@ -224,4 +224,11 @@ ResumeSchema.index({ organizationId: 1, currentOwner: 1 });
 ResumeSchema.index({ organizationId: 1, stageEnteredAt: 1 });
 ResumeSchema.index({ organizationId: 1, tags: 1 });
 
+// Phase 5C: Additional DB Optimization Indexes
+ResumeSchema.index({ candidateEmail: 1 });
+ResumeSchema.index({ organizationId: 1, candidateName: 1 });
+ResumeSchema.index({ organizationId: 1, "parsedData.jobTitle": 1 });
+ResumeSchema.index({ organizationId: 1, "predictiveHiring.flightRisk": 1 });
+ResumeSchema.index({ organizationId: 1, "candidateEngagement.engagementScore": -1 });
+
 export const Resume = mongoose.model<IResume>('Resume', ResumeSchema);

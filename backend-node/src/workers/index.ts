@@ -1,14 +1,26 @@
 import { autonomousAgentWorker } from './autonomousAgent';
+import { resumeWorker } from './resumeWorker';
+import { copilotWorker } from './copilotWorker';
+import { learningWorker } from './learningWorker';
 import { logWithTrace } from '../lib/telemetry';
 
 export const startWorkers = () => {
-  logWithTrace('info', 'Starting background workers...');
+  logWithTrace('info', 'Starting background BullMQ workers...');
   
-  autonomousAgentWorker.on('ready', () => {
-    logWithTrace('info', 'Autonomous Agent Worker is ready and listening to queue');
-  });
+  const workers = [
+    { name: 'Autonomous Agent', instance: autonomousAgentWorker },
+    { name: 'Resume Processing', instance: resumeWorker },
+    { name: 'Copilot', instance: copilotWorker },
+    { name: 'Learning Pipeline', instance: learningWorker }
+  ];
 
-  autonomousAgentWorker.on('error', (err) => {
-    logWithTrace('error', `Autonomous Agent Worker error: ${err.message}`);
+  workers.forEach(({ name, instance }) => {
+    instance.on('ready', () => {
+      logWithTrace('info', `${name} Worker is ready and listening to queue`);
+    });
+
+    instance.on('error', (err) => {
+      logWithTrace('error', `${name} Worker error: ${err.message}`);
+    });
   });
 };

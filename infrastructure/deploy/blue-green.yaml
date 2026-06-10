@@ -1,0 +1,27 @@
+# Blue/Green Deployment Strategy for TalentAI
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: talentai-node-api-rollout
+  namespace: talentai-prod
+spec:
+  replicas: 5
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: talentai-node-api
+  template:
+    metadata:
+      labels:
+        app: talentai-node-api
+    spec:
+      containers:
+      - name: node-api
+        image: talentai/node-api:v5.0.0
+        ports:
+        - containerPort: 3000
+  strategy:
+    blueGreen: 
+      activeService: node-api-active
+      previewService: node-api-preview
+      autoPromotionEnabled: false

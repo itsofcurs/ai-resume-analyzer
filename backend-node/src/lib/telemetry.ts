@@ -73,3 +73,22 @@ export const completionTokensTotal = meter.createCounter('completion_tokens_tota
 export const aiCostUsdTotal = meter.createCounter('ai_cost_usd_total', {
   description: 'Total AI cost in USD',
 });
+
+// Phase 5C: Queue Telemetry
+export const queueDepth = meter.createObservableGauge('queue_depth', {
+  description: 'Number of jobs currently waiting in the queue',
+});
+
+export const queueWaitTime = meter.createHistogram('queue_wait_time_ms', {
+  description: 'Time spent by jobs waiting in the queue',
+  unit: 'ms',
+});
+
+export const queueProcessingTime = meter.createHistogram('queue_processing_time_ms', {
+  description: 'Time spent processing jobs',
+  unit: 'ms',
+});
+
+export const queueFailureTotal = meter.createCounter('queue_failure_total', {
+  description: 'Total number of failed queue jobs',
+});
