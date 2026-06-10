@@ -16,6 +16,14 @@ services:
       timeout: 5s
       retries: 5
 
+  mongo:
+    image: mongo:6
+    container_name: talent_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
   redis:
     image: redis:7-alpine
     container_name: talent_redis
@@ -53,3 +61,4 @@ services:
 
 volumes:
   pgdata:
+  mongodata:

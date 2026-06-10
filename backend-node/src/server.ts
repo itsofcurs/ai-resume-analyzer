@@ -117,15 +117,16 @@ const apiLimiter = rateLimit({
   max: 100, // Limit each IP to 100 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 app.use('/api', apiLimiter);
 
 const userRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 60 * 1000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { ip: false },
+  validate: { ip: false, xForwardedForHeader: false },
   keyGenerator: (req: any) => {
     return req.user?.id || req.ip;
   }
