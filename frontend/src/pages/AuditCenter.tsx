@@ -21,7 +21,7 @@ export function AuditCenter() {
   useEffect(() => {
     const fetchAuditLogs = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/audit', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/audit`, {
           withCredentials: true,
         });
         setLogs(response.data);

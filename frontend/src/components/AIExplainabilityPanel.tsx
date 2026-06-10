@@ -36,7 +36,7 @@ export const AIExplainabilityPanel: React.FC<Props> = ({ recommendationPayload, 
   const fetchExplanation = async () => {
     setLoading(true);
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api/copilot/explain`, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/copilot/explain`, {
         recommendation_payload: recommendationPayload
       }, { withCredentials: true });
       setData(response.data);

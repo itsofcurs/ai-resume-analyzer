@@ -25,7 +25,7 @@ export function AICostCenter() {
   useEffect(() => {
     const fetchCosts = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/cost/analytics', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cost/analytics`, {
           withCredentials: true,
         });
         setAnalytics(response.data);
