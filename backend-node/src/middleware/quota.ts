@@ -11,13 +11,21 @@ export const quotaMiddleware = async (req: AuthRequest, res: Response, next: Nex
   try {
     const orgId = req.user.organizationId;
     
-    const quota = await prisma.usageQuota.findUnique({
+    let quota = await prisma.usageQuota.findUnique({
       where: { organizationId: orgId }
     });
 
     if (!quota) {
-      logger.warn(`No quota found for org ${orgId}. Denying access.`);
-      return res.status(403).json({ error: 'No active usage quota found for organization.' });
+      logger.info(`Auto-provisioning default free tier quota for org ${orgId}`);
+      quota = await prisma.usageQuota.create({
+        data: {
+          organizationId: orgId,
+          apiLimit: 50,
+          apiUsage: 0,
+          seatsLimit: 1,
+          seatsUsed: 1
+        }
+      });
     }
 
     if (quota.apiUsage >= quota.apiLimit && quota.apiLimit !== -1) { // -1 means unlimited
