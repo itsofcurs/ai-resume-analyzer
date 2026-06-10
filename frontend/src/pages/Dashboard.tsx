@@ -48,7 +48,7 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchData();
     const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const socket = io(socketUrl);
+    const socket = io(socketUrl, { auth: { token } });
     socket.on('resume_processed', () => {
       fetchData();
     });

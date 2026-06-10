@@ -58,7 +58,7 @@ export const PipelineBoard = () => {
     fetchPipeline();
 
     // Socket.io initialization
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, { auth: { token } });
 
     socket.on("connect", () => {
       socketIdRef.current = socket.id || "";

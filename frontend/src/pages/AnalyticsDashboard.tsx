@@ -83,7 +83,7 @@ export const AnalyticsDashboard = () => {
   useEffect(() => {
     fetchAnalytics();
     
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, { auth: { token } });
     socket.on('ANALYTICS_UPDATED', () => {
       fetchAnalytics(true);
     });
