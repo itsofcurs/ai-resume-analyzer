@@ -572,7 +572,7 @@ router.post('/explain', quotaMiddleware, async (req: AuthRequest, res: any) => {
     const job = await copilotQueue.add('explain-recommendation', {
       ...req.body,
       organizationId: req.user.organizationId,
-      userId: req.user.id
+      userId: req.user.userId
     }, {
       jobId: `explain-${req.user.organizationId}-${Date.now()}`
     });

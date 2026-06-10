@@ -4,8 +4,8 @@ import winston from 'winston';
 // Format to mask PII before logging
 const maskPII = winston.format((info) => {
   if (typeof info.message === 'string') {
-    info.message = info.message.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]');
-    info.message = info.message.replace(/\+?\d{10,14}/g, '[REDACTED_PHONE]');
+    info.message = (info.message as string).replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]');
+    info.message = (info.message as string).replace(/\+?\d{10,14}/g, '[REDACTED_PHONE]');
   }
   if (info.candidateName) info.candidateName = '[REDACTED_NAME]';
   if (info.email) info.email = '[REDACTED_EMAIL]';

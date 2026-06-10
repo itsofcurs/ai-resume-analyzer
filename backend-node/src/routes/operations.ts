@@ -37,7 +37,7 @@ router.get('/metrics', async (req: AuthRequest, res: any) => {
 
     const tokenUsageLog = await prisma.aICost.aggregate({
       where: { organizationId: orgId },
-      _sum: { tokensUsed: true, cost: true }
+      _sum: { tokensUsed: true, totalCost: true }
     });
 
     res.json({
@@ -58,7 +58,7 @@ router.get('/metrics', async (req: AuthRequest, res: any) => {
       telemetry: {
         activeUsers: activeUsersCount,
         tokenUsage: tokenUsageLog._sum.tokensUsed || 0,
-        totalCost: tokenUsageLog._sum.cost || 0
+        totalCost: tokenUsageLog._sum.totalCost || 0
       },
       health: {
         status: 'Operational',

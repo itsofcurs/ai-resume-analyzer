@@ -20,7 +20,7 @@ export const DLQ_SUFFIX = '-dlq';
  */
 export const createQueue = (queueName: string) => {
   const queue = new Queue(queueName, { 
-    connection,
+    connection: connection as any,
     defaultJobOptions: {
       attempts: 3,
       backoff: {
@@ -32,10 +32,10 @@ export const createQueue = (queueName: string) => {
     }
   });
 
-  const dlq = new Queue(`${queueName}${DLQ_SUFFIX}`, { connection });
+  const dlq = new Queue(`${queueName}${DLQ_SUFFIX}`, { connection: connection as any });
 
   // Queue Events for Telemetry
-  const queueEvents = new QueueEvents(queueName, { connection });
+  const queueEvents = new QueueEvents(queueName, { connection: connection as any });
 
   queueEvents.on('completed', ({ jobId, returnvalue, prev }) => {
     // We can't directly measure processing time here without the job instance's processedOn
@@ -82,7 +82,7 @@ export const createWorker = (
       const processingTime = Date.now() - startTime;
       queueProcessingTime.record(processingTime, { queue: queueName });
     }
-  }, { connection });
+  }, { connection: connection as any });
 
   worker.on('error', err => {
     logger.error(`Worker error on ${queueName}: ${err}`);
