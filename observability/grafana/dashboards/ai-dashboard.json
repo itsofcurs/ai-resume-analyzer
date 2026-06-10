@@ -1,0 +1,19 @@
+{
+  "title": "TalentAI AI Performance",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "AI Request Latency",
+      "targets": [
+        { "expr": "rate(ai_request_duration_seconds_sum[5m]) / rate(ai_request_duration_seconds_count[5m])" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "AI Error Rate",
+      "targets": [
+        { "expr": "rate(ai_request_errors_total[5m])" }
+      ]
+    }
+  ]
+}

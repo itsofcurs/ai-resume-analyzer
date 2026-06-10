@@ -1,0 +1,19 @@
+{
+  "title": "TalentAI Infrastructure Health",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "API Request Rate (HTTP)",
+      "targets": [
+        { "expr": "rate(http_requests_total[1m])", "legendFormat": "{{method}} {{route}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "API Error Rate (HTTP 5xx)",
+      "targets": [
+        { "expr": "rate(http_requests_total{status=~\"5..\"}[1m])", "legendFormat": "{{route}}" }
+      ]
+    }
+  ]
+}

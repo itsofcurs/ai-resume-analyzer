@@ -17,6 +17,7 @@ import { ExecutiveDashboard } from './pages/ExecutiveDashboard';
 import { AuditCenter } from './pages/AuditCenter';
 import { AICostCenter } from './pages/AICostCenter';
 import { BillingDashboard } from './pages/BillingDashboard';
+import { LaunchCertificationCenter } from './pages/LaunchCertificationCenter';
 import { useSelector } from 'react-redux';
 import type { RootState } from './store';
 
@@ -173,6 +174,13 @@ function App() {
             <ProtectedRoute>
               <RoleRoute allowedRoles={['executive', 'admin']}>
                 <DashboardLayout><BillingDashboard /></DashboardLayout>
+              </RoleRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/launch-certification" element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['executive', 'admin']}>
+                <DashboardLayout><LaunchCertificationCenter /></DashboardLayout>
               </RoleRoute>
             </ProtectedRoute>
           } />

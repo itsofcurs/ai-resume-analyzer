@@ -1,0 +1,20 @@
+{
+  "title": "TalentAI Queue Health",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Queue Depth (Waiting Jobs)",
+      "targets": [
+        { "expr": "queue_waiting_jobs", "legendFormat": "{{queue}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue Processing Latency (ms)",
+      "targets": [
+        { "expr": "rate(queue_processing_latency_sum[5m]) / rate(queue_processing_latency_count[5m])", "legendFormat": "{{queue}}" }
+      ]
+    }
+  ]
+}

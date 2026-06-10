@@ -1,0 +1,19 @@
+{
+  "title": "TalentAI Billing & Cost Governance",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total AI Spend",
+      "targets": [
+        { "expr": "sum(ai_cost_total_dollars)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "AI Cost per Organization",
+      "targets": [
+        { "expr": "sum by (organization_id) (ai_cost_total_dollars)" }
+      ]
+    }
+  ]
+}

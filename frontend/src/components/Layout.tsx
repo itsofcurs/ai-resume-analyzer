@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { path: '/compare', label: 'Compare Candidates', icon: GitCompare },
   { path: '/pipeline', label: 'Pipeline Board', icon: Users },
   { path: '/pipeline-analytics', label: 'Pipeline Analytics', icon: TrendingUp },
+  { path: '/launch-certification', label: 'Launch Certification', icon: ShieldAlert },
 ];
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -48,7 +49,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const role = useSelector((state: RootState) => state.auth.role);
   const isExecutive = role === 'executive' || role === 'admin';
   const filteredNavItems = NAV_ITEMS.filter(item => {
-    if (['/executive', '/audit', '/cost', '/billing'].includes(item.path)) return isExecutive;
+    if (['/executive', '/audit', '/cost', '/billing', '/launch-certification'].includes(item.path)) return isExecutive;
     return true;
   });
 
