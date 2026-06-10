@@ -46,9 +46,11 @@ db = mongo_client.get_database("talentdb")
 resumes_collection = db.get_collection("resumes")
 
 
-def get_mongo_collection():
-    """Return the resumes MongoDB collection."""
-    return resumes_collection
+def get_mongo_collection(collection_name: str = "resumes"):
+    """Return a MongoDB collection."""
+    if collection_name == "resumes":
+        return resumes_collection
+    return db.get_collection(collection_name)
 
 
 # ---------------------------------------------------------------------------

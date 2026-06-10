@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 import redis
 
 # Use the centralized database tools
-from database import get_mongo_collection, get_chroma_client
+from database import get_mongo_collection
 from embeddings import generate_embedding
 
 logger = logging.getLogger(__name__)
@@ -16,19 +16,10 @@ class RecruiterMemory:
     """
     Hybrid memory model for Agent Context:
     1. Short-Term Memory -> Redis
-    2. Long-Term Memory -> ChromaDB (Semantic) + MongoDB (Metadata)
+    2. Long-Term Memory -> MongoDB (Atlas Vector Search for Semantics)
     """
     def __init__(self):
         self.redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://127.0.0.1:6379"), decode_responses=True)
-        self.chroma = get_chroma_client()
-        self.collection_name = "recruiter_memory"
-        
-        # Ensure Chroma collection exists
-        try:
-            self.chroma_collection = self.chroma.get_or_create_collection(name=self.collection_name)
-        except Exception as e:
-            logger.error(f"Failed to initialize Chroma collection {self.collection_name}: {e}")
-            self.chroma_collection = None
             
     async def store_memory(self, organization_id: str, payload: Dict[str, Any]) -> str:
         """Stores a memory snapshot into both short-term and long-term storage"""
@@ -52,35 +43,26 @@ class RecruiterMemory:
         # 1. Short-Term Memory (Redis) - TTL 24 hours
         if recruiter_id:
             redis_key = f"memory:org:{organization_id}:recruiter:{recruiter_id}"
-            self.redis_client.lpush(redis_key, json.dumps(doc))
-            self.redis_client.ltrim(redis_key, 0, 49) # Keep last 50
-            self.redis_client.expire(redis_key, 86400)
+            try:
+                self.redis_client.lpush(redis_key, json.dumps(doc))
+                self.redis_client.ltrim(redis_key, 0, 49) # Keep last 50
+                self.redis_client.expire(redis_key, 86400)
+            except Exception as e:
+                logger.error(f"Redis memory storage failed: {e}")
             
-        # 2. Long-Term Memory Metadata (MongoDB)
+        # 2. Long-Term Memory & Semantic (MongoDB)
         try:
             mongo_coll = get_mongo_collection("agent_memories")
-            mongo_coll.insert_one(doc.copy())
+            if content:
+                # Generate embedding for vector search
+                embedding = generate_embedding(content)
+                # Note: The embedding function might be async depending on implementation, 
+                # but if it was synchronous in the previous code, we keep it as is.
+                doc["embedding"] = embedding
+                
+            mongo_coll.insert_one(doc)
         except Exception as e:
             logger.error(f"MongoDB memory storage failed: {e}")
-            
-        # 3. Long-Term Semantic Memory (ChromaDB)
-        if self.chroma_collection and content:
-            try:
-                embedding = generate_embedding(content)
-                self.chroma_collection.add(
-                    documents=[content],
-                    embeddings=[embedding],
-                    metadatas=[{
-                        "organization_id": organization_id,
-                        "recruiter_id": str(recruiter_id),
-                        "candidate_id": str(candidate_id),
-                        "type": memory_type,
-                        "memory_id": memory_id
-                    }],
-                    ids=[memory_id]
-                )
-            except Exception as e:
-                logger.error(f"ChromaDB memory storage failed: {e}")
                 
         return memory_id
         
@@ -88,15 +70,17 @@ class RecruiterMemory:
         """Retrieves long term interaction history for a candidate"""
         try:
             mongo_coll = get_mongo_collection("agent_memories")
+            # For async motor, we must use await to_list
             cursor = mongo_coll.find({
                 "organization_id": organization_id,
                 "candidate_id": candidate_id
             }).sort("timestamp", -1).limit(20)
             
-            results = []
-            for doc in cursor:
+            results = await cursor.to_list(length=20)
+            for doc in results:
                 doc['_id'] = str(doc['_id'])
-                results.append(doc)
+                if "embedding" in doc:
+                    del doc["embedding"] # Exclude large vector from results
             return results
         except Exception as e:
             logger.error(f"MongoDB candidate memory retrieval failed: {e}")
@@ -113,27 +97,45 @@ class RecruiterMemory:
             return []
             
     async def search_memory(self, organization_id: str, query: str, limit: int = 5) -> List[Dict[str, Any]]:
-        """Semantic search across organizational memory"""
-        if not self.chroma_collection:
-            return []
-            
+        """Semantic search across organizational memory using MongoDB Vector Search"""
         try:
             embedding = generate_embedding(query)
-            results = self.chroma_collection.query(
-                query_embeddings=[embedding],
-                n_results=limit,
-                where={"organization_id": organization_id}
-            )
+            mongo_coll = get_mongo_collection("agent_memories")
             
+            pipeline = [
+                {
+                    "$vectorSearch": {
+                        "index": "memory_vector_index",
+                        "path": "embedding",
+                        "queryVector": embedding,
+                        "numCandidates": limit * 10,
+                        "limit": limit,
+                        "filter": {"organization_id": organization_id}
+                    }
+                },
+                {
+                    "$project": {
+                        "embedding": 0,
+                        "score": {"$meta": "vectorSearchScore"}
+                    }
+                }
+            ]
+            
+            results = await mongo_coll.aggregate(pipeline).to_list(length=limit)
             memories = []
-            for i in range(len(results['ids'][0])):
+            for doc in results:
                 memories.append({
-                    "id": results['ids'][0][i],
-                    "content": results['documents'][0][i],
-                    "metadata": results['metadatas'][0][i],
-                    "distance": results['distances'][0][i] if 'distances' in results and results['distances'] else 0
+                    "id": doc.get("memory_id", str(doc["_id"])),
+                    "content": doc.get("content", ""),
+                    "metadata": {
+                        "recruiter_id": doc.get("recruiter_id"),
+                        "candidate_id": doc.get("candidate_id"),
+                        "type": doc.get("type"),
+                        "timestamp": doc.get("timestamp")
+                    },
+                    "distance": doc.get("score", 0)
                 })
             return memories
         except Exception as e:
-            logger.error(f"ChromaDB search failed: {e}")
+            logger.error(f"MongoDB vector search failed: {e}")
             return []
