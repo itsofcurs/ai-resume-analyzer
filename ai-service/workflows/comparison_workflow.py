@@ -9,15 +9,15 @@ Output: Comparison Report (Structured JSON)
 
 import json
 import logging
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
+from bson import ObjectId
+from database import get_mongo_collection
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langgraph.graph import StateGraph, END
-from bson import ObjectId
-
-from database import get_mongo_collection
+from langgraph.graph import END, StateGraph
 from services.llm.llm_router import LLMRouter
+
 from utils.parser_utils import clean_json_str
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,7 @@ COMPARISON_PROMPT = PromptTemplate.from_template(
     """
 )
 
+
 class ComparisonState(TypedDict):
     candidate_a_id: str
     candidate_b_id: str
@@ -68,6 +69,7 @@ class ComparisonState(TypedDict):
     candidate_b_data: Optional[dict]
     comparison_result: Optional[dict]
     error: Optional[str]
+
 
 class ComparisonWorkflow:
     def __init__(self):
@@ -79,37 +81,45 @@ class ComparisonWorkflow:
         graph.add_node("handle_failure", self._node_handle_failure)
 
         graph.set_entry_point("fetch_candidates")
-        
+
         graph.add_conditional_edges(
             "fetch_candidates",
-            lambda state: "handle_failure" if state.get("error") else "generate_comparison"
+            lambda state: (
+                "handle_failure" if state.get("error") else "generate_comparison"
+            ),
         )
-        
+
         graph.add_conditional_edges(
             "generate_comparison",
-            lambda state: "handle_failure" if state.get("error") else "update_mongo"
+            lambda state: "handle_failure" if state.get("error") else "update_mongo",
         )
-        
+
         graph.add_conditional_edges(
             "update_mongo",
-            lambda state: "handle_failure" if state.get("error") else END
+            lambda state: "handle_failure" if state.get("error") else END,
         )
-        
+
         graph.add_edge("handle_failure", END)
 
         self._graph = graph.compile()
 
     async def _node_fetch_candidates(self, state: ComparisonState) -> ComparisonState:
-        logger.info(f"[COMPARE] Stage 1 - Fetching candidates {state['candidate_a_id']} vs {state['candidate_b_id']}")
+        logger.info(
+            f"[COMPARE] Stage 1 - Fetching candidates {state['candidate_a_id']} vs {state['candidate_b_id']}"
+        )
         try:
             collection = get_mongo_collection()
-            cand_a = await collection.find_one({"_id": ObjectId(state['candidate_a_id'])})
-            cand_b = await collection.find_one({"_id": ObjectId(state['candidate_b_id'])})
-            
+            cand_a = await collection.find_one(
+                {"_id": ObjectId(state["candidate_a_id"])}
+            )
+            cand_b = await collection.find_one(
+                {"_id": ObjectId(state["candidate_b_id"])}
+            )
+
             if not cand_a or not cand_b:
                 state["error"] = "One or both candidates not found in MongoDB."
                 return state
-                
+
             state["candidate_a_data"] = {
                 "id": str(cand_a["_id"]),
                 "name": cand_a.get("candidateName", "Unknown"),
@@ -119,7 +129,7 @@ class ComparisonWorkflow:
                 "knowledgeGraph": cand_a.get("knowledgeGraph", {}),
                 "ranking": cand_a.get("candidateRanking", {}),
                 "fraud": cand_a.get("fraudAnalysis", {}),
-                "predictive": cand_a.get("predictiveHiring", {})
+                "predictive": cand_a.get("predictiveHiring", {}),
             }
             state["candidate_b_data"] = {
                 "id": str(cand_b["_id"]),
@@ -130,23 +140,31 @@ class ComparisonWorkflow:
                 "knowledgeGraph": cand_b.get("knowledgeGraph", {}),
                 "ranking": cand_b.get("candidateRanking", {}),
                 "fraud": cand_b.get("fraudAnalysis", {}),
-                "predictive": cand_b.get("predictiveHiring", {})
+                "predictive": cand_b.get("predictiveHiring", {}),
             }
         except Exception as e:
             state["error"] = str(e)
         return state
 
-    async def _node_generate_comparison(self, state: ComparisonState) -> ComparisonState:
+    async def _node_generate_comparison(
+        self, state: ComparisonState
+    ) -> ComparisonState:
         logger.info("[COMPARE] Stage 2 - Generating AI Comparison")
         try:
             llm = LLMRouter.get_llm("comparison")
             chain = COMPARISON_PROMPT | llm | StrOutputParser()
-            
-            raw_response = await chain.ainvoke({
-                "candidate_a_json": json.dumps(state["candidate_a_data"], ensure_ascii=False),
-                "candidate_b_json": json.dumps(state["candidate_b_data"], ensure_ascii=False)
-            })
-            
+
+            raw_response = await chain.ainvoke(
+                {
+                    "candidate_a_json": json.dumps(
+                        state["candidate_a_data"], ensure_ascii=False
+                    ),
+                    "candidate_b_json": json.dumps(
+                        state["candidate_b_data"], ensure_ascii=False
+                    ),
+                }
+            )
+
             cleaned = clean_json_str(raw_response)
             state["comparison_result"] = json.loads(cleaned)
         except Exception as e:
@@ -160,21 +178,21 @@ class ComparisonWorkflow:
             collection = get_mongo_collection()
             comparison_doc = {
                 "compared_with": state["candidate_b_id"],
-                "result": state["comparison_result"]
+                "result": state["comparison_result"],
             }
             # Append to candidate A's comparisonHistory
             await collection.update_one(
                 {"_id": ObjectId(state["candidate_a_id"])},
-                {"$push": {"comparisonHistory": comparison_doc}}
+                {"$push": {"comparisonHistory": comparison_doc}},
             )
             # Append inverse to candidate B
             inverse_doc = {
                 "compared_with": state["candidate_a_id"],
-                "result": state["comparison_result"]
+                "result": state["comparison_result"],
             }
             await collection.update_one(
                 {"_id": ObjectId(state["candidate_b_id"])},
-                {"$push": {"comparisonHistory": inverse_doc}}
+                {"$push": {"comparisonHistory": inverse_doc}},
             )
         except Exception as e:
             state["error"] = str(e)
@@ -191,10 +209,10 @@ class ComparisonWorkflow:
             "candidate_a_data": None,
             "candidate_b_data": None,
             "comparison_result": None,
-            "error": None
+            "error": None,
         }
         final_state = await self._graph.ainvoke(state)
         if final_state.get("error"):
             return {"error": final_state["error"]}
-        
+
         return {"comparison": final_state.get("comparison_result")}

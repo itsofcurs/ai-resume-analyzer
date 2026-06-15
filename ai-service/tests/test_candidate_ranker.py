@@ -4,7 +4,11 @@ from schemas.job_match_schema import (
     FinalATSAnalysisSchema,
     RuleBasedScoreSchema,
 )
-from services.candidate_ranker import CandidateRanker, CandidateRankingInput, RankingThresholds
+from services.candidate_ranker import (
+    CandidateRanker,
+    CandidateRankingInput,
+    RankingThresholds,
+)
 
 
 def _analysis(final: int, rule: int, emb: int, conf: int) -> FinalATSAnalysisSchema:
@@ -38,7 +42,9 @@ def _analysis(final: int, rule: int, emb: int, conf: int) -> FinalATSAnalysisSch
 
 
 def test_candidate_ranker_tiebreak_and_labels():
-    ranker = CandidateRanker(RankingThresholds(strong_match=85, good_match=70, borderline=55))
+    ranker = CandidateRanker(
+        RankingThresholds(strong_match=85, good_match=70, borderline=55)
+    )
     inputs = [
         CandidateRankingInput("c1", "Alice", _analysis(80, 70, 60, 50)),
         CandidateRankingInput("c2", "Bob", _analysis(80, 75, 55, 40)),
@@ -50,4 +56,3 @@ def test_candidate_ranker_tiebreak_and_labels():
     assert ranked[0].shortlist_label == "STRONG_MATCH"
     assert ranked[-1].shortlist_label == "GOOD_MATCH"
     assert "tie_breaker_order" in trace
-

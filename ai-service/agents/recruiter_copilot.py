@@ -10,22 +10,21 @@ from MongoDB, providing conversational insights.
 
 import json
 import logging
-from typing import Any
 
+from bson import ObjectId
+from database import get_mongo_collection, vector_search
+from embeddings import generate_query_embedding
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-
 from services.gemini_service import GeminiService
-from database import vector_search, get_mongo_collection
-from embeddings import generate_query_embedding
-from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # LangChain Tools
 # ---------------------------------------------------------------------------
+
 
 @tool
 async def search_candidates_tool(query: str, top_k: int = 5) -> str:
@@ -43,6 +42,7 @@ async def search_candidates_tool(query: str, top_k: int = 5) -> str:
         logger.error(f"Error in search_candidates_tool: {e}")
         return f"Error executing search: {e}"
 
+
 @tool
 async def get_candidate_details_tool(resume_id: str) -> str:
     """
@@ -54,12 +54,13 @@ async def get_candidate_details_tool(resume_id: str) -> str:
         resume = await collection.find_one({"_id": ObjectId(resume_id)})
         if not resume:
             return "Candidate not found."
-        
+
         parsed_data = resume.get("parsedData", {})
         return json.dumps(parsed_data, default=str)
     except Exception as e:
         logger.error(f"Error in get_candidate_details_tool: {e}")
         return f"Error retrieving candidate details: {e}"
+
 
 # ---------------------------------------------------------------------------
 # Agent Configuration
@@ -75,21 +76,27 @@ When asked to find candidates, use the search tool. If the recruiter asks for a 
 Always provide concise, professional, and data-driven responses. Highlight key strengths and potential red flags based on the data provided.
 """
 
+
 class RecruiterCopilotAgent:
     """
     Conversational Agent Executor for Recruiter Copilot.
     """
+
     def __init__(self):
         self._llm = GeminiService.get_instance().get_llm()
         self._tools = [search_candidates_tool, get_candidate_details_tool]
-        self._prompt = ChatPromptTemplate.from_messages([
-            ("system", RECRUITER_SYSTEM_PROMPT),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ])
+        self._prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", RECRUITER_SYSTEM_PROMPT),
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ]
+        )
         self._agent = create_tool_calling_agent(self._llm, self._tools, self._prompt)
-        self._agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=True)
+        self._agent_executor = AgentExecutor(
+            agent=self._agent, tools=self._tools, verbose=True
+        )
 
     async def chat(self, user_input: str, chat_history: list = None) -> str:
         """
@@ -97,10 +104,9 @@ class RecruiterCopilotAgent:
         """
         chat_history = chat_history or []
         try:
-            response = await self._agent_executor.ainvoke({
-                "input": user_input,
-                "chat_history": chat_history
-            })
+            response = await self._agent_executor.ainvoke(
+                {"input": user_input, "chat_history": chat_history}
+            )
             return response.get("output", "I'm sorry, I couldn't generate a response.")
         except Exception as e:
             logger.error(f"RecruiterCopilotAgent failed: {e}")

@@ -19,8 +19,9 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from schemas.resume_schema import ResumeParseResponse
-from utils.parser_utils import truncate_text, DEFAULT_EMBEDDING_CHAR_LIMIT
 from services.cache_service import CacheService, cache_service
+
+from utils.parser_utils import DEFAULT_EMBEDDING_CHAR_LIMIT, truncate_text
 
 
 @dataclass(frozen=True)
@@ -155,7 +156,9 @@ class EmbeddingMatcher:
         if resume.education:
             parts.append("Education:")
             for ed in resume.education[:4]:
-                line = " - ".join([p for p in [ed.degree, ed.institution, ed.year] if p])
+                line = " - ".join(
+                    [p for p in [ed.degree, ed.institution, ed.year] if p]
+                )
                 if line:
                     parts.append(line)
         return "\n".join(parts)
@@ -173,11 +176,18 @@ class EmbeddingMatcher:
         if job_title:
             parts.append(f"Job Title: {job_title}")
         if required_skills:
-            parts.append("Required Skills: " + ", ".join([str(s) for s in required_skills if s]))
+            parts.append(
+                "Required Skills: " + ", ".join([str(s) for s in required_skills if s])
+            )
         if preferred_skills:
-            parts.append("Preferred Skills: " + ", ".join([str(s) for s in preferred_skills if s]))
+            parts.append(
+                "Preferred Skills: "
+                + ", ".join([str(s) for s in preferred_skills if s])
+            )
         if domain_keywords:
-            parts.append("Domain Keywords: " + ", ".join([str(s) for s in domain_keywords if s]))
+            parts.append(
+                "Domain Keywords: " + ", ".join([str(s) for s in domain_keywords if s])
+            )
         if job_description_text:
             parts.append("Job Description:\n" + job_description_text)
         return "\n".join(parts)

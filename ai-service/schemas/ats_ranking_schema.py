@@ -12,7 +12,8 @@ These schemas handle upload-time standalone scoring (Phase 1).
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -73,9 +74,11 @@ class CandidateRankingResultSchema(BaseModel):
         default="Candidate requires further evaluation.",
         description="Brief actionable recommendation for the recruiter.",
     )
-    hiring_priority: Literal["Critical", "High", "Medium", "Low", "Do Not Hire"] = Field(
-        default="Medium",
-        description="Hiring pipeline priority level.",
+    hiring_priority: Literal["Critical", "High", "Medium", "Low", "Do Not Hire"] = (
+        Field(
+            default="Medium",
+            description="Hiring pipeline priority level.",
+        )
     )
 
     @field_validator("grade", mode="before")

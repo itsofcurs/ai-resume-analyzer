@@ -1,6 +1,4 @@
-import os
 import pytest
-
 from core.config import Settings
 
 
@@ -20,4 +18,3 @@ def test_settings_allows_missing_key_when_llm_disabled(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     s = Settings()
     s.validate_startup()  # should not raise
-

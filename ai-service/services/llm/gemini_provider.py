@@ -4,18 +4,17 @@ services/llm/gemini_provider.py
 Provider implementation for Google Gemini.
 """
 
-import logging
-from typing import Optional
-
 import itertools
+import logging
 import threading
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.runnables import Runnable
 
 from core.config import get_settings
+from langchain_core.runnables import Runnable
+from langchain_google_genai import ChatGoogleGenerativeAI
 from services.llm.provider_interface import LLMProvider
 
 logger = logging.getLogger(__name__)
+
 
 class GeminiProvider(LLMProvider):
     """
@@ -43,7 +42,9 @@ class GeminiProvider(LLMProvider):
 
         api_keys = self._settings.get_parsed_gemini_keys()
         if not api_keys:
-            raise ValueError(f"GEMINI_API_KEY(S) is missing for provider {self.provider_name}.")
+            raise ValueError(
+                f"GEMINI_API_KEY(S) is missing for provider {self.provider_name}."
+            )
 
         model_name = self._settings.gemini_model
 
@@ -58,11 +59,15 @@ class GeminiProvider(LLMProvider):
                     convert_system_message_to_human=True,
                 )
                 self._llms.append(llm)
-            
+
             self._pool_iterator = itertools.cycle(self._llms)
-            logger.debug(f"{self.provider_name.capitalize()}Provider: LLM client pool ready ({len(self._llms)} keys, model={model_name}).")
+            logger.debug(
+                f"{self.provider_name.capitalize()}Provider: LLM client pool ready ({len(self._llms)} keys, model={model_name})."
+            )
         except Exception as exc:
-            logger.error(f"{self.provider_name.capitalize()}Provider: Failed to init LLM pool — {exc}")
+            logger.error(
+                f"{self.provider_name.capitalize()}Provider: Failed to init LLM pool — {exc}"
+            )
             raise
 
         with self._lock:

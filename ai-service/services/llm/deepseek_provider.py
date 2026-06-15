@@ -7,13 +7,13 @@ Provider implementation for DeepSeek.
 import logging
 from typing import Optional
 
-from langchain_openai import ChatOpenAI
-from langchain_core.runnables import Runnable
-
 from core.config import get_settings
+from langchain_core.runnables import Runnable
+from langchain_openai import ChatOpenAI
 from services.llm.provider_interface import LLMProvider
 
 logger = logging.getLogger(__name__)
+
 
 class DeepSeekProvider(LLMProvider):
     """
@@ -37,7 +37,9 @@ class DeepSeekProvider(LLMProvider):
 
         api_key = self._settings.deepseek_api_key
         if not api_key:
-            raise ValueError(f"DEEPSEEK_API_KEY is missing for provider {self.provider_name}.")
+            raise ValueError(
+                f"DEEPSEEK_API_KEY is missing for provider {self.provider_name}."
+            )
 
         model_name = self._settings.deepseek_model
 
@@ -47,12 +49,16 @@ class DeepSeekProvider(LLMProvider):
                 api_key=api_key,
                 base_url="https://api.deepseek.com",
                 temperature=0.0,
-                max_retries=1, # Let the fallback chain handle retries across providers
+                max_retries=1,  # Let the fallback chain handle retries across providers
                 request_timeout=self._settings.gemini_timeout_s,
             )
-            logger.debug(f"{self.provider_name.capitalize()}Provider: LLM client ready ({model_name}).")
+            logger.debug(
+                f"{self.provider_name.capitalize()}Provider: LLM client ready ({model_name})."
+            )
         except Exception as exc:
-            logger.error(f"{self.provider_name.capitalize()}Provider: Failed to init LLM — {exc}")
+            logger.error(
+                f"{self.provider_name.capitalize()}Provider: Failed to init LLM — {exc}"
+            )
             raise
 
         return self._llm

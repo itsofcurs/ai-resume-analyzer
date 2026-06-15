@@ -13,4 +13,3 @@ Normal resume content: Python FastAPI
     assert "system:" not in safe.lower()
     assert "<assistant>" not in safe.lower()
     assert "python" in safe.lower()
-

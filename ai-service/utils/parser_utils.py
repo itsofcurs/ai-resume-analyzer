@@ -7,8 +7,8 @@ Centralising these utilities prevents duplicated logic across agents,
 services, and workflows and ensures consistent output quality.
 """
 
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,7 @@ DEFAULT_EMBEDDING_CHAR_LIMIT: int = 2_000
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
 
 def sanitize_name(name: str) -> str:
     """

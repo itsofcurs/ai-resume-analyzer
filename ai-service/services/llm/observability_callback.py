@@ -14,6 +14,7 @@ from langchain_core.outputs import LLMResult
 
 logger = logging.getLogger(__name__)
 
+
 class MultiLLMObservabilityCallback(BaseCallbackHandler):
     """
     Observability callback for LLMRouter fallbacks and metrics.
@@ -51,7 +52,7 @@ class MultiLLMObservabilityCallback(BaseCallbackHandler):
                 provider = "Qwen"
             else:
                 provider = f"OpenAI-compat ({model})"
-                
+
         self.provider_names[run_id] = provider
         logger.info(f"[LLM Start] Provider: {provider} | Run ID: {run_id}")
 
@@ -65,14 +66,14 @@ class MultiLLMObservabilityCallback(BaseCallbackHandler):
     ) -> Any:
         start_time = self.start_times.pop(run_id, None)
         provider = self.provider_names.pop(run_id, "unknown")
-        
+
         latency = (time.time() - start_time) if start_time else 0.0
-        
+
         # Extract token usage if available
         tokens = "unknown"
         if response.llm_output and "token_usage" in response.llm_output:
             tokens = response.llm_output["token_usage"]
-            
+
         logger.info(
             f"[LLM End] Provider: {provider} | Latency: {latency:.2f}s | "
             f"Tokens: {tokens} | Run ID: {run_id}"
@@ -88,9 +89,9 @@ class MultiLLMObservabilityCallback(BaseCallbackHandler):
     ) -> Any:
         start_time = self.start_times.pop(run_id, None)
         provider = self.provider_names.pop(run_id, "unknown")
-        
+
         latency = (time.time() - start_time) if start_time else 0.0
-        
+
         logger.warning(
             f"[LLM Error/Failover] Provider: {provider} failed after {latency:.2f}s | "
             f"Error: {str(error)} | Run ID: {run_id}"

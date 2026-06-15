@@ -1,13 +1,14 @@
 import json
-import pytest
 
-from workflows.job_match_workflow import JobMatchWorkflow
-from schemas.job_match_schema import JobMatchRequestSchema
 import agents.ats_scorer as ats_mod
+import pytest
+from schemas.job_match_schema import JobMatchRequestSchema
+from workflows.job_match_workflow import JobMatchWorkflow
 
 
 def _run(coro):
     import asyncio
+
     return asyncio.run(coro)
 
 
@@ -25,10 +26,13 @@ async def _job_match_workflow_success_with_llm_mock(monkeypatch):
                 }
             )
 
-    monkeypatch.setattr(ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain())
+    monkeypatch.setattr(
+        ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain()
+    )
 
     # Mock embeddings to avoid model download
     import embeddings as emb
+
     monkeypatch.setattr(emb, "generate_embedding", lambda text: [1.0, 0.0, 0.0])
 
     wf = JobMatchWorkflow()
@@ -41,7 +45,11 @@ async def _job_match_workflow_success_with_llm_mock(monkeypatch):
     )
     out = await wf.run(req)
     assert 0 <= out.final_ats_score <= 100
-    assert out.reasoning.recommendation in ("Interview Recommended", "Maybe", "Not Recommended")
+    assert out.reasoning.recommendation in (
+        "Interview Recommended",
+        "Maybe",
+        "Not Recommended",
+    )
     assert "parse_ms" in out.stage_timings_ms
 
 
@@ -57,4 +65,3 @@ def test_job_match_request_validation_rejects_empty():
             job_description_text="",
             required_skills=[],
         )
-

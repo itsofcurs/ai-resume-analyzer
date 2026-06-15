@@ -10,7 +10,6 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-
 WorkflowState = Literal[
     "queued",
     "parsing",
@@ -30,4 +29,3 @@ class WorkflowEventSchema(BaseModel):
     timestamp_ms: int = Field(ge=0)
     message: Optional[str] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
-

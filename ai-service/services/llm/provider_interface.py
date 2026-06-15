@@ -5,7 +5,9 @@ Abstract base class for LLM providers.
 """
 
 from abc import ABC, abstractmethod
+
 from langchain_core.runnables import Runnable
+
 
 class LLMProvider(ABC):
     """
@@ -17,7 +19,6 @@ class LLMProvider(ABC):
         """
         Return the configured LangChain LLM client (Runnable).
         """
-        pass
 
     @property
     @abstractmethod
@@ -25,4 +26,3 @@ class LLMProvider(ABC):
         """
         Return the name of the provider.
         """
-        pass

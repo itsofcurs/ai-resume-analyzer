@@ -25,12 +25,10 @@ Prerequisites:
 """
 
 import logging
-from typing import Optional
 
-from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-
 from core.config import get_settings
+from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
 
@@ -153,19 +151,21 @@ async def vector_search(
         results = await resumes_collection.aggregate(pipeline).to_list(length=top_k)
         matches = []
         for doc in results:
-            matches.append({
-                "resume_id": str(doc["_id"]),
-                "score": doc.get("score", 0.0),
-                "metadata": {
-                    "filename": doc.get("filename", ""),
-                    "name": doc.get("candidateName", ""),
-                    "skills": (
-                        doc.get("parsedData", {}).get("skills", [])
-                        if doc.get("parsedData")
-                        else []
-                    ),
-                },
-            })
+            matches.append(
+                {
+                    "resume_id": str(doc["_id"]),
+                    "score": doc.get("score", 0.0),
+                    "metadata": {
+                        "filename": doc.get("filename", ""),
+                        "name": doc.get("candidateName", ""),
+                        "skills": (
+                            doc.get("parsedData", {}).get("skills", [])
+                            if doc.get("parsedData")
+                            else []
+                        ),
+                    },
+                }
+            )
         return matches
     except Exception as exc:
         logger.error("MongoDB vector search failed: %s", exc)

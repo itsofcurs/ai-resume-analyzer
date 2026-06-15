@@ -17,7 +17,6 @@ from typing import Iterable, Optional
 
 from core.errors import RecruiterValidationError
 
-
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _PHONE_RE = re.compile(r"\b(\+?\d[\d\-\s]{7,}\d)\b")
 
@@ -50,4 +49,3 @@ def require_api_key(provided: Optional[str], allowed_keys: Iterable[str]) -> Non
         return  # auth disabled by configuration
     if not provided or provided.strip() not in allowed:
         raise RecruiterValidationError("Unauthorized recruiter request.")
-

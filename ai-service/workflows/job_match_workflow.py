@@ -75,4 +75,3 @@ class JobMatchWorkflow:
             result.llm_confidence_score,
         )
         return result
-

@@ -10,8 +10,8 @@ import re
 from typing import Tuple
 
 from core.errors import InvalidResumeError
-from utils.parser_utils import truncate_text
 
+from utils.parser_utils import truncate_text
 
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
 _ROLE_LINE = re.compile(r"^\s*(system|assistant|developer|user)\s*[:=]", re.IGNORECASE)
@@ -21,7 +21,9 @@ _PROMPT_INJECTION = re.compile(
     r"do\s+not\s+follow|override\s+instructions)",
     re.IGNORECASE,
 )
-_TAG_BLOCKS = re.compile(r"<\s*/?\s*(system|assistant|developer|user)\s*>", re.IGNORECASE)
+_TAG_BLOCKS = re.compile(
+    r"<\s*/?\s*(system|assistant|developer|user)\s*>", re.IGNORECASE
+)
 
 
 def sanitize_text(text: str) -> str:
@@ -55,7 +57,9 @@ def prepare_llm_input(text: str, *, max_chars: int | None = None) -> Tuple[str, 
         (safe_text, injection_detected)
     """
     sanitized = sanitize_text(text)
-    injection_detected = bool(_PROMPT_INJECTION.search(sanitized) or _ROLE_LINE.search(sanitized))
+    injection_detected = bool(
+        _PROMPT_INJECTION.search(sanitized) or _ROLE_LINE.search(sanitized)
+    )
     scrubbed = strip_prompt_injection(sanitized)
     if max_chars:
         scrubbed = truncate_text(scrubbed, max_chars=max_chars)

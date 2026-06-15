@@ -4,18 +4,18 @@ embeddings.py
 Vector embedding generation using Google Gemini REST API.
 
 Replaces the buggy gRPC legacy SDK instantiation with a fast, lightweight
-httpx REST request, implementing round-robin API key rotation to handle 
+httpx REST request, implementing round-robin API key rotation to handle
 rate limits across multiple keys seamlessly.
 
 Model: gemini-embedding-2
 Free tier: 1,500 requests/minute
 """
 
-import logging
 import itertools
+import logging
 import threading
-import httpx
 
+import httpx
 from core.config import get_settings
 from core.errors import EmbeddingError
 
@@ -33,12 +33,17 @@ if keys:
     _keys = keys
     _pool_iterator = itertools.cycle(_keys)
     _configured = True
-    logger.info(f"Embeddings: REST API pool configured ({len(_keys)} keys, model=gemini-embedding-2)")
+    logger.info(
+        f"Embeddings: REST API pool configured ({len(_keys)} keys, model=gemini-embedding-2)"
+    )
 else:
     logger.warning("Embeddings: GEMINI_API_KEY(S) not set — embedding calls will fail")
 
 EMBEDDING_MODEL = "models/gemini-embedding-2"
-API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/{model}:embedContent?key={key}"
+API_URL_TEMPLATE = (
+    "https://generativelanguage.googleapis.com/v1beta/{model}:embedContent?key={key}"
+)
+
 
 def _do_rest_call(text: str, task_type: str) -> list[float]:
     if not _configured:
@@ -50,11 +55,9 @@ def _do_rest_call(text: str, task_type: str) -> list[float]:
     url = API_URL_TEMPLATE.format(model=EMBEDDING_MODEL, key=current_key)
     payload = {
         "model": EMBEDDING_MODEL,
-        "content": {
-            "parts": [{"text": text}]
-        },
+        "content": {"parts": [{"text": text}]},
         "taskType": task_type,
-        "outputDimensionality": 768
+        "outputDimensionality": 768,
     }
 
     try:

@@ -1,26 +1,26 @@
+import datetime
 import json
 import logging
-import datetime
-import asyncio
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
-from bson import ObjectId
 import httpx
+from bson import ObjectId
+from core.config import get_settings
+from database import get_mongo_collection
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langgraph.graph import StateGraph, END
-
-from database import get_mongo_collection
-from utils.retry_utils import ainvoke_with_retry
-from utils.parser_utils import clean_json_str
-from core.config import get_settings
+from langgraph.graph import END, StateGraph
 from services.llm.llm_router import LLMRouter
+
+from utils.parser_utils import clean_json_str
+from utils.retry_utils import ainvoke_with_retry
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
+
 
 class PredictiveHiringState(TypedDict):
     resume_id: str
@@ -135,6 +135,7 @@ Return ONLY a valid JSON object:
 # Workflow
 # ---------------------------------------------------------------------------
 
+
 class PredictiveHiringWorkflow:
     def __init__(self):
         builder = StateGraph(PredictiveHiringState)
@@ -142,30 +143,44 @@ class PredictiveHiringWorkflow:
         builder.add_node("load_candidate", self._node_load_candidate)
         builder.add_node("evaluate_historical_signals", self._node_evaluate_signals)
         builder.add_node("calculate_success_probability", self._node_calc_success)
-        builder.add_node("calculate_retention_risk", self._node_calc_success)   # combined with success
+        builder.add_node(
+            "calculate_retention_risk", self._node_calc_success
+        )  # combined with success
         builder.add_node("calculate_team_fit", self._node_calc_leadership_fit)
-        builder.add_node("calculate_leadership_potential", self._node_calc_leadership_fit)  # combined
+        builder.add_node(
+            "calculate_leadership_potential", self._node_calc_leadership_fit
+        )  # combined
         builder.add_node("generate_hiring_decision", self._node_generate_decision)
         builder.add_node("persist_results", self._node_persist)
 
         builder.set_entry_point("load_candidate")
 
         # Linear chain with error short-circuits
-        builder.add_conditional_edges("load_candidate",
+        builder.add_conditional_edges(
+            "load_candidate",
             lambda s: "evaluate_historical_signals" if not s.get("error") else END,
-            ["evaluate_historical_signals", END])
-        builder.add_conditional_edges("evaluate_historical_signals",
+            ["evaluate_historical_signals", END],
+        )
+        builder.add_conditional_edges(
+            "evaluate_historical_signals",
             lambda s: "calculate_success_probability" if not s.get("error") else END,
-            ["calculate_success_probability", END])
-        builder.add_conditional_edges("calculate_success_probability",
+            ["calculate_success_probability", END],
+        )
+        builder.add_conditional_edges(
+            "calculate_success_probability",
             lambda s: "calculate_team_fit" if not s.get("error") else END,
-            ["calculate_team_fit", END])
-        builder.add_conditional_edges("calculate_team_fit",
+            ["calculate_team_fit", END],
+        )
+        builder.add_conditional_edges(
+            "calculate_team_fit",
             lambda s: "generate_hiring_decision" if not s.get("error") else END,
-            ["generate_hiring_decision", END])
-        builder.add_conditional_edges("generate_hiring_decision",
+            ["generate_hiring_decision", END],
+        )
+        builder.add_conditional_edges(
+            "generate_hiring_decision",
             lambda s: "persist_results" if not s.get("error") else END,
-            ["persist_results", END])
+            ["persist_results", END],
+        )
         builder.add_edge("persist_results", END)
 
         self._graph = builder.compile()
@@ -181,7 +196,9 @@ class PredictiveHiringWorkflow:
                 await client.post(
                     f"{settings.node_backend_url.rstrip('/')}/api/interview/webhook/event",
                     json={"id": resume_id, "event": event_name},
-                    headers={"x-api-key": settings.internal_api_key or "default-internal-key"},
+                    headers={
+                        "x-api-key": settings.internal_api_key or "default-internal-key"
+                    },
                     timeout=2.0,
                 )
         except Exception as exc:
@@ -198,7 +215,9 @@ class PredictiveHiringWorkflow:
 
     # ---- nodes ----
 
-    async def _node_load_candidate(self, state: PredictiveHiringState) -> PredictiveHiringState:
+    async def _node_load_candidate(
+        self, state: PredictiveHiringState
+    ) -> PredictiveHiringState:
         logger.info(f"[PREDICTIVE] Stage 1 — Loading candidate {state['resume_id']}")
         await self._emit_event(state["resume_id"], "PREDICTIVE_ANALYZING")
         try:
@@ -220,7 +239,9 @@ class PredictiveHiringWorkflow:
             await self._emit_event(state["resume_id"], "PREDICTIVE_FAILED")
         return state
 
-    async def _node_evaluate_signals(self, state: PredictiveHiringState) -> PredictiveHiringState:
+    async def _node_evaluate_signals(
+        self, state: PredictiveHiringState
+    ) -> PredictiveHiringState:
         if state.get("error"):
             return state
         logger.info("[PREDICTIVE] Stage 2 — Evaluating historical signals")
@@ -231,22 +252,36 @@ class PredictiveHiringWorkflow:
             state["signal_profile"] = await ainvoke_with_retry(
                 chain,
                 {
-                    "resume_json": json.dumps(state.get("resume_data", {}), default=str),
+                    "resume_json": json.dumps(
+                        state.get("resume_data", {}), default=str
+                    ),
                     "ats_json": json.dumps(state.get("ats_scores", {}), default=str),
-                    "interview_json": json.dumps(state.get("interview_evaluation", {}), default=str),
-                    "fraud_json": json.dumps(state.get("fraud_analysis", {}), default=str),
-                    "skill_gap_json": json.dumps(state.get("skill_gap_analysis", {}), default=str),
-                    "ranking_json": json.dumps(state.get("candidate_ranking", {}), default=str),
+                    "interview_json": json.dumps(
+                        state.get("interview_evaluation", {}), default=str
+                    ),
+                    "fraud_json": json.dumps(
+                        state.get("fraud_analysis", {}), default=str
+                    ),
+                    "skill_gap_json": json.dumps(
+                        state.get("skill_gap_analysis", {}), default=str
+                    ),
+                    "ranking_json": json.dumps(
+                        state.get("candidate_ranking", {}), default=str
+                    ),
                 },
             )
         except Exception as e:
             state["error"] = str(e)
         return state
 
-    async def _node_calc_success(self, state: PredictiveHiringState) -> PredictiveHiringState:
+    async def _node_calc_success(
+        self, state: PredictiveHiringState
+    ) -> PredictiveHiringState:
         if state.get("error"):
             return state
-        logger.info("[PREDICTIVE] Stage 3 — Calculating success probability & retention risk")
+        logger.info(
+            "[PREDICTIVE] Stage 3 — Calculating success probability & retention risk"
+        )
         await self._emit_event(state["resume_id"], "RETENTION_ANALYZING")
         try:
             llm = LLMRouter.get_llm("interview")
@@ -255,18 +290,28 @@ class PredictiveHiringWorkflow:
                 chain,
                 {
                     "signal_profile": state.get("signal_profile", ""),
-                    "interview_score": str(self._safe(
-                        (state.get("interview_evaluation") or {}).get("overall_score")
-                    )),
-                    "trust_score": str(self._safe(
-                        (state.get("fraud_analysis") or {}).get("trustScore")
-                    )),
-                    "hiring_readiness": str(self._safe(
-                        (state.get("skill_gap_analysis") or {}).get("hiringReadinessScore")
-                    )),
-                    "ats_score": str(self._safe(
-                        (state.get("ats_scores") or {}).get("overall_score")
-                    )),
+                    "interview_score": str(
+                        self._safe(
+                            (state.get("interview_evaluation") or {}).get(
+                                "overall_score"
+                            )
+                        )
+                    ),
+                    "trust_score": str(
+                        self._safe(
+                            (state.get("fraud_analysis") or {}).get("trustScore")
+                        )
+                    ),
+                    "hiring_readiness": str(
+                        self._safe(
+                            (state.get("skill_gap_analysis") or {}).get(
+                                "hiringReadinessScore"
+                            )
+                        )
+                    ),
+                    "ats_score": str(
+                        self._safe((state.get("ats_scores") or {}).get("overall_score"))
+                    ),
                 },
             )
             data = json.loads(clean_json_str(raw))
@@ -276,10 +321,14 @@ class PredictiveHiringWorkflow:
             state["error"] = str(e)
         return state
 
-    async def _node_calc_leadership_fit(self, state: PredictiveHiringState) -> PredictiveHiringState:
+    async def _node_calc_leadership_fit(
+        self, state: PredictiveHiringState
+    ) -> PredictiveHiringState:
         if state.get("error"):
             return state
-        logger.info("[PREDICTIVE] Stage 4 — Calculating leadership potential & team fit")
+        logger.info(
+            "[PREDICTIVE] Stage 4 — Calculating leadership potential & team fit"
+        )
         await self._emit_event(state["resume_id"], "TEAM_FIT_ANALYZING")
         try:
             llm = LLMRouter.get_llm("interview")
@@ -291,9 +340,13 @@ class PredictiveHiringWorkflow:
                     "weaknesses": json.dumps(
                         (state.get("skill_gap_analysis") or {}).get("weaknesses", [])
                     ),
-                    "growth_potential": str(self._safe(
-                        (state.get("skill_gap_analysis") or {}).get("growthPotentialScore")
-                    )),
+                    "growth_potential": str(
+                        self._safe(
+                            (state.get("skill_gap_analysis") or {}).get(
+                                "growthPotentialScore"
+                            )
+                        )
+                    ),
                     "fraud_risk": str(
                         (state.get("fraud_analysis") or {}).get("fraudRisk", "UNKNOWN")
                     ),
@@ -302,13 +355,17 @@ class PredictiveHiringWorkflow:
             data = json.loads(clean_json_str(raw))
             state["team_fit_score"] = data.get("teamFitScore", 0)
             state["leadership_potential"] = data.get("leadershipPotential", "MEDIUM")
-            state["onboarding_difficulty"] = data.get("onboardingDifficulty", "MODERATE")
+            state["onboarding_difficulty"] = data.get(
+                "onboardingDifficulty", "MODERATE"
+            )
             state["promotion_potential"] = data.get("promotionPotential", "MEDIUM")
         except Exception as e:
             state["error"] = str(e)
         return state
 
-    async def _node_generate_decision(self, state: PredictiveHiringState) -> PredictiveHiringState:
+    async def _node_generate_decision(
+        self, state: PredictiveHiringState
+    ) -> PredictiveHiringState:
         if state.get("error"):
             return state
         logger.info("[PREDICTIVE] Stage 5 — Generating final hiring decision")
@@ -322,9 +379,15 @@ class PredictiveHiringWorkflow:
                     "success_score": str(state.get("success_score", 0)),
                     "retention_risk": str(state.get("retention_risk", "MEDIUM")),
                     "team_fit_score": str(state.get("team_fit_score", 0)),
-                    "leadership_potential": str(state.get("leadership_potential", "MEDIUM")),
-                    "onboarding_difficulty": str(state.get("onboarding_difficulty", "MODERATE")),
-                    "promotion_potential": str(state.get("promotion_potential", "MEDIUM")),
+                    "leadership_potential": str(
+                        state.get("leadership_potential", "MEDIUM")
+                    ),
+                    "onboarding_difficulty": str(
+                        state.get("onboarding_difficulty", "MODERATE")
+                    ),
+                    "promotion_potential": str(
+                        state.get("promotion_potential", "MEDIUM")
+                    ),
                 },
             )
             data = json.loads(clean_json_str(raw))
@@ -335,7 +398,9 @@ class PredictiveHiringWorkflow:
             state["error"] = str(e)
         return state
 
-    async def _node_persist(self, state: PredictiveHiringState) -> PredictiveHiringState:
+    async def _node_persist(
+        self, state: PredictiveHiringState
+    ) -> PredictiveHiringState:
         if state.get("error"):
             return state
         logger.info("[PREDICTIVE] Stage 6 — Persisting results")

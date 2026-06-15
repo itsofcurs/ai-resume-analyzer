@@ -22,8 +22,8 @@ at import time (e.g. `bson` via MongoDB drivers) to keep unit tests and
 lightweight imports reliable.
 """
 
-from workflows.job_match_workflow import JobMatchWorkflow
 from workflows.batch_job_match_workflow import BatchJobMatchWorkflow
+from workflows.job_match_workflow import JobMatchWorkflow
 
 try:
     from workflows.resume_workflow import ResumeWorkflow  # noqa: F401

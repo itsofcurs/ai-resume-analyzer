@@ -30,4 +30,3 @@ class RecruiterAnalyticsSchema(BaseModel):
     top_missing_skills: list[SkillGapSummarySchema] = Field(default_factory=list)
     semantic_alignment_average: float = 0.0
     shortlist_counts: dict[str, int] = Field(default_factory=dict)
-

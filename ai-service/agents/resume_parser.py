@@ -30,23 +30,22 @@ LangGraph readiness:
     returns a typed state dict in a future multi-agent workflow.
 """
 
+import asyncio
 import json
 import logging
-import asyncio
-from typing import Optional
 
 from langchain_core.output_parsers import StrOutputParser
-
-from prompts.resume_parser_prompt import RESUME_PARSER_PROMPT, PROMPT_VERSION
+from prompts.resume_parser_prompt import PROMPT_VERSION, RESUME_PARSER_PROMPT
 from schemas.resume_schema import (
-    ResumeParseResponse,
-    ExperienceSchema,
     EducationSchema,
+    ExperienceSchema,
     ProjectSchema,
+    ResumeParseResponse,
 )
 from services.gemini_service import GeminiServiceError
 from services.llm.llm_router import LLMRouter
-from utils.parser_utils import sanitize_name, clean_json_str, DEFAULT_PROMPT_CHAR_LIMIT
+
+from utils.parser_utils import DEFAULT_PROMPT_CHAR_LIMIT, clean_json_str, sanitize_name
 from utils.security_guardrails import prepare_llm_input, validate_resume_text
 
 logger = logging.getLogger(__name__)
@@ -79,6 +78,7 @@ def _build_fallback(reason: str) -> ResumeParseResponse:
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
+
 
 class ResumeParserAgent:
     """
@@ -143,28 +143,43 @@ class ResumeParserAgent:
         experience: list[ExperienceSchema] = []
         for entry in data.get("experience", []) or []:
             if isinstance(entry, dict):
-                experience.append(ExperienceSchema(**{
-                    k: v for k, v in entry.items()
-                    if k in ExperienceSchema.model_fields
-                }))
+                experience.append(
+                    ExperienceSchema(
+                        **{
+                            k: v
+                            for k, v in entry.items()
+                            if k in ExperienceSchema.model_fields
+                        }
+                    )
+                )
 
         # Build nested education list
         education: list[EducationSchema] = []
         for entry in data.get("education", []) or []:
             if isinstance(entry, dict):
-                education.append(EducationSchema(**{
-                    k: v for k, v in entry.items()
-                    if k in EducationSchema.model_fields
-                }))
+                education.append(
+                    EducationSchema(
+                        **{
+                            k: v
+                            for k, v in entry.items()
+                            if k in EducationSchema.model_fields
+                        }
+                    )
+                )
 
         # Build nested projects list
         projects: list[ProjectSchema] = []
         for entry in data.get("projects", []) or []:
             if isinstance(entry, dict):
-                projects.append(ProjectSchema(**{
-                    k: v for k, v in entry.items()
-                    if k in ProjectSchema.model_fields
-                }))
+                projects.append(
+                    ProjectSchema(
+                        **{
+                            k: v
+                            for k, v in entry.items()
+                            if k in ProjectSchema.model_fields
+                        }
+                    )
+                )
 
         # Sanitise the extracted name using centralised utility
         raw_name = data.get("name", "")
@@ -207,10 +222,14 @@ class ResumeParserAgent:
             return _build_fallback(str(exc))
 
         raw_text_length = len(raw_text)
-        safe_text, injection_detected = prepare_llm_input(raw_text, max_chars=DEFAULT_PROMPT_CHAR_LIMIT)
+        safe_text, injection_detected = prepare_llm_input(
+            raw_text, max_chars=DEFAULT_PROMPT_CHAR_LIMIT
+        )
         truncated = safe_text
         if injection_detected:
-            logger.warning("ResumeParserAgent: prompt injection patterns detected and stripped.")
+            logger.warning(
+                "ResumeParserAgent: prompt injection patterns detected and stripped."
+            )
 
         try:
             chain = self._get_chain()
@@ -279,9 +298,10 @@ class ResumeParserAgent:
             A validated ResumeParseResponse.
         """
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # We're inside an async context; schedule as a coroutine
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 future = pool.submit(asyncio.run, self.aparse(raw_text))
                 return future.result()

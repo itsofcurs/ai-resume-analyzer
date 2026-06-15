@@ -14,7 +14,7 @@ Agents are designed to be orchestrated by workflow/ modules and, in a
 future iteration, by a LangGraph StateGraph router.
 """
 
-from agents.resume_parser import ResumeParserAgent
 from agents.ats_scorer import ATSScoringAgent
+from agents.resume_parser import ResumeParserAgent
 
 __all__ = ["ResumeParserAgent", "ATSScoringAgent"]

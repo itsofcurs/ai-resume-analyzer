@@ -53,4 +53,3 @@ class WorkflowTraceService:
 
 
 workflow_trace_service = WorkflowTraceService()
-

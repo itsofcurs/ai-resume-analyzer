@@ -1,13 +1,19 @@
+from schemas.resume_schema import EducationSchema, ExperienceSchema, ResumeParseResponse
 from services.rule_based_scorer import RuleBasedScorer
-from schemas.resume_schema import ResumeParseResponse, ExperienceSchema, EducationSchema
 
 
 def test_rule_scorer_high_overlap():
     resume = ResumeParseResponse(
         name="Jane Doe",
         skills=["python", "fastapi", "mongodb", "docker"],
-        experience=[ExperienceSchema(role="Backend Engineer", company="X", duration="2022-2024")],
-        education=[EducationSchema(degree="B.Tech Computer Science", institution="Uni", year="2020")],
+        experience=[
+            ExperienceSchema(role="Backend Engineer", company="X", duration="2022-2024")
+        ],
+        education=[
+            EducationSchema(
+                degree="B.Tech Computer Science", institution="Uni", year="2020"
+            )
+        ],
     )
     scorer = RuleBasedScorer()
     out = scorer.score(
@@ -21,7 +27,10 @@ def test_rule_scorer_high_overlap():
     )
     assert 0 <= out["rule_score"] <= 100
     assert out["skill_overlap"] >= 80
-    assert "kafka" in out["missing_required_skills"] or out["missing_required_skills"] == []
+    assert (
+        "kafka" in out["missing_required_skills"]
+        or out["missing_required_skills"] == []
+    )
 
 
 def test_rule_scorer_missing_required_skills():
@@ -30,4 +39,3 @@ def test_rule_scorer_missing_required_skills():
     out = scorer.score(resume=resume, required_skills=["python", "docker"])
     assert "docker" in out["missing_required_skills"]
     assert out["skill_overlap"] < 100
-

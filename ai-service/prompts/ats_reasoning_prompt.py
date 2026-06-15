@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from langchain_core.prompts import PromptTemplate
 
-
 PROMPT_VERSION: str = "1.0.0"
 
 _ATS_REASONING_TEMPLATE: str = """\
@@ -81,4 +80,3 @@ ATS_REASONING_PROMPT: PromptTemplate = PromptTemplate(
     ],
     template=_ATS_REASONING_TEMPLATE,
 )
-

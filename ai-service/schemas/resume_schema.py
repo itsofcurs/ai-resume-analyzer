@@ -18,12 +18,13 @@ Future usage:
 from __future__ import annotations
 
 from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator
 
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Sub-schemas (nested objects)
 # ---------------------------------------------------------------------------
+
 
 class ExperienceSchema(BaseModel):
     """
@@ -90,14 +91,13 @@ class ProjectSchema(BaseModel):
         default_factory=list,
         description="Technologies used (e.g. ['React', 'FastAPI', 'PostgreSQL']).",
     )
-    url: Optional[str] = Field(
-        default=None, description="GitHub or live project URL."
-    )
+    url: Optional[str] = Field(default=None, description="GitHub or live project URL.")
 
 
 # ---------------------------------------------------------------------------
 # Top-level response schema
 # ---------------------------------------------------------------------------
+
 
 class ResumeParseResponse(BaseModel):
     """
@@ -125,12 +125,8 @@ class ResumeParseResponse(BaseModel):
         default="Unknown Candidate",
         description="Full name of the candidate.",
     )
-    email: Optional[str] = Field(
-        default=None, description="Candidate email address."
-    )
-    phone: Optional[str] = Field(
-        default=None, description="Candidate phone number."
-    )
+    email: Optional[str] = Field(default=None, description="Candidate email address.")
+    phone: Optional[str] = Field(default=None, description="Candidate phone number.")
 
     # -- Skills -------------------------------------------------------------
     skills: List[str] = Field(
@@ -197,7 +193,12 @@ class ResumeParseResponse(BaseModel):
 
     # -- Validators ---------------------------------------------------------
 
-    @field_validator("authenticity_score", "ai_generated_probability", "technical_depth_score", mode="before")
+    @field_validator(
+        "authenticity_score",
+        "ai_generated_probability",
+        "technical_depth_score",
+        mode="before",
+    )
     @classmethod
     def clamp_score(cls, v: object) -> int:
         """Clamp any numeric score to [0, 100] and cast to int."""

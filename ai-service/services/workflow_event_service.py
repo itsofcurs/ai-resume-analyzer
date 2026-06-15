@@ -52,4 +52,3 @@ class WorkflowEventService:
 
 
 workflow_event_service = WorkflowEventService()
-

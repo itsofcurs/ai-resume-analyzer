@@ -9,13 +9,12 @@ from __future__ import annotations
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 from schemas.job_match_schema import (
-    ATSWeightsSchema,
     MAX_JD_TEXT_CHARS,
     MAX_LIST_ITEMS,
     MAX_RESUME_TEXT_CHARS,
     MAX_TOKEN_LENGTH,
+    ATSWeightsSchema,
     _normalise_token,
 )
 from schemas.recruiter_analytics_schema import (
@@ -47,8 +46,12 @@ class CandidateRankingItemSchema(BaseModel):
     llm_confidence_score: int = Field(ge=0, le=100)
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
-    recommendation: Literal["Interview Recommended", "Maybe", "Not Recommended"] = "Maybe"
-    shortlist_label: Literal["STRONG_MATCH", "GOOD_MATCH", "BORDERLINE", "REJECT"] = "BORDERLINE"
+    recommendation: Literal["Interview Recommended", "Maybe", "Not Recommended"] = (
+        "Maybe"
+    )
+    shortlist_label: Literal["STRONG_MATCH", "GOOD_MATCH", "BORDERLINE", "REJECT"] = (
+        "BORDERLINE"
+    )
     rank_position: int = Field(ge=1, description="1-based rank position after sorting.")
     semantic_alignment: str = Field(default="")
     matched_required_skills: list[str] = Field(default_factory=list)
@@ -68,7 +71,13 @@ class CandidateRankingItemSchema(BaseModel):
         except (ValueError, TypeError):
             return 0
 
-    @field_validator("strengths", "weaknesses", "matched_required_skills", "missing_required_skills", mode="before")
+    @field_validator(
+        "strengths",
+        "weaknesses",
+        "matched_required_skills",
+        "missing_required_skills",
+        mode="before",
+    )
     @classmethod
     def _ensure_list(cls, v: object) -> list[str]:
         if v is None:
@@ -173,5 +182,6 @@ class BatchRankingResponseSchema(BaseModel):
     processing_summary: BatchProcessingSummarySchema
     processing_time_ms: int = Field(default=0, ge=0)
     total_candidates: int = Field(default=0, ge=0)
-    shortlisted_candidates: list[CandidateRankingItemSchema] = Field(default_factory=list)
-
+    shortlisted_candidates: list[CandidateRankingItemSchema] = Field(
+        default_factory=list
+    )

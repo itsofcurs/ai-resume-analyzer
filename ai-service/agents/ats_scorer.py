@@ -17,9 +17,8 @@ import json
 import logging
 import time
 
-from langchain_core.output_parsers import StrOutputParser
-
 from agents.resume_parser import ResumeParserAgent
+from langchain_core.output_parsers import StrOutputParser
 from prompts.ats_reasoning_prompt import ATS_REASONING_PROMPT, PROMPT_VERSION
 from schemas.job_match_schema import (
     ATSReasoningSchema,
@@ -29,11 +28,12 @@ from schemas.job_match_schema import (
     RuleBasedScoreSchema,
 )
 from schemas.resume_schema import ResumeParseResponse
+from services.cache_service import CacheService, cache_service
 from services.embedding_matcher import EmbeddingMatcher
 from services.gemini_service import GeminiServiceError
 from services.llm.llm_router import LLMRouter
 from services.rule_based_scorer import RuleBasedScorer, RuleBasedScoringConfig
-from services.cache_service import CacheService, cache_service
+
 from utils.llm_output_guardrails import safe_json_parser
 from utils.security_guardrails import prepare_llm_input
 
@@ -309,12 +309,20 @@ class ATSScoringAgent:
             chain = self._get_reasoning_chain()
             safe_job_text, job_injection = prepare_llm_input(job_description_text)
             if job_injection:
-                logger.warning("ATSScoringAgent: prompt injection patterns detected in job description.")
+                logger.warning(
+                    "ATSScoringAgent: prompt injection patterns detected in job description."
+                )
             payload = {
                 "job_description_text": safe_job_text,
-                "resume_json": json.dumps(parsed_resume.model_dump(exclude_none=True), ensure_ascii=False),
-                "rule_score_json": json.dumps(rule_breakdown.model_dump(), ensure_ascii=False),
-                "embedding_score_json": json.dumps(embedding_breakdown.model_dump(), ensure_ascii=False),
+                "resume_json": json.dumps(
+                    parsed_resume.model_dump(exclude_none=True), ensure_ascii=False
+                ),
+                "rule_score_json": json.dumps(
+                    rule_breakdown.model_dump(), ensure_ascii=False
+                ),
+                "embedding_score_json": json.dumps(
+                    embedding_breakdown.model_dump(), ensure_ascii=False
+                ),
                 "weights_json": json.dumps(weights.model_dump(), ensure_ascii=False),
             }
 
@@ -328,7 +336,10 @@ class ATSScoringAgent:
             if parsed.ok and parsed.data is not None:
                 reasoning = ATSReasoningSchema(**parsed.data)
             else:
-                logger.warning("ATSScoringAgent: reasoning degraded (parse_error=%s).", parsed.error)
+                logger.warning(
+                    "ATSScoringAgent: reasoning degraded (parse_error=%s).",
+                    parsed.error,
+                )
 
             timings["llm_ms"] = int((time.perf_counter() - t3) * 1000)
 

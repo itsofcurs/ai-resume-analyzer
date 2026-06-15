@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from prometheus_client import Counter, Histogram
 
-
 API_REQUESTS = Counter(
     "ai_service_requests_total",
     "Total API requests",
@@ -36,4 +35,3 @@ CACHE_EVENTS = Counter(
     "Cache events",
     ["backend", "event"],
 )
-

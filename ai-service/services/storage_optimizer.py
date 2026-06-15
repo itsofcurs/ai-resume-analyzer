@@ -13,7 +13,7 @@ It is safe to import and does nothing automatically.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 class StorageOptimizer:

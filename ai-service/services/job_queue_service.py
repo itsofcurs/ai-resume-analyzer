@@ -13,7 +13,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from services.worker_backend import JobState, JobStatus, WorkerBackend
+from services.worker_backend import WorkerBackend
+
 
 @dataclass
 class JobRecord:
@@ -69,7 +70,9 @@ class JobQueueService:
             return self._backend.health()
         return {
             "status": "ready",
-            "queued_jobs": len([j for j in self._jobs.values() if j.status == "queued"]),
+            "queued_jobs": len(
+                [j for j in self._jobs.values() if j.status == "queued"]
+            ),
         }
 
     def clear(self) -> None:
@@ -77,4 +80,3 @@ class JobQueueService:
 
 
 job_queue_service = JobQueueService()
-

@@ -16,17 +16,16 @@ This file is retained as a fallback and for any direct callers that have
 not yet migrated to the new workflow layer.
 """
 
-import io
-import re
-import fitz  # PyMuPDF
-import requests
+import json
 import logging
 import os
-import json
+
+import fitz  # PyMuPDF
+import requests
 from google import genai
 
 # Shared text utilities — single source of truth for text processing
-from utils.parser_utils import sanitize_name, truncate_text, clean_json_str
+from utils.parser_utils import clean_json_str, sanitize_name, truncate_text
 
 logger = logging.getLogger(__name__)
 
@@ -36,29 +35,31 @@ client = None
 if api_key:
     client = genai.Client(api_key=api_key)
 
+
 def download_and_extract_text(url: str, filename: str) -> str:
     """Download file from Cloudinary and extract raw text."""
     try:
         response = requests.get(url)
         response.raise_for_status()
-        
+
         file_bytes = response.content
-        ext = filename.split('.')[-1].lower() if '.' in filename else ''
-        
+        ext = filename.split(".")[-1].lower() if "." in filename else ""
+
         text = ""
-        if ext == 'pdf':
+        if ext == "pdf":
             with fitz.open("pdf", file_bytes) as doc:
                 for page in doc:
                     text += page.get_text("text") + "\n"
-        elif ext in ['txt', 'md']:
-            text = file_bytes.decode('utf-8', errors='ignore')
+        elif ext in ["txt", "md"]:
+            text = file_bytes.decode("utf-8", errors="ignore")
         else:
-            text = file_bytes.decode('utf-8', errors='ignore')
-            
+            text = file_bytes.decode("utf-8", errors="ignore")
+
         return text
     except Exception as e:
         logger.error(f"Error downloading or extracting text: {e}")
         return ""
+
 
 def analyze_resume_unified(text: str) -> dict:
     """Uses Gemini 2.5-flash to extract details and perform balanced authenticity/AI analysis in a single call."""
@@ -71,9 +72,9 @@ def analyze_resume_unified(text: str) -> dict:
             "authenticity_score": 100,
             "ai_generated_probability": 0,
             "red_flags": ["API key missing"],
-            "technical_depth_score": 100
+            "technical_depth_score": 100,
         }
-        
+
     try:
         prompt = f"""
         You are an expert technical recruiter and HR auditor. Analyze this resume text to extract candidate details and perform an authenticity/AI generation audit.
@@ -105,13 +106,12 @@ def analyze_resume_unified(text: str) -> dict:
         {truncate_text(text)}
         """
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
+            model="gemini-2.5-flash", contents=prompt
         )
         # Use shared utility to strip markdown fences reliably
         response_text = clean_json_str(response.text)
         parsed = json.loads(response_text)
-        
+
         # Use shared sanitize_name utility — single source of truth for name validation
         parsed["name"] = sanitize_name(parsed.get("name", ""))
 
@@ -126,8 +126,9 @@ def analyze_resume_unified(text: str) -> dict:
             "authenticity_score": 90,
             "ai_generated_probability": 10,
             "red_flags": [],
-            "technical_depth_score": 80
+            "technical_depth_score": 80,
         }
+
 
 def extract_basic_info(text: str) -> dict:
     """Preserved wrapper calling the unified analysis to extract basic info."""
@@ -136,8 +137,9 @@ def extract_basic_info(text: str) -> dict:
         "name": data.get("name", "Unknown Candidate"),
         "email": data.get("email", ""),
         "phone": data.get("phone", ""),
-        "skills": data.get("skills", [])
+        "skills": data.get("skills", []),
     }
+
 
 def analyze_authenticity(text: str) -> dict:
     """Preserved wrapper calling the unified analysis to get authenticity results."""
@@ -146,5 +148,5 @@ def analyze_authenticity(text: str) -> dict:
         "authenticity_score": data.get("authenticity_score", 90),
         "ai_generated_probability": data.get("ai_generated_probability", 10),
         "red_flags": data.get("red_flags", []),
-        "technical_depth_score": data.get("technical_depth_score", 80)
+        "technical_depth_score": data.get("technical_depth_score", 80),
     }

@@ -1,7 +1,7 @@
 import time
 
-from services.cache_service import CacheService, InMemoryCacheBackend
 from schemas.resume_schema import ResumeParseResponse
+from services.cache_service import CacheService, InMemoryCacheBackend
 
 
 def test_cache_metrics_hit_miss_eviction():
@@ -13,7 +13,9 @@ def test_cache_metrics_hit_miss_eviction():
     m = cache.metrics()
     assert m["misses"] >= 1
 
-    cache.set_cached_resume(resume_text, ResumeParseResponse(name="Jane Doe", skills=["python"]))
+    cache.set_cached_resume(
+        resume_text, ResumeParseResponse(name="Jane Doe", skills=["python"])
+    )
     assert cache.get_cached_resume(resume_text) is not None
     m2 = cache.metrics()
     assert m2["hits"] >= 1
@@ -24,6 +26,7 @@ def test_cache_metrics_hit_miss_eviction():
     assert cache.get_cached_resume(resume_text) is None
     m3 = cache.metrics()
     assert m3["evictions"] >= 1
+
 
 from schemas.job_match_schema import (
     ATSReasoningSchema,
@@ -79,5 +82,10 @@ def test_cache_service_resume_embedding_ats():
 
     analysis = _analysis(80)
     cache.set_cached_ats("resume text", "jd text", analysis, weights_signature="w1")
-    assert cache.get_cached_ats("resume text", "jd text", weights_signature="w1") is not None
-    assert cache.get_cached_ats("resume text", "jd text", weights_signature="w2") is None
+    assert (
+        cache.get_cached_ats("resume text", "jd text", weights_signature="w1")
+        is not None
+    )
+    assert (
+        cache.get_cached_ats("resume text", "jd text", weights_signature="w2") is None
+    )

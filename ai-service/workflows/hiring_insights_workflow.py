@@ -1,9 +1,11 @@
 import logging
-from typing import TypedDict, Dict, Any, List
-from langgraph.graph import StateGraph, START, END
+from typing import Any, Dict, List, TypedDict
+
+from langgraph.graph import END, START, StateGraph
 from services.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
+
 
 class HiringInsightsState(TypedDict):
     organization_id: str
@@ -15,6 +17,7 @@ class HiringInsightsState(TypedDict):
     recommendations: List[str]
     executiveSummary: str
     error: str
+
 
 class HiringInsightsWorkflow:
     def __init__(self):
@@ -28,7 +31,9 @@ class HiringInsightsWorkflow:
         builder.add_node("detect_bottlenecks", self.detect_bottlenecks)
         builder.add_node("detect_hiring_patterns", self.detect_hiring_patterns)
         builder.add_node("identify_skill_gaps", self.identify_skill_gaps)
-        builder.add_node("predict_future_hiring_risks", self.predict_future_hiring_risks)
+        builder.add_node(
+            "predict_future_hiring_risks", self.predict_future_hiring_risks
+        )
         builder.add_node("generate_recommendations", self.generate_recommendations)
         builder.add_node("generate_executive_summary", self.generate_executive_summary)
 
@@ -58,26 +63,32 @@ class HiringInsightsWorkflow:
         except Exception as e:
             return {"weaknesses": [f"Analysis error: {e}"]}
 
-    async def detect_hiring_patterns(self, state: HiringInsightsState) -> Dict[str, Any]:
+    async def detect_hiring_patterns(
+        self, state: HiringInsightsState
+    ) -> Dict[str, Any]:
         stats = state.get("aggregated_stats", {})
         prompt = f"Identify 3 key positive patterns or strengths in these hiring metrics: {stats}"
         try:
             res = await self.gemini.generate_text(prompt)
             lines = [l.strip("-* ") for l in res.split("\n") if len(l) > 10][:3]
             return {"patterns": lines, "strengths": lines}
-        except Exception as e:
+        except Exception:
             return {"patterns": []}
 
     async def identify_skill_gaps(self, state: HiringInsightsState) -> Dict[str, Any]:
         stats = state.get("aggregated_stats", {})
         prompt = f"Based on the following skill distribution data, identify critical missing skills or gaps: {stats.get('skills', {})}"
         try:
-            res = await self.gemini.generate_text(prompt)
-            return {"strengths": state.get("strengths", [])} # Dummy operation, handled mostly in backend now via aggregate
+            await self.gemini.generate_text(prompt)
+            return {
+                "strengths": state.get("strengths", [])
+            }  # Dummy operation, handled mostly in backend now via aggregate
         except Exception:
             return {}
 
-    async def predict_future_hiring_risks(self, state: HiringInsightsState) -> Dict[str, Any]:
+    async def predict_future_hiring_risks(
+        self, state: HiringInsightsState
+    ) -> Dict[str, Any]:
         stats = state.get("aggregated_stats", {})
         prompt = f"Predict 3 future hiring risks based on this candidate pipeline data: {stats}"
         try:
@@ -87,7 +98,9 @@ class HiringInsightsWorkflow:
         except Exception:
             return {"hiringRisks": ["Unable to predict risks"]}
 
-    async def generate_recommendations(self, state: HiringInsightsState) -> Dict[str, Any]:
+    async def generate_recommendations(
+        self, state: HiringInsightsState
+    ) -> Dict[str, Any]:
         prompt = f"Given weaknesses: {state.get('weaknesses')} and risks: {state.get('hiringRisks')}, provide 3 actionable recruiter recommendations."
         try:
             res = await self.gemini.generate_text(prompt)
@@ -96,7 +109,9 @@ class HiringInsightsWorkflow:
         except Exception:
             return {"recommendations": []}
 
-    async def generate_executive_summary(self, state: HiringInsightsState) -> Dict[str, Any]:
+    async def generate_executive_summary(
+        self, state: HiringInsightsState
+    ) -> Dict[str, Any]:
         prompt = f"Write a 3 sentence executive summary for the VP of Talent Acquisition summarizing these findings: {state}"
         try:
             res = await self.gemini.generate_text(prompt)
@@ -104,7 +119,9 @@ class HiringInsightsWorkflow:
         except Exception:
             return {"executiveSummary": "Summary generation failed."}
 
-    async def run(self, organization_id: str, aggregated_stats: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(
+        self, organization_id: str, aggregated_stats: Dict[str, Any]
+    ) -> Dict[str, Any]:
         try:
             initial_state = HiringInsightsState(
                 organization_id=organization_id,
@@ -115,7 +132,7 @@ class HiringInsightsWorkflow:
                 hiringRisks=[],
                 recommendations=[],
                 executiveSummary="",
-                error=""
+                error="",
             )
             result = await self.workflow.ainvoke(initial_state)
             return {
@@ -124,7 +141,7 @@ class HiringInsightsWorkflow:
                 "patterns": result.get("patterns"),
                 "hiringRisks": result.get("hiringRisks"),
                 "recommendations": result.get("recommendations"),
-                "executiveSummary": result.get("executiveSummary")
+                "executiveSummary": result.get("executiveSummary"),
             }
         except Exception as e:
             logger.error(f"HiringInsightsWorkflow error: {e}")

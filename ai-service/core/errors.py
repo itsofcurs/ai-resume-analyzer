@@ -4,6 +4,7 @@ core/errors.py
 Typed error taxonomy for platform reliability.
 """
 
+
 class ATSProcessingError(RuntimeError):
     """Raised when ATS processing fails irrecoverably."""
 
@@ -26,4 +27,3 @@ class RecruiterValidationError(ValueError):
 
 class CacheError(RuntimeError):
     """Raised when cache operations fail."""
-

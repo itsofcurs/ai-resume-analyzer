@@ -25,8 +25,6 @@ from typing import Any, Optional
 
 import orjson
 import redis.asyncio as redis
-
-from core.errors import CacheError
 from services.cache_service import BaseCacheBackend, CacheEntry, CacheMetrics
 
 
@@ -115,7 +113,9 @@ class RedisCacheBackend(BaseCacheBackend):
     def get(self, key: str) -> Optional[CacheEntry]:
         start = time.perf_counter()
         try:
-            raw = self._loop_thread.run(self._client.get(self._k(key)), timeout_s=self._op_timeout_s)
+            raw = self._loop_thread.run(
+                self._client.get(self._k(key)), timeout_s=self._op_timeout_s
+            )
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self._metrics.get_latency_ms_sum += elapsed_ms
             self._metrics.get_latency_ms_count += 1
@@ -138,7 +138,9 @@ class RedisCacheBackend(BaseCacheBackend):
                     timeout_s=self._op_timeout_s,
                 )
             else:
-                self._loop_thread.run(self._client.set(k, data), timeout_s=self._op_timeout_s)
+                self._loop_thread.run(
+                    self._client.set(k, data), timeout_s=self._op_timeout_s
+                )
             self._metrics.sets += 1
         except Exception:
             # set failures should not crash the workflow; caller can fall back.
@@ -146,7 +148,9 @@ class RedisCacheBackend(BaseCacheBackend):
 
     def delete(self, key: str) -> None:
         try:
-            self._loop_thread.run(self._client.delete(self._k(key)), timeout_s=self._op_timeout_s)
+            self._loop_thread.run(
+                self._client.delete(self._k(key)), timeout_s=self._op_timeout_s
+            )
             self._metrics.evictions += 1
         except Exception:
             return None
@@ -158,7 +162,9 @@ class RedisCacheBackend(BaseCacheBackend):
 
     def health(self) -> dict[str, Any]:
         try:
-            pong = self._loop_thread.run(self._client.ping(), timeout_s=self._op_timeout_s)
+            pong = self._loop_thread.run(
+                self._client.ping(), timeout_s=self._op_timeout_s
+            )
             return {"backend": "redis", "status": "ready" if pong else "unavailable"}
         except Exception:
             return {"backend": "redis", "status": "unavailable"}
@@ -171,4 +177,3 @@ class RedisCacheBackend(BaseCacheBackend):
             self._loop_thread.run(self._client.close(), timeout_s=self._op_timeout_s)
         except Exception:
             pass
-

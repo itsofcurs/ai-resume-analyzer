@@ -1,12 +1,14 @@
 import os
+from typing import Any, Dict, List
+
 import google.generativeai as genai
-from typing import Dict, Any, List
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use gemini-1.5-flash for speed or gemini-1.5-pro for complex reasoning
 # We'll use flash by default for lower latency unless pro is needed
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel("gemini-1.5-flash")
+
 
 async def generate_candidate_summary(resume_data: Dict[str, Any]) -> str:
     prompt = f"""
@@ -20,7 +22,10 @@ async def generate_candidate_summary(resume_data: Dict[str, Any]) -> str:
     response = await model.generate_content_async(prompt)
     return response.text
 
-async def analyze_job_fit(resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
+
+async def analyze_job_fit(
+    resume_data: Dict[str, Any], job_description: str
+) -> Dict[str, Any]:
     prompt = f"""
     You are an AI recruitment copilot. Analyze the candidate's fit for the job description.
     Return ONLY a valid JSON object with the following keys:
@@ -39,13 +44,17 @@ async def analyze_job_fit(resume_data: Dict[str, Any], job_description: str) -> 
     """
     response = await model.generate_content_async(prompt)
     import json
+
     try:
         text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(text)
-    except:
+    except Exception:
         return {"fit_score": 0, "error": "AI generation failed to parse."}
 
-async def generate_interview_questions(resume_data: Dict[str, Any], job_description: str) -> List[str]:
+
+async def generate_interview_questions(
+    resume_data: Dict[str, Any], job_description: str
+) -> List[str]:
     prompt = f"""
     Generate 5 highly tailored technical and behavioral interview questions for this candidate,
     specifically probing their weaknesses or gaps compared to the job description.
@@ -57,11 +66,13 @@ async def generate_interview_questions(resume_data: Dict[str, Any], job_descript
     """
     response = await model.generate_content_async(prompt)
     import json
+
     try:
         text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(text)
-    except:
+    except Exception:
         return ["Could not generate questions."]
+
 
 async def detect_fraud(resume_data: Dict[str, Any], raw_text: str) -> Dict[str, Any]:
     prompt = f"""
@@ -79,8 +90,9 @@ async def detect_fraud(resume_data: Dict[str, Any], raw_text: str) -> Dict[str, 
     """
     response = await model.generate_content_async(prompt)
     import json
+
     try:
         text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(text)
-    except:
+    except Exception:
         return {"confidence_score": 100, "flags": []}

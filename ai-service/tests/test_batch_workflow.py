@@ -1,13 +1,14 @@
 import json
 
+import agents.ats_scorer as ats_mod
 from schemas.ranking_schema import BatchRankingRequestSchema
 from schemas.resume_schema import ResumeParseResponse
 from workflows.batch_job_match_workflow import BatchJobMatchWorkflow
-import agents.ats_scorer as ats_mod
 
 
 def _run(coro):
     import asyncio
+
     return asyncio.run(coro)
 
 
@@ -37,6 +38,7 @@ class FakeParser:
 class SlowParser:
     async def aparse(self, raw_text):
         import asyncio
+
         await asyncio.sleep(0.2)
         return ResumeParseResponse(
             name="Slow Candidate",
@@ -45,12 +47,16 @@ class SlowParser:
 
 
 async def _batch_workflow_success(monkeypatch):
-    monkeypatch.setattr(ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain())
+    monkeypatch.setattr(
+        ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain()
+    )
 
     import embeddings as emb
+
     monkeypatch.setattr(emb, "generate_embedding", lambda text: [1.0, 0.0, 0.0])
 
     from services.cache_service import cache_service
+
     cache_service.clear()
 
     wf = BatchJobMatchWorkflow(parser_agent=FakeParser())
@@ -89,12 +95,16 @@ def test_batch_workflow_success(monkeypatch):
 
 
 async def _batch_workflow_partial_failure(monkeypatch):
-    monkeypatch.setattr(ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain())
+    monkeypatch.setattr(
+        ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain()
+    )
 
     import embeddings as emb
+
     monkeypatch.setattr(emb, "generate_embedding", lambda text: [1.0, 0.0, 0.0])
 
     from services.cache_service import cache_service
+
     cache_service.clear()
 
     wf = BatchJobMatchWorkflow(parser_agent=FakeParser(), max_retries=0)
@@ -127,15 +137,21 @@ def test_batch_workflow_partial_failure(monkeypatch):
 
 
 async def _batch_workflow_timeout(monkeypatch):
-    monkeypatch.setattr(ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain())
+    monkeypatch.setattr(
+        ats_mod.ATSScoringAgent, "_get_reasoning_chain", lambda self: FakeChain()
+    )
 
     import embeddings as emb
+
     monkeypatch.setattr(emb, "generate_embedding", lambda text: [1.0, 0.0, 0.0])
 
     from services.cache_service import cache_service
+
     cache_service.clear()
 
-    wf = BatchJobMatchWorkflow(parser_agent=SlowParser(), parse_timeout_s=0.05, max_retries=0)
+    wf = BatchJobMatchWorkflow(
+        parser_agent=SlowParser(), parse_timeout_s=0.05, max_retries=0
+    )
     req = BatchRankingRequestSchema(
         resumes=[
             {
@@ -156,4 +172,3 @@ async def _batch_workflow_timeout(monkeypatch):
 
 def test_batch_workflow_timeout(monkeypatch):
     _run(_batch_workflow_timeout(monkeypatch))
-

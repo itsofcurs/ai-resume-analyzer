@@ -13,10 +13,9 @@ import time
 import uuid
 from typing import Any, Iterable, Optional, TypedDict
 
-from langgraph.graph import END, StateGraph
-
 from agents.ats_scorer import ATSScoringAgent
 from agents.resume_parser import ResumeParserAgent
+from langgraph.graph import END, StateGraph
 from schemas.job_match_schema import ATSWeightsSchema, FinalATSAnalysisSchema
 from schemas.ranking_schema import (
     BatchProcessingSummarySchema,
@@ -30,8 +29,8 @@ from schemas.recruiter_analytics_schema import (
     SkillGapSummarySchema,
 )
 from schemas.resume_schema import ResumeParseResponse
-from services.candidate_ranker import CandidateRanker, CandidateRankingInput
 from services.cache_service import cache_service
+from services.candidate_ranker import CandidateRanker, CandidateRankingInput
 from services.workflow_event_service import WorkflowEventService, workflow_event_service
 
 logger = logging.getLogger(__name__)
@@ -98,11 +97,23 @@ class BatchJobMatchWorkflow:
         self._parser = parser_agent or ResumeParserAgent()
         self._ranker = ranker or CandidateRanker()
         self._event_service = event_service or workflow_event_service
-        concurrency = max_concurrency if max_concurrency is not None else settings.max_batch_concurrency
+        concurrency = (
+            max_concurrency
+            if max_concurrency is not None
+            else settings.max_batch_concurrency
+        )
         self._max_concurrency = max(1, int(concurrency))
         self._max_retries = max(0, int(max_retries))
-        parse_timeout = parse_timeout_s if parse_timeout_s is not None else settings.batch_parse_timeout_s
-        score_timeout = score_timeout_s if score_timeout_s is not None else settings.batch_score_timeout_s
+        parse_timeout = (
+            parse_timeout_s
+            if parse_timeout_s is not None
+            else settings.batch_parse_timeout_s
+        )
+        score_timeout = (
+            score_timeout_s
+            if score_timeout_s is not None
+            else settings.batch_score_timeout_s
+        )
         # Allow sub-second timeouts for tight SLOs and unit tests.
         # Hard floor avoids accidental zero/negative timeouts.
         self._parse_timeout_s = max(0.05, float(parse_timeout))
@@ -162,16 +173,26 @@ class BatchJobMatchWorkflow:
         final_state["processing_time_ms"] = processing_time_ms
         if final_state.get("processing_summary"):
             final_state["processing_summary"].processing_latency_ms = processing_time_ms
-            final_state["processing_summary"].node_timings_ms["total_ms"] = processing_time_ms
-            if final_state.get("processing_summary").failed_candidates and len(final_state.get("ranked_candidates", [])) == 0:
-                self._emit_state(final_state, "failed", "Batch completed with no successful candidates")
+            final_state["processing_summary"].node_timings_ms[
+                "total_ms"
+            ] = processing_time_ms
+            if (
+                final_state.get("processing_summary").failed_candidates
+                and len(final_state.get("ranked_candidates", [])) == 0
+            ):
+                self._emit_state(
+                    final_state,
+                    "failed",
+                    "Batch completed with no successful candidates",
+                )
             else:
                 self._emit_state(final_state, "completed", "Batch completed")
 
         return BatchRankingResponseSchema(
             ranked_candidates=final_state.get("ranked_candidates", []),
             shortlisted_candidates=final_state.get("shortlisted_candidates", []),
-            processing_summary=final_state.get("processing_summary") or BatchProcessingSummarySchema(),
+            processing_summary=final_state.get("processing_summary")
+            or BatchProcessingSummarySchema(),
             processing_time_ms=final_state.get("processing_time_ms", 0),
             total_candidates=len(candidates),
         )
@@ -209,7 +230,9 @@ class BatchJobMatchWorkflow:
                 return candidate
             resume_text = (candidate.get("resume_text") or "").strip()
             if len(resume_text) < 20:
-                self._mark_failed(candidate, "parse_resume", "resume_text too short or empty")
+                self._mark_failed(
+                    candidate, "parse_resume", "resume_text too short or empty"
+                )
                 return candidate
 
             cached = cache_service.get_cached_resume(resume_text)
@@ -229,12 +252,16 @@ class BatchJobMatchWorkflow:
                 return candidate
 
             candidate["parsed_resume"] = parsed
-            candidate["node_timings_ms"]["parse_resume"] = int((time.perf_counter() - start) * 1000)
+            candidate["node_timings_ms"]["parse_resume"] = int(
+                (time.perf_counter() - start) * 1000
+            )
             cache_service.set_cached_resume(resume_text, parsed)
             return candidate
 
         await self._run_parallel(candidates, _parse)
-        state["node_timings_ms"]["parse_resume"] = self._sum_node_timings(candidates, "parse_resume")
+        state["node_timings_ms"]["parse_resume"] = self._sum_node_timings(
+            candidates, "parse_resume"
+        )
         return state
 
     async def _node_hybrid_ats_score(self, state: BatchState) -> BatchState:
@@ -247,7 +274,9 @@ class BatchJobMatchWorkflow:
                 return candidate
             parsed = candidate.get("parsed_resume")
             if parsed is None:
-                self._mark_failed(candidate, "hybrid_ats_score", "parsed_resume missing")
+                self._mark_failed(
+                    candidate, "hybrid_ats_score", "parsed_resume missing"
+                )
                 return candidate
 
             start = time.perf_counter()
@@ -269,12 +298,16 @@ class BatchJobMatchWorkflow:
                 return candidate
 
             candidate["analysis"] = analysis
-            candidate["node_timings_ms"]["hybrid_ats_score"] = int((time.perf_counter() - start) * 1000)
+            candidate["node_timings_ms"]["hybrid_ats_score"] = int(
+                (time.perf_counter() - start) * 1000
+            )
             candidate["resume_text"] = ""
             return candidate
 
         await self._run_parallel(candidates, _score)
-        state["node_timings_ms"]["hybrid_ats_score"] = self._sum_node_timings(candidates, "hybrid_ats_score")
+        state["node_timings_ms"]["hybrid_ats_score"] = self._sum_node_timings(
+            candidates, "hybrid_ats_score"
+        )
         return state
 
     async def _node_rank_candidate(self, state: BatchState) -> BatchState:
@@ -284,8 +317,12 @@ class BatchJobMatchWorkflow:
             analysis = candidate.get("analysis")
             if analysis is None:
                 continue
-            candidate["shortlist_label"] = self._ranker.label_for_score(analysis.final_ats_score)
-        state["node_timings_ms"]["rank_candidate"] = int((time.perf_counter() - start) * 1000)
+            candidate["shortlist_label"] = self._ranker.label_for_score(
+                analysis.final_ats_score
+            )
+        state["node_timings_ms"]["rank_candidate"] = int(
+            (time.perf_counter() - start) * 1000
+        )
         return state
 
     async def _node_aggregate_results(self, state: BatchState) -> BatchState:
@@ -307,7 +344,9 @@ class BatchJobMatchWorkflow:
         ranked, trace = self._ranker.rank(inputs)
         state["ranked_candidates"] = ranked
         state["ranking_trace"] = trace
-        state["node_timings_ms"]["aggregate_results"] = int((time.perf_counter() - start) * 1000)
+        state["node_timings_ms"]["aggregate_results"] = int(
+            (time.perf_counter() - start) * 1000
+        )
         return state
 
     async def _node_shortlist_candidates(self, state: BatchState) -> BatchState:
@@ -318,7 +357,9 @@ class BatchJobMatchWorkflow:
 
         processing_summary = self._build_processing_summary(state, ranked)
         state["processing_summary"] = processing_summary
-        state["node_timings_ms"]["shortlist_candidates"] = int((time.perf_counter() - start) * 1000)
+        state["node_timings_ms"]["shortlist_candidates"] = int(
+            (time.perf_counter() - start) * 1000
+        )
         return state
 
     # ------------------------------------------------------------------
@@ -337,7 +378,9 @@ class BatchJobMatchWorkflow:
                 try:
                     return await fn(candidate)
                 except asyncio.CancelledError:
-                    self._mark_failed(candidate, "cancelled", "candidate processing cancelled")
+                    self._mark_failed(
+                        candidate, "cancelled", "candidate processing cancelled"
+                    )
                     return candidate
                 except Exception as exc:
                     self._mark_failed(candidate, "processing_error", str(exc))
@@ -415,7 +458,9 @@ class BatchJobMatchWorkflow:
 
         top_skill_gaps = [
             SkillGapSummarySchema(skill=skill, count=count)
-            for skill, count in sorted(skill_gap_counts.items(), key=lambda x: (-x[1], x[0]))[:5]
+            for skill, count in sorted(
+                skill_gap_counts.items(), key=lambda x: (-x[1], x[0])
+            )[:5]
         ]
 
         semantic_distribution = self._semantic_distribution(ranked)
@@ -430,7 +475,9 @@ class BatchJobMatchWorkflow:
         ]
 
         node_timings_ms = dict(state.get("node_timings_ms", {}))
-        node_timings_ms["total_ms"] = int((time.perf_counter() - state.get("start_time", time.perf_counter())) * 1000)
+        node_timings_ms["total_ms"] = int(
+            (time.perf_counter() - state.get("start_time", time.perf_counter())) * 1000
+        )
 
         failed_nodes = self._aggregate_failed_nodes(state.get("candidates", []))
         retry_counts = self._aggregate_retry_counts(state.get("candidates", []))
@@ -470,7 +517,9 @@ class BatchJobMatchWorkflow:
         )
 
     @staticmethod
-    def _candidate_summary(candidate: Optional[CandidateRankingItemSchema]) -> Optional[CandidateSummarySchema]:
+    def _candidate_summary(
+        candidate: Optional[CandidateRankingItemSchema],
+    ) -> Optional[CandidateSummarySchema]:
         if candidate is None:
             return None
         return CandidateSummarySchema(
@@ -567,4 +616,3 @@ class BatchJobMatchWorkflow:
             message=message,
             metadata={"graph_id": state.get("graph_id")},
         )
-

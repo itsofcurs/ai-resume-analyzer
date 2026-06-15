@@ -1,26 +1,28 @@
 import json
 import logging
-from typing import TypedDict, Optional
-from bson import ObjectId
+from typing import Optional, TypedDict
+
 import httpx
+from bson import ObjectId
+from core.config import get_settings
+from database import get_mongo_collection
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langgraph.graph import StateGraph, END
-
-from database import get_mongo_collection
+from langgraph.graph import END, StateGraph
 from schemas.interview_schema import (
-    InterviewQuestionsSchema,
-    TechnicalQuestion,
-    ProjectQuestion,
     BehavioralQuestion,
     FollowUpQuestion,
+    InterviewQuestionsSchema,
+    ProjectQuestion,
+    TechnicalQuestion,
 )
 from services.llm.llm_router import LLMRouter
-from utils.retry_utils import ainvoke_with_retry
+
 from utils.parser_utils import clean_json_str
-from core.config import get_settings
+from utils.retry_utils import ainvoke_with_retry
 
 logger = logging.getLogger(__name__)
+
 
 class InterviewState(TypedDict):
     resume_id: str
@@ -30,6 +32,7 @@ class InterviewState(TypedDict):
     behavioral_questions: list[BehavioralQuestion]
     follow_up_questions: list[FollowUpQuestion]
     error: Optional[str]
+
 
 TECHNICAL_PROMPT = PromptTemplate.from_template(
     """You are an expert technical interviewer. Based on the candidate's skills and experience, generate 3-5 technical interview questions.
@@ -98,10 +101,11 @@ FOLLOWUP_PROMPT = PromptTemplate.from_template(
     """
 )
 
+
 class InterviewQuestionGraph:
     def __init__(self):
         graph = StateGraph(InterviewState)
-        
+
         graph.add_node("load_candidate", self._node_load_candidate)
         graph.add_node("generate_technical", self._node_generate_technical)
         graph.add_node("generate_project", self._node_generate_project)
@@ -109,37 +113,45 @@ class InterviewQuestionGraph:
         graph.add_node("generate_followups", self._node_generate_followups)
         graph.add_node("save_questions", self._node_save_questions)
         graph.add_node("handle_failure", self._node_handle_failure)
-        
+
         graph.set_entry_point("load_candidate")
-        
+
         graph.add_conditional_edges(
             "load_candidate",
-            lambda state: "handle_failure" if state.get("error") else "generate_technical"
+            lambda state: (
+                "handle_failure" if state.get("error") else "generate_technical"
+            ),
         )
-        
+
         graph.add_conditional_edges(
             "generate_technical",
-            lambda state: "handle_failure" if state.get("error") else "generate_project"
+            lambda state: (
+                "handle_failure" if state.get("error") else "generate_project"
+            ),
         )
-        
+
         graph.add_conditional_edges(
             "generate_project",
-            lambda state: "handle_failure" if state.get("error") else "generate_behavioral"
+            lambda state: (
+                "handle_failure" if state.get("error") else "generate_behavioral"
+            ),
         )
-        
+
         graph.add_conditional_edges(
             "generate_behavioral",
-            lambda state: "handle_failure" if state.get("error") else "generate_followups"
+            lambda state: (
+                "handle_failure" if state.get("error") else "generate_followups"
+            ),
         )
-        
+
         graph.add_conditional_edges(
             "generate_followups",
-            lambda state: "handle_failure" if state.get("error") else "save_questions"
+            lambda state: "handle_failure" if state.get("error") else "save_questions",
         )
-        
+
         graph.add_edge("save_questions", END)
         graph.add_edge("handle_failure", END)
-        
+
         self._graph = graph.compile()
 
     async def _emit_event(self, resume_id: str, event_name: str):
@@ -149,11 +161,15 @@ class InterviewQuestionGraph:
                 await client.post(
                     f"{settings.node_backend_url.rstrip('/')}/api/interview/webhook/event",
                     json={"id": resume_id, "event": event_name},
-                    headers={"x-api-key": settings.internal_api_key or "default-internal-key"},
-                    timeout=2.0
+                    headers={
+                        "x-api-key": settings.internal_api_key or "default-internal-key"
+                    },
+                    timeout=2.0,
                 )
         except Exception as exc:
-            logger.warning(f"[INTERVIEW] Failed to send webhook for {event_name}: {exc}")
+            logger.warning(
+                f"[INTERVIEW] Failed to send webhook for {event_name}: {exc}"
+            )
 
     async def _node_load_candidate(self, state: InterviewState) -> InterviewState:
         logger.info(f"[INTERVIEW] Stage 1 - Loading candidate {state['resume_id']}")
@@ -164,7 +180,7 @@ class InterviewQuestionGraph:
             if not resume:
                 state["error"] = "Resume not found"
                 return state
-            
+
             state["parsed_data"] = resume.get("parsedData", {})
             if not state["parsed_data"]:
                 state["error"] = "No parsed data available for candidate"
@@ -184,7 +200,9 @@ class InterviewQuestionGraph:
         logger.info(f"[INTERVIEW] Stage 2 - Generating Technical Questions")
         try:
             resume_json = json.dumps(state["parsed_data"])
-            state["technical_questions"] = await self._generate_section(TECHNICAL_PROMPT, resume_json, TechnicalQuestion)
+            state["technical_questions"] = await self._generate_section(
+                TECHNICAL_PROMPT, resume_json, TechnicalQuestion
+            )
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate technical questions: {e}")
             state["error"] = str(e)
@@ -194,7 +212,9 @@ class InterviewQuestionGraph:
         logger.info(f"[INTERVIEW] Stage 3 - Generating Project Questions")
         try:
             resume_json = json.dumps(state["parsed_data"])
-            state["project_questions"] = await self._generate_section(PROJECT_PROMPT, resume_json, ProjectQuestion)
+            state["project_questions"] = await self._generate_section(
+                PROJECT_PROMPT, resume_json, ProjectQuestion
+            )
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate project questions: {e}")
             state["error"] = str(e)
@@ -204,7 +224,9 @@ class InterviewQuestionGraph:
         logger.info(f"[INTERVIEW] Stage 4 - Generating Behavioral Questions")
         try:
             resume_json = json.dumps(state["parsed_data"])
-            state["behavioral_questions"] = await self._generate_section(BEHAVIORAL_PROMPT, resume_json, BehavioralQuestion)
+            state["behavioral_questions"] = await self._generate_section(
+                BEHAVIORAL_PROMPT, resume_json, BehavioralQuestion
+            )
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate behavioral questions: {e}")
             state["error"] = str(e)
@@ -214,12 +236,12 @@ class InterviewQuestionGraph:
         logger.info(f"[INTERVIEW] Stage 5 - Generating Follow-up Questions")
         try:
             all_questions = (
-                [q.question for q in state["technical_questions"]] +
-                [q.question for q in state["project_questions"]] +
-                [q.question for q in state["behavioral_questions"]]
+                [q.question for q in state["technical_questions"]]
+                + [q.question for q in state["project_questions"]]
+                + [q.question for q in state["behavioral_questions"]]
             )
             questions_json = json.dumps(all_questions)
-            
+
             llm = LLMRouter.get_llm("interview")
             chain = FOLLOWUP_PROMPT | llm | StrOutputParser()
             raw = await ainvoke_with_retry(chain, {"questions_json": questions_json})
@@ -240,13 +262,13 @@ class InterviewQuestionGraph:
                 behavioralQuestions=state["behavioral_questions"],
                 followUpQuestions=state["follow_up_questions"],
             )
-            
+
             collection = get_mongo_collection()
             await collection.update_one(
                 {"_id": ObjectId(state["resume_id"])},
-                {"$set": {"interviewQuestions": schema.model_dump()}}
+                {"$set": {"interviewQuestions": schema.model_dump()}},
             )
-            
+
             await self._emit_event(state["resume_id"], "QUESTION_GENERATION_COMPLETED")
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to save questions: {e}")
@@ -267,7 +289,7 @@ class InterviewQuestionGraph:
             "project_questions": [],
             "behavioral_questions": [],
             "follow_up_questions": [],
-            "error": None
+            "error": None,
         }
         await self._graph.ainvoke(initial_state)
 
@@ -279,14 +301,14 @@ class InterviewQuestionGraph:
         resume = await collection.find_one({"_id": ObjectId(resume_id)})
         if not resume:
             return {"error": "Resume not found"}
-        
+
         parsed_data = resume.get("parsedData", {})
         if not parsed_data:
             return {"error": "No parsed data available for candidate"}
 
         resume_json = json.dumps(parsed_data)
         llm = LLMRouter.get_llm("interview")
-        
+
         if mode == "QnA":
             prompt = PromptTemplate.from_template(
                 """You are an expert technical interviewer. Based on the candidate's profile, generate 5 targeted interview questions specifically about the topic/technology: '{topic}'.
@@ -305,17 +327,23 @@ class InterviewQuestionGraph:
                 
                 Return ONLY a valid JSON array of objects. Each object must have a 'title' string (the section heading) and a 'content' string (the detailed markdown content for that section). Do not include markdown code blocks."""
             )
-            
+
         chain = prompt | llm | StrOutputParser()
         try:
-            result_str = await ainvoke_with_retry(chain, {"resume_json": resume_json, "topic": topic})
+            result_str = await ainvoke_with_retry(
+                chain, {"resume_json": resume_json, "topic": topic}
+            )
             # Try to parse the JSON string
-            cleaned_result = result_str.replace("```json", "").replace("```", "").strip()
+            cleaned_result = (
+                result_str.replace("```json", "").replace("```", "").strip()
+            )
             try:
                 result_json = json.loads(cleaned_result)
                 return {"result": result_json, "format": "json"}
             except Exception as json_e:
-                logger.warning(f"[INTERVIEW] Failed to parse JSON prep output: {json_e}. Returning as string.")
+                logger.warning(
+                    f"[INTERVIEW] Failed to parse JSON prep output: {json_e}. Returning as string."
+                )
                 return {"result": result_str, "format": "string"}
         except Exception as e:
             logger.error(f"[INTERVIEW] Failed to generate prep for topic {topic}: {e}")

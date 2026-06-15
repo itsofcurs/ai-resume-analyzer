@@ -12,10 +12,6 @@ Current services:
   - GeminiService  → singleton ChatGoogleGenerativeAI wrapper
 """
 
-from services.gemini_service import GeminiService
-from services.rule_based_scorer import RuleBasedScorer, RuleBasedScoringConfig
-from services.embedding_matcher import EmbeddingMatcher, EmbeddingMatcherConfig
-from services.candidate_ranker import CandidateRanker, CandidateRankingInput, RankingThresholds
 from services.cache_service import (
     BaseCacheBackend,
     CacheMetrics,
@@ -24,10 +20,18 @@ from services.cache_service import (
     RedisCacheBackend,
     cache_service,
 )
-from services.workflow_trace_service import WorkflowTraceService, workflow_trace_service
-from services.workflow_event_service import WorkflowEventService, workflow_event_service
+from services.candidate_ranker import (
+    CandidateRanker,
+    CandidateRankingInput,
+    RankingThresholds,
+)
+from services.embedding_matcher import EmbeddingMatcher, EmbeddingMatcherConfig
+from services.gemini_service import GeminiService
 from services.job_queue_service import JobQueueService, job_queue_service
-from services.rate_limit_service import RateLimitService, ConcurrencyGuard
+from services.rate_limit_service import ConcurrencyGuard, RateLimitService
+from services.rule_based_scorer import RuleBasedScorer, RuleBasedScoringConfig
+from services.workflow_event_service import WorkflowEventService, workflow_event_service
+from services.workflow_trace_service import WorkflowTraceService, workflow_trace_service
 
 __all__ = [
     "GeminiService",

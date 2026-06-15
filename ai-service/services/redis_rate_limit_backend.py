@@ -13,15 +13,19 @@ from __future__ import annotations
 
 import asyncio
 import threading
-import time
-from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import redis.asyncio as redis
 
 
 class RedisRateLimiter:
-    def __init__(self, *, redis_url: str, namespace: str = "ai-service", op_timeout_s: float = 1.5) -> None:
+    def __init__(
+        self,
+        *,
+        redis_url: str,
+        namespace: str = "ai-service",
+        op_timeout_s: float = 1.5,
+    ) -> None:
         self._ns = namespace.strip() or "ai-service"
         self._timeout_s = float(op_timeout_s)
         self._client = redis.from_url(redis_url, decode_responses=True)
@@ -67,4 +71,3 @@ class RedisRateLimiter:
             return {"backend": "redis", "status": "ready" if ok else "unavailable"}
         except Exception:
             return {"backend": "redis", "status": "unavailable"}
-

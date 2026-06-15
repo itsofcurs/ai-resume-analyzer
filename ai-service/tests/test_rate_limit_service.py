@@ -19,4 +19,3 @@ def test_invalid_payload_blocking():
     assert rl.allow(key, limit=100, window_seconds=60) is False
     time.sleep(1.1)
     assert rl.allow(key, limit=100, window_seconds=60) is True
-

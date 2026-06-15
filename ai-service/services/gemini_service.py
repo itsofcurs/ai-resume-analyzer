@@ -26,9 +26,8 @@ Future extensions:
 import logging
 from typing import Optional
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-
 from core.config import Settings
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Custom exception
 # ---------------------------------------------------------------------------
 
+
 class GeminiServiceError(Exception):
     """Raised when the Gemini service cannot be initialised or a call fails."""
 
@@ -44,6 +44,7 @@ class GeminiServiceError(Exception):
 # ---------------------------------------------------------------------------
 # GeminiService — singleton
 # ---------------------------------------------------------------------------
+
 
 class GeminiService:
     """
@@ -115,7 +116,6 @@ class GeminiService:
 
         model_name = settings.gemini_model
 
-
         try:
             logger.info(
                 "GeminiService: initialising ChatGoogleGenerativeAI with model='%s'",
@@ -132,9 +132,7 @@ class GeminiService:
                 # Prevent safety blocks on resume content
                 convert_system_message_to_human=True,
             )
-            logger.info(
-                "GeminiService: LLM client ready (model=%s).", model_name
-            )
+            logger.info("GeminiService: LLM client ready (model=%s).", model_name)
 
         except Exception as exc:
             logger.error("GeminiService: failed to initialise LLM — %s", exc)

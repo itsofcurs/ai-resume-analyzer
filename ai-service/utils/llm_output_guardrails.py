@@ -66,5 +66,6 @@ def safe_json_parser(raw_text: str) -> SafeJsonParseResult:
             return SafeJsonParseResult(ok=True, data=parsed)
         return SafeJsonParseResult(ok=False, data=None, error="json_not_object")
     except json.JSONDecodeError as exc:
-        return SafeJsonParseResult(ok=False, data=None, error=f"json_decode_error:{exc}")
-
+        return SafeJsonParseResult(
+            ok=False, data=None, error=f"json_decode_error:{exc}"
+        )

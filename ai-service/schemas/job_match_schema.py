@@ -14,9 +14,7 @@ from __future__ import annotations
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 from schemas.resume_schema import ResumeParseResponse
-
 
 MAX_RESUME_TEXT_CHARS: int = 60_000
 MAX_JD_TEXT_CHARS: int = 60_000
@@ -59,7 +57,9 @@ class RuleBasedScoreSchema(BaseModel):
 
 class EmbeddingScoreSchema(BaseModel):
     embedding_similarity_score: int = Field(ge=0, le=100)
-    cosine_similarity: float = Field(default=0.0, description="Raw cosine similarity between embeddings.")
+    cosine_similarity: float = Field(
+        default=0.0, description="Raw cosine similarity between embeddings."
+    )
     semantic_alignment: str = Field(default="")
 
     @field_validator("embedding_similarity_score", mode="before")
@@ -75,8 +75,8 @@ class ATSReasoningSchema(BaseModel):
     reasoning_summary: str = Field(default="")
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
-    recommendation: Literal["Interview Recommended", "Maybe", "Not Recommended"] = Field(
-        default="Maybe"
+    recommendation: Literal["Interview Recommended", "Maybe", "Not Recommended"] = (
+        Field(default="Maybe")
     )
     llm_confidence_score: int = Field(default=50, ge=0, le=100)
 
@@ -100,7 +100,9 @@ class ATSWeightsSchema(BaseModel):
 
     @model_validator(mode="after")
     def _normalise(self) -> "ATSWeightsSchema":
-        total = float(self.rule_weight + self.embedding_weight + self.llm_confidence_weight)
+        total = float(
+            self.rule_weight + self.embedding_weight + self.llm_confidence_weight
+        )
         if total <= 0.0:
             raise ValueError("Invalid weights: sum of weights must be > 0.")
         self.rule_weight = self.rule_weight / total
@@ -118,13 +120,21 @@ class JobMatchRequestSchema(BaseModel):
         min_length=20,
         max_length=MAX_RESUME_TEXT_CHARS,
         description="Raw resume text (extracted from PDF/TXT upstream).",
-        json_schema_extra={"examples": ["Jane Doe\nSenior Backend Engineer...\nSkills: Python, FastAPI, MongoDB..."]},
+        json_schema_extra={
+            "examples": [
+                "Jane Doe\nSenior Backend Engineer...\nSkills: Python, FastAPI, MongoDB..."
+            ]
+        },
     )
     job_description_text: str = Field(
         min_length=30,
         max_length=MAX_JD_TEXT_CHARS,
         description="Raw job description text.",
-        json_schema_extra={"examples": ["We are hiring a backend engineer with FastAPI, MongoDB, Docker..."]},
+        json_schema_extra={
+            "examples": [
+                "We are hiring a backend engineer with FastAPI, MongoDB, Docker..."
+            ]
+        },
     )
 
     job_title: Optional[str] = None
@@ -273,7 +283,10 @@ class FinalATSAnalysisSchema(BaseModel):
                     },
                     "reasoning": {
                         "reasoning_summary": "The resume aligns strongly with the backend stack and experience scope...",
-                        "strengths": ["Strong FastAPI/MongoDB alignment", "Relevant backend project themes"],
+                        "strengths": [
+                            "Strong FastAPI/MongoDB alignment",
+                            "Relevant backend project themes",
+                        ],
                         "weaknesses": ["Kafka not evidenced in resume skills"],
                         "recommendation": "Interview Recommended",
                         "llm_confidence_score": 88,
@@ -293,7 +306,13 @@ class FinalATSAnalysisSchema(BaseModel):
         }
     }
 
-    @field_validator("final_ats_score", "rule_score", "embedding_score", "llm_confidence_score", mode="before")
+    @field_validator(
+        "final_ats_score",
+        "rule_score",
+        "embedding_score",
+        "llm_confidence_score",
+        mode="before",
+    )
     @classmethod
     def _clamp(cls, v: object) -> int:
         try:
@@ -309,4 +328,3 @@ class HybridATSResponseSchema(BaseModel):
 
     analysis: FinalATSAnalysisSchema
     meta: dict[str, Any] = Field(default_factory=dict)
-

@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -92,7 +92,9 @@ class ConcurrencyGuard:
         self._semaphores: dict[str, asyncio.Semaphore] = {}
         self._inflight: dict[str, int] = {}
 
-    def _get_semaphore(self, key: str, limit: Optional[int] = None) -> asyncio.Semaphore:
+    def _get_semaphore(
+        self, key: str, limit: Optional[int] = None
+    ) -> asyncio.Semaphore:
         if key not in self._semaphores:
             self._semaphores[key] = asyncio.Semaphore(limit or self._default_limit)
         return self._semaphores[key]
@@ -110,4 +112,3 @@ class ConcurrencyGuard:
 
     def inflight(self, key: str) -> int:
         return self._inflight.get(key, 0)
-

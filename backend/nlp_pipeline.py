@@ -9,14 +9,14 @@ Pipeline steps:
   5. Information Extraction (name, email, phone, education, experience)
 """
 
-import re
 import logging
-from typing import Dict, List, Any
+import re
+from typing import Any, Dict, List
 
 import spacy
 from spacy.matcher import PhraseMatcher
 
-from backend.skill_dictionary import get_all_skills, categorize_skill
+from backend.skill_dictionary import categorize_skill, get_all_skills
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,7 @@ def preprocess_text(text: str) -> Dict[str, Any]:
     Returns tokens, cleaned text, and sentence count.
     """
     import nltk
+
     try:
         nltk.data.find("tokenizers/punkt")
     except LookupError:
@@ -79,8 +80,8 @@ def preprocess_text(text: str) -> Dict[str, Any]:
     except LookupError:
         nltk.download("stopwords", quiet=True)
 
-    from nltk.tokenize import word_tokenize, sent_tokenize
     from nltk.corpus import stopwords
+    from nltk.tokenize import sent_tokenize, word_tokenize
 
     stop_words = set(stopwords.words("english"))
 
@@ -91,9 +92,7 @@ def preprocess_text(text: str) -> Dict[str, Any]:
     tokens = word_tokenize(lower_text)
 
     # Remove stopwords and non-alphabetic tokens
-    filtered_tokens = [
-        t for t in tokens if t.isalpha() and t not in stop_words
-    ]
+    filtered_tokens = [t for t in tokens if t.isalpha() and t not in stop_words]
 
     # Sentence count
     sentences = sent_tokenize(text)
@@ -184,10 +183,7 @@ def extract_skills(text: str, doc=None) -> List[Dict[str, str]]:
     for skill in sorted(found_skills):
         if skill not in seen:
             seen.add(skill)
-            result.append({
-                "skill": skill,
-                "category": categorize_skill(skill)
-            })
+            result.append({"skill": skill, "category": categorize_skill(skill)})
 
     return result
 
@@ -196,19 +192,69 @@ def extract_skills(text: str, doc=None) -> List[Dict[str, str]]:
 # Step 5: Information Extraction
 # ---------------------------------------------------------------------------
 EDUCATION_KEYWORDS = [
-    "b.tech", "btech", "b.e", "be ", "m.tech", "mtech", "msc", "m.sc",
-    "bsc", "b.sc", "bca", "mca", "b.com", "m.com", "mba", "phd", "ph.d",
-    "bachelor", "master", "doctorate", "diploma", "degree",
-    "engineering", "science", "arts", "commerce", "technology",
-    "university", "college", "institute", "school", "iit", "nit",
-    "bits", "vit", "manipal", "amity", "symbiosis",
+    "b.tech",
+    "btech",
+    "b.e",
+    "be ",
+    "m.tech",
+    "mtech",
+    "msc",
+    "m.sc",
+    "bsc",
+    "b.sc",
+    "bca",
+    "mca",
+    "b.com",
+    "m.com",
+    "mba",
+    "phd",
+    "ph.d",
+    "bachelor",
+    "master",
+    "doctorate",
+    "diploma",
+    "degree",
+    "engineering",
+    "science",
+    "arts",
+    "commerce",
+    "technology",
+    "university",
+    "college",
+    "institute",
+    "school",
+    "iit",
+    "nit",
+    "bits",
+    "vit",
+    "manipal",
+    "amity",
+    "symbiosis",
 ]
 
 EXPERIENCE_KEYWORDS = [
-    "experience", "worked", "work", "employment", "intern", "internship",
-    "project", "position", "role", "company", "organization", "firm",
-    "developer", "engineer", "analyst", "manager", "lead", "architect",
-    "consultant", "specialist", "coordinator", "associate",
+    "experience",
+    "worked",
+    "work",
+    "employment",
+    "intern",
+    "internship",
+    "project",
+    "position",
+    "role",
+    "company",
+    "organization",
+    "firm",
+    "developer",
+    "engineer",
+    "analyst",
+    "manager",
+    "lead",
+    "architect",
+    "consultant",
+    "specialist",
+    "coordinator",
+    "associate",
 ]
 
 SECTION_HEADERS = {
@@ -227,9 +273,7 @@ def extract_name(text: str, entities: List[Dict]) -> str:
     Falls back to the first capitalized full name in text.
     """
     # 1. Try spaCy PERSON entities
-    person_entities = [
-        e["text"] for e in entities if e["label"] == "PERSON"
-    ]
+    person_entities = [e["text"] for e in entities if e["label"] == "PERSON"]
     if person_entities:
         # Use the first, typically the candidate's name
         return person_entities[0].strip()
@@ -273,7 +317,7 @@ def extract_email(text: str) -> str:
 def extract_phone(text: str) -> str:
     """Extract phone number from text using regex."""
     patterns = [
-        r"(\+91[\-\s]?)?[6-9]\d{9}",                    # Indian mobile
+        r"(\+91[\-\s]?)?[6-9]\d{9}",  # Indian mobile
         r"\+?1?[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}",  # US format
         r"(\+\d{1,3}[\s\-])?\(?\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}",  # generic
     ]
@@ -297,9 +341,7 @@ def extract_linkedin(text: str) -> str:
 
 def extract_github(text: str) -> str:
     """Extract GitHub profile URL."""
-    pattern = re.compile(
-        r"(?:github\.com/|github:\s*)([a-zA-Z0-9\-]+)", re.IGNORECASE
-    )
+    pattern = re.compile(r"(?:github\.com/|github:\s*)([a-zA-Z0-9\-]+)", re.IGNORECASE)
     match = pattern.search(text)
     if match:
         return f"https://github.com/{match.group(1)}"
@@ -325,9 +367,19 @@ def extract_education(text: str, entities: List[Dict]) -> List[Dict]:
         else:
             if len(line) < 40 and any(
                 h in lower
-                for h in ["experience", "work", "skill", "project", "certif",
-                          "achievement", "employment", "career", "language",
-                          "interest", "reference"]
+                for h in [
+                    "experience",
+                    "work",
+                    "skill",
+                    "project",
+                    "certif",
+                    "achievement",
+                    "employment",
+                    "career",
+                    "language",
+                    "interest",
+                    "reference",
+                ]
             ):
                 end_idx = i
                 break
@@ -388,15 +440,19 @@ def extract_education(text: str, entities: List[Dict]) -> List[Dict]:
                 kw in ent["text"].lower()
                 for kw in ["university", "college", "institute", "school", "iit", "nit"]
             ):
-                education_entries.append({
-                    "degree": "Not specified",
-                    "institution": ent["text"],
-                    "year": "",
-                })
+                education_entries.append(
+                    {
+                        "degree": "Not specified",
+                        "institution": ent["text"],
+                        "year": "",
+                    }
+                )
 
-    return education_entries if education_entries else [
-        {"degree": "Not Found", "institution": "Not Found", "year": ""}
-    ]
+    return (
+        education_entries
+        if education_entries
+        else [{"degree": "Not Found", "institution": "Not Found", "year": ""}]
+    )
 
 
 def extract_experience(text: str, entities: List[Dict]) -> List[Dict]:
@@ -411,13 +467,27 @@ def extract_experience(text: str, entities: List[Dict]) -> List[Dict]:
     # --- Section detection (length guard prevents matching body text) ---
     start_idx, end_idx = -1, len(lines)
     exp_headers = [
-        "work experience", "professional experience", "employment history",
-        "work history", "career history", "experience",
+        "work experience",
+        "professional experience",
+        "employment history",
+        "work history",
+        "career history",
+        "experience",
     ]
     end_headers = [
-        "education", "academic", "qualification", "skills", "technical skills",
-        "projects", "certifications", "certificates", "achievements",
-        "languages", "interests", "references", "hobbies",
+        "education",
+        "academic",
+        "qualification",
+        "skills",
+        "technical skills",
+        "projects",
+        "certifications",
+        "certificates",
+        "achievements",
+        "languages",
+        "interests",
+        "references",
+        "hobbies",
     ]
     for i, line in enumerate(lines):
         lower = line.lower()
@@ -537,15 +607,19 @@ def extract_experience(text: str, entities: List[Dict]) -> List[Dict]:
         if key not in seen_keys and any(v for v in key):
             seen_keys.add(key)
             # Fill any blank field with a dash for display clarity
-            deduped.append({
-                "role":     e.get("role")     or "Not specified",
-                "company":  e.get("company")  or "Not specified",
-                "duration": e.get("duration") or "Not specified",
-            })
+            deduped.append(
+                {
+                    "role": e.get("role") or "Not specified",
+                    "company": e.get("company") or "Not specified",
+                    "duration": e.get("duration") or "Not specified",
+                }
+            )
 
-    return deduped if deduped else [
-        {"role": "Not Found", "company": "Not Found", "duration": "Not Found"}
-    ]
+    return (
+        deduped
+        if deduped
+        else [{"role": "Not Found", "company": "Not Found", "duration": "Not Found"}]
+    )
 
 
 def extract_summary(text: str) -> str:
@@ -556,7 +630,10 @@ def extract_summary(text: str) -> str:
 
     for line in lines:
         lower = line.lower().strip()
-        if any(h in lower for h in ["summary", "objective", "profile", "about me", "career objective"]):
+        if any(
+            h in lower
+            for h in ["summary", "objective", "profile", "about me", "career objective"]
+        ):
             in_summary = True
             continue
         if in_summary:
@@ -622,7 +699,7 @@ def process_resume(text: str) -> Dict[str, Any]:
         "skill_categories": skill_categories,
         "education": education,
         "experience": experience,
-        "entities": entities[:50],          # limit for UI
+        "entities": entities[:50],  # limit for UI
         "pos_sample": nlp_results["pos_tags"][:30],  # sample for display
         "word_count": preprocessed["word_count"],
         "sentence_count": preprocessed["sentence_count"],

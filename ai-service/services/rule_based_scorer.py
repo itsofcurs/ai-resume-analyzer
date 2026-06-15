@@ -37,7 +37,9 @@ class RuleBasedScoringConfig:
     keyword_weight: float = 10.0
 
     # Keyword scoring behaviour
-    keyword_required_weight: float = 0.7  # how much required keywords dominate keyword score
+    keyword_required_weight: float = (
+        0.7  # how much required keywords dominate keyword score
+    )
 
 
 def _normalise_tokens(values: Iterable[str]) -> set[str]:
@@ -92,8 +94,12 @@ class RuleBasedScorer:
             return 0, []
 
         # Required overlap dominates; preferred is a bonus.
-        req_overlap = (len(resume & required) / len(required) * 100.0) if required else 0.0
-        pref_overlap = (len(resume & preferred) / len(preferred) * 100.0) if preferred else 0.0
+        req_overlap = (
+            (len(resume & required) / len(required) * 100.0) if required else 0.0
+        )
+        pref_overlap = (
+            (len(resume & preferred) / len(preferred) * 100.0) if preferred else 0.0
+        )
 
         score = _weighted_average([(req_overlap, 0.8), (pref_overlap, 0.2)])
         missing_required = sorted(list(required - resume))
@@ -116,7 +122,10 @@ class RuleBasedScorer:
         def present(k: str) -> bool:
             # word-boundary match for simple keywords, fallback to substring
             if re.fullmatch(r"[a-z0-9\+\#\.\- ]+", k):
-                return re.search(rf"(^|[^a-z0-9]){re.escape(k)}([^a-z0-9]|$)", text) is not None
+                return (
+                    re.search(rf"(^|[^a-z0-9]){re.escape(k)}([^a-z0-9]|$)", text)
+                    is not None
+                )
             return k in text
 
         req_hit = sum(1 for k in required if present(k))
@@ -125,7 +134,9 @@ class RuleBasedScorer:
         req_score = (req_hit / len(required) * 100.0) if required else 0.0
         pref_score = (pref_hit / len(preferred) * 100.0) if preferred else 0.0
 
-        return _weighted_average([(req_score, required_weight), (pref_score, 1.0 - required_weight)])
+        return _weighted_average(
+            [(req_score, required_weight), (pref_score, 1.0 - required_weight)]
+        )
 
     @staticmethod
     def _experience_match_score(
@@ -149,18 +160,29 @@ class RuleBasedScorer:
         if min_years_experience is not None:
             # Very conservative proxy: 1 role ≈ 1.5 years (not asserted, only scoring signal)
             est_years = role_count * 1.5
-            years_score = 100.0 if est_years >= float(min_years_experience) else (est_years / float(min_years_experience) * 100.0)
+            years_score = (
+                100.0
+                if est_years >= float(min_years_experience)
+                else (est_years / float(min_years_experience) * 100.0)
+            )
         else:
             years_score = 0.0
 
         # Proxy 2: seniority keyword match from titles
-        title_text = " ".join(
-            [e.role or "" for e in (resume.experience or [])]
-        ).lower()
+        title_text = " ".join([e.role or "" for e in (resume.experience or [])]).lower()
         seniority_score = 0.0
         if seniority:
             s = seniority.strip().lower()
-            if s in ("intern", "junior", "mid", "senior", "lead", "staff", "principal", "manager"):
+            if s in (
+                "intern",
+                "junior",
+                "mid",
+                "senior",
+                "lead",
+                "staff",
+                "principal",
+                "manager",
+            ):
                 cues = {
                     "intern": ["intern", "trainee"],
                     "junior": ["junior", "jr", "associate"],
@@ -171,7 +193,9 @@ class RuleBasedScorer:
                     "principal": ["principal"],
                     "manager": ["manager", "engineering manager"],
                 }.get(s, [])
-                seniority_score = 100.0 if any(cue in title_text for cue in cues) else 50.0
+                seniority_score = (
+                    100.0 if any(cue in title_text for cue in cues) else 50.0
+                )
             else:
                 seniority_score = 50.0
 
@@ -191,7 +215,10 @@ class RuleBasedScorer:
             return 0
 
         edu_text = " ".join(
-            [f"{e.degree or ''} {e.institution or ''}" for e in (resume.education or [])]
+            [
+                f"{e.degree or ''} {e.institution or ''}"
+                for e in (resume.education or [])
+            ]
         ).lower()
 
         required = _normalise_tokens(required_degrees or [])
@@ -251,12 +278,14 @@ class RuleBasedScorer:
             required_weight=self._config.keyword_required_weight,
         )
 
-        rule_score = _weighted_average([
-            (skill_overlap, self._config.skill_overlap_weight),
-            (exp_match, self._config.experience_weight),
-            (edu_match, self._config.education_weight),
-            (keyword_score, self._config.keyword_weight),
-        ])
+        rule_score = _weighted_average(
+            [
+                (skill_overlap, self._config.skill_overlap_weight),
+                (exp_match, self._config.experience_weight),
+                (edu_match, self._config.education_weight),
+                (keyword_score, self._config.keyword_weight),
+            ]
+        )
 
         return {
             "rule_score": rule_score,
@@ -294,4 +323,3 @@ class RuleBasedScorer:
             if ed.institution:
                 parts.append(ed.institution)
         return "\n".join(parts)
-

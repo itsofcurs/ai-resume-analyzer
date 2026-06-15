@@ -1,7 +1,7 @@
 import math
 
-from services.embedding_matcher import EmbeddingMatcher
 from schemas.resume_schema import ResumeParseResponse
+from services.embedding_matcher import EmbeddingMatcher
 
 
 def test_embedding_matcher_similarity_consistency_monkeypatched(monkeypatch):
@@ -12,6 +12,7 @@ def test_embedding_matcher_similarity_consistency_monkeypatched(monkeypatch):
         return [n, n / 2.0, 1.0]
 
     import embeddings as emb
+
     monkeypatch.setattr(emb, "generate_embedding", fake_embed)
 
     matcher = EmbeddingMatcher()
@@ -38,10 +39,10 @@ def test_embedding_matcher_low_similarity_monkeypatched(monkeypatch):
         return embed_a(text) if calls["n"] == 1 else embed_b(text)
 
     import embeddings as emb
+
     monkeypatch.setattr(emb, "generate_embedding", fake_embed)
 
     matcher = EmbeddingMatcher()
     resume = ResumeParseResponse(name="X", skills=["python"])
     out = matcher.score(resume=resume, job_description_text="java")
     assert out["embedding_similarity_score"] <= 60
-

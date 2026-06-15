@@ -1,10 +1,12 @@
 import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
-import sys
 import os
+import sys
+
+from motor.motor_asyncio import AsyncIOMotorClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from workflows.authenticity_workflow import AuthenticityWorkflow
+
 
 async def test_authenticity():
     client = AsyncIOMotorClient("mongodb://localhost:27017")
@@ -15,21 +17,19 @@ async def test_authenticity():
     mock_resume = {
         "candidateName": "Test Plagiarizer",
         "organizationId": "org-test-123",
-        "parsedData": {
-            "skills": ["Python", "React", "Node"]
-        },
+        "parsedData": {"skills": ["Python", "React", "Node"]},
         "interviewEvaluation": {
             "answers": [
                 {
                     "question": "What is Node.js?",
-                    "answer": "Node.js is a cross-platform, open-source JavaScript runtime environment that can run on Windows, Linux, Unix, macOS, and more."
+                    "answer": "Node.js is a cross-platform, open-source JavaScript runtime environment that can run on Windows, Linux, Unix, macOS, and more.",
                 },
                 {
                     "question": "How do you handle state in React?",
-                    "answer": "I use Redux and Context API. React is a free and open-source front-end JavaScript library for building user interfaces based on components."
-                }
+                    "answer": "I use Redux and Context API. React is a free and open-source front-end JavaScript library for building user interfaces based on components.",
+                },
             ]
-        }
+        },
     }
 
     result = await collection.insert_one(mock_resume)
@@ -52,12 +52,13 @@ async def test_authenticity():
         print(f"Assessment: {auth.get('finalAssessment')}")
     else:
         print("Error: No answerAuthenticity found in final state!")
-        print(final_state.get('error', 'Unknown Error'))
+        print(final_state.get("error", "Unknown Error"))
 
     # Cleanup
     await collection.delete_one({"_id": result.inserted_id})
     print("[+] Cleaned up mock resume.")
     client.close()
+
 
 if __name__ == "__main__":
     asyncio.run(test_authenticity())

@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 def _import_app():
     try:
         from main import app  # noqa
+
         return app
     except ModuleNotFoundError as exc:
         # Minimal CI environments may not install optional infra deps (motor, chromadb, etc.)
@@ -25,4 +26,3 @@ def test_metrics_endpoint_exists():
     r = client.get("/api/metrics")
     assert r.status_code == 200
     assert "text/plain" in r.headers.get("content-type", "")
-

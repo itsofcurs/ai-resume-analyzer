@@ -1,45 +1,47 @@
+import datetime
 import json
 import logging
-import datetime
-from typing import TypedDict, Optional, List
+from typing import Optional, TypedDict
 
-from bson import ObjectId
 import httpx
+from bson import ObjectId
+from core.config import get_settings
+from database import get_mongo_collection
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langgraph.graph import StateGraph, END
-
-from database import get_mongo_collection
-from utils.retry_utils import ainvoke_with_retry
-from utils.parser_utils import clean_json_str
-from core.config import get_settings
+from langgraph.graph import END, StateGraph
 from services.llm.llm_router import LLMRouter
+
+from utils.parser_utils import clean_json_str
+from utils.retry_utils import ainvoke_with_retry
 
 logger = logging.getLogger(__name__)
 
+
 class SkillGraphState(TypedDict):
     resume_id: str
-    
+
     parsed_resume: Optional[dict]
     ats_scores: Optional[dict]
     interview_evaluation: Optional[dict]
     success_prediction: Optional[dict]
     authenticity_analysis: Optional[dict]
-    
+
     technical_skills: Optional[list]
     soft_skills: Optional[list]
     strengths: Optional[list]
     weaknesses: Optional[list]
-    
+
     overall_technical_score: Optional[int]
     overall_soft_skill_score: Optional[int]
-    
+
     skill_clusters: Optional[list]
     skill_relationships: Optional[list]
     competency_level: Optional[dict]
-    
+
     skill_graph: Optional[dict]
     error: Optional[str]
+
 
 TECHNICAL_SKILLS_PROMPT = PromptTemplate.from_template(
     """Analyze the following candidate data to extract their core Technical Skills.
@@ -121,39 +123,69 @@ CLUSTERS_COMPETENCIES_PROMPT = PromptTemplate.from_template(
     }}"""
 )
 
+
 class SkillGraphWorkflow:
     def __init__(self):
         builder = StateGraph(SkillGraphState)
-        
+
         builder.add_node("load_candidate", self._node_load_candidate)
         builder.add_node("extract_technical", self._node_extract_technical)
         builder.add_node("extract_soft", self._node_extract_soft)
-        builder.add_node("identify_strengths_weaknesses", self._node_identify_strengths_weaknesses)
+        builder.add_node(
+            "identify_strengths_weaknesses", self._node_identify_strengths_weaknesses
+        )
         builder.add_node("extract_clusters", self._node_extract_clusters)
         builder.add_node("aggregate_scores", self._node_aggregate_scores)
         builder.add_node("persist", self._node_persist)
-        
+
         builder.set_entry_point("load_candidate")
-        
-        builder.add_conditional_edges("load_candidate", lambda s: "extract_technical" if not s.get("error") else END, ["extract_technical", END])
-        builder.add_conditional_edges("extract_technical", lambda s: "extract_soft" if not s.get("error") else END, ["extract_soft", END])
-        builder.add_conditional_edges("extract_soft", lambda s: "identify_strengths_weaknesses" if not s.get("error") else END, ["identify_strengths_weaknesses", END])
-        builder.add_conditional_edges("identify_strengths_weaknesses", lambda s: "extract_clusters" if not s.get("error") else END, ["extract_clusters", END])
-        builder.add_conditional_edges("extract_clusters", lambda s: "aggregate_scores" if not s.get("error") else END, ["aggregate_scores", END])
-        builder.add_conditional_edges("aggregate_scores", lambda s: "persist" if not s.get("error") else END, ["persist", END])
+
+        builder.add_conditional_edges(
+            "load_candidate",
+            lambda s: "extract_technical" if not s.get("error") else END,
+            ["extract_technical", END],
+        )
+        builder.add_conditional_edges(
+            "extract_technical",
+            lambda s: "extract_soft" if not s.get("error") else END,
+            ["extract_soft", END],
+        )
+        builder.add_conditional_edges(
+            "extract_soft",
+            lambda s: "identify_strengths_weaknesses" if not s.get("error") else END,
+            ["identify_strengths_weaknesses", END],
+        )
+        builder.add_conditional_edges(
+            "identify_strengths_weaknesses",
+            lambda s: "extract_clusters" if not s.get("error") else END,
+            ["extract_clusters", END],
+        )
+        builder.add_conditional_edges(
+            "extract_clusters",
+            lambda s: "aggregate_scores" if not s.get("error") else END,
+            ["aggregate_scores", END],
+        )
+        builder.add_conditional_edges(
+            "aggregate_scores",
+            lambda s: "persist" if not s.get("error") else END,
+            ["persist", END],
+        )
         builder.add_edge("persist", END)
-        
+
         self._graph = builder.compile()
 
     async def _emit_event(self, resume_id: str, event_name: str):
         try:
             settings = get_settings()
-            if not settings.node_backend_url: return
+            if not settings.node_backend_url:
+                return
             async with httpx.AsyncClient() as client:
                 await client.post(
                     f"{settings.node_backend_url.rstrip('/')}/api/interview/webhook/event",
                     json={"id": resume_id, "event": event_name},
-                    headers={"x-api-key": settings.internal_api_key or "default-internal-key"},
+                    headers={
+                        "x-api-key": settings.internal_api_key or "default-internal-key"
+                    },
                     timeout=2.0,
                 )
         except Exception as exc:
@@ -189,16 +221,20 @@ class SkillGraphWorkflow:
         return state
 
     async def _node_extract_technical(self, state: SkillGraphState) -> SkillGraphState:
-        if state.get("error"): return state
+        if state.get("error"):
+            return state
         logger.info("[SKILLGRAPH] Stage 2 - Extracting Technical Skills")
         try:
             llm = LLMRouter.get_llm("extraction")
             chain = TECHNICAL_SKILLS_PROMPT | llm | StrOutputParser()
-            raw = await ainvoke_with_retry(chain, {
-                "resume_data": json.dumps(state.get("parsed_resume", {})),
-                "interview_data": json.dumps(state.get("interview_evaluation", {})),
-                "ats_data": json.dumps(state.get("ats_scores", {}))
-            })
+            raw = await ainvoke_with_retry(
+                chain,
+                {
+                    "resume_data": json.dumps(state.get("parsed_resume", {})),
+                    "interview_data": json.dumps(state.get("interview_evaluation", {})),
+                    "ats_data": json.dumps(state.get("ats_scores", {})),
+                },
+            )
             data = json.loads(clean_json_str(raw))
             state["technical_skills"] = data.get("technicalSkills", [])
         except Exception as e:
@@ -206,33 +242,43 @@ class SkillGraphWorkflow:
         return state
 
     async def _node_extract_soft(self, state: SkillGraphState) -> SkillGraphState:
-        if state.get("error"): return state
+        if state.get("error"):
+            return state
         logger.info("[SKILLGRAPH] Stage 3 - Extracting Soft Skills")
         try:
             llm = LLMRouter.get_llm("extraction")
             chain = SOFT_SKILLS_PROMPT | llm | StrOutputParser()
-            raw = await ainvoke_with_retry(chain, {
-                "resume_data": json.dumps(state.get("parsed_resume", {})),
-                "interview_data": json.dumps(state.get("interview_evaluation", {})),
-                "success_data": json.dumps(state.get("success_prediction", {}))
-            })
+            raw = await ainvoke_with_retry(
+                chain,
+                {
+                    "resume_data": json.dumps(state.get("parsed_resume", {})),
+                    "interview_data": json.dumps(state.get("interview_evaluation", {})),
+                    "success_data": json.dumps(state.get("success_prediction", {})),
+                },
+            )
             data = json.loads(clean_json_str(raw))
             state["soft_skills"] = data.get("softSkills", [])
         except Exception as e:
             state["error"] = str(e)
         return state
 
-    async def _node_identify_strengths_weaknesses(self, state: SkillGraphState) -> SkillGraphState:
-        if state.get("error"): return state
+    async def _node_identify_strengths_weaknesses(
+        self, state: SkillGraphState
+    ) -> SkillGraphState:
+        if state.get("error"):
+            return state
         logger.info("[SKILLGRAPH] Stage 4 - Identifying Strengths & Weaknesses")
         try:
             llm = LLMRouter.get_llm("extraction")
             chain = STRENGTHS_WEAKNESSES_PROMPT | llm | StrOutputParser()
-            raw = await ainvoke_with_retry(chain, {
-                "technical": json.dumps(state.get("technical_skills", [])),
-                "soft": json.dumps(state.get("soft_skills", [])),
-                "authenticity": json.dumps(state.get("authenticity_analysis", {}))
-            })
+            raw = await ainvoke_with_retry(
+                chain,
+                {
+                    "technical": json.dumps(state.get("technical_skills", [])),
+                    "soft": json.dumps(state.get("soft_skills", [])),
+                    "authenticity": json.dumps(state.get("authenticity_analysis", {})),
+                },
+            )
             data = json.loads(clean_json_str(raw))
             state["strengths"] = data.get("strengths", [])
             state["weaknesses"] = data.get("weaknesses", [])
@@ -241,15 +287,19 @@ class SkillGraphWorkflow:
         return state
 
     async def _node_extract_clusters(self, state: SkillGraphState) -> SkillGraphState:
-        if state.get("error"): return state
+        if state.get("error"):
+            return state
         logger.info("[SKILLGRAPH] Stage 4b - Extracting Clusters & Competencies")
         try:
             llm = LLMRouter.get_llm("extraction")
             chain = CLUSTERS_COMPETENCIES_PROMPT | llm | StrOutputParser()
-            raw = await ainvoke_with_retry(chain, {
-                "technical": json.dumps(state.get("technical_skills", [])),
-                "soft": json.dumps(state.get("soft_skills", []))
-            })
+            raw = await ainvoke_with_retry(
+                chain,
+                {
+                    "technical": json.dumps(state.get("technical_skills", [])),
+                    "soft": json.dumps(state.get("soft_skills", [])),
+                },
+            )
             data = json.loads(clean_json_str(raw))
             state["skill_clusters"] = data.get("skillClusters", [])
             state["skill_relationships"] = data.get("skillRelationships", [])
@@ -260,27 +310,31 @@ class SkillGraphWorkflow:
             state["skill_clusters"] = []
             state["skill_relationships"] = []
             state["competency_level"] = {
-                "technical": "Intermediate", "communication": "Intermediate", 
-                "leadership": "Intermediate", "problemSolving": "Intermediate"
+                "technical": "Intermediate",
+                "communication": "Intermediate",
+                "leadership": "Intermediate",
+                "problemSolving": "Intermediate",
             }
         return state
 
     async def _node_aggregate_scores(self, state: SkillGraphState) -> SkillGraphState:
-        if state.get("error"): return state
+        if state.get("error"):
+            return state
         logger.info("[SKILLGRAPH] Stage 5 - Aggregating Scores")
-        
+
         tech = state.get("technical_skills", [])
         soft = state.get("soft_skills", [])
-        
+
         tech_avg = sum([t.get("score", 0) for t in tech]) / len(tech) if tech else 0
         soft_avg = sum([s.get("score", 0) for s in soft]) / len(soft) if soft else 0
-        
+
         state["overall_technical_score"] = int(tech_avg)
         state["overall_soft_skill_score"] = int(soft_avg)
         return state
 
     async def _node_persist(self, state: SkillGraphState) -> SkillGraphState:
-        if state.get("error"): return state
+        if state.get("error"):
+            return state
         if state["resume_id"] == "test_resume":
             state["skill_graph"] = {
                 "technicalSkills": state.get("technical_skills"),
@@ -292,10 +346,10 @@ class SkillGraphWorkflow:
                 "competencyLevel": state.get("competency_level", {}),
                 "overallTechnicalScore": state.get("overall_technical_score"),
                 "overallSoftSkillScore": state.get("overall_soft_skill_score"),
-                "generatedAt": datetime.datetime.utcnow().isoformat()
+                "generatedAt": datetime.datetime.utcnow().isoformat(),
             }
             return state
-            
+
         logger.info("[SKILLGRAPH] Stage 6 - Persist")
         try:
             doc = {
@@ -308,14 +362,13 @@ class SkillGraphWorkflow:
                 "competencyLevel": state.get("competency_level", {}),
                 "overallTechnicalScore": state.get("overall_technical_score", 0),
                 "overallSoftSkillScore": state.get("overall_soft_skill_score", 0),
-                "generatedAt": datetime.datetime.utcnow().isoformat()
+                "generatedAt": datetime.datetime.utcnow().isoformat(),
             }
             state["skill_graph"] = doc
 
             collection = get_mongo_collection()
             await collection.update_one(
-                {"_id": ObjectId(state["resume_id"])},
-                {"$set": {"skillGraph": doc}}
+                {"_id": ObjectId(state["resume_id"])}, {"$set": {"skillGraph": doc}}
             )
             await self._emit_event(state["resume_id"], "SKILL_GRAPH_COMPLETED")
         except Exception as e:
@@ -342,7 +395,7 @@ class SkillGraphWorkflow:
             "skill_relationships": None,
             "competency_level": None,
             "skill_graph": None,
-            "error": None
+            "error": None,
         }
 
         result = await self._graph.ainvoke(initial_state)

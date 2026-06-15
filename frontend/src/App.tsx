@@ -2,6 +2,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout, ProtectedRoute } from './components/Layout';
 import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { VerifyEmail } from './pages/VerifyEmail';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
+import { AuthSuccess } from './pages/AuthSuccess';
+import { SecuritySettings } from './pages/SecuritySettings';
+import { MFASettings } from './pages/MFASettings';
 import { Dashboard } from './pages/Dashboard';
 import { Candidates } from './pages/Candidates';
 import { Jobs } from './pages/Jobs';
@@ -41,7 +48,13 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth-success" element={<AuthSuccess />} />
         <Route 
+
           path="/" 
           element={
             <ProtectedRoute>
@@ -230,6 +243,16 @@ function App() {
           <Route path="/knowledge-base" element={
             <ProtectedRoute>
               <DashboardLayout><KnowledgeBase /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/security" element={
+            <ProtectedRoute>
+              <DashboardLayout><SecuritySettings /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/mfa-setup" element={
+            <ProtectedRoute>
+              <DashboardLayout><MFASettings /></DashboardLayout>
             </ProtectedRoute>
           } />
         {/* Fallback */}

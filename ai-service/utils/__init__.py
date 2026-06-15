@@ -12,6 +12,6 @@ Current utilities:
   - clean_json_str()  → strips markdown fences from LLM JSON responses
 """
 
-from utils.parser_utils import sanitize_name, truncate_text, clean_json_str
+from utils.parser_utils import clean_json_str, sanitize_name, truncate_text
 
 __all__ = ["sanitize_name", "truncate_text", "clean_json_str"]

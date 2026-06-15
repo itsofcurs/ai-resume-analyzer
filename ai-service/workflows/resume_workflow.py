@@ -19,26 +19,28 @@ Pipeline stages:
 import json
 import logging
 import time
-from typing import Optional, TypedDict, Any
+from typing import Optional, TypedDict
 
+from agents.resume_parser import ResumeParserAgent
 from bson import ObjectId
-from langchain_core.output_parsers import StrOutputParser
-from langgraph.graph import StateGraph, END
-
 from database import get_mongo_collection, store_vector
 from embeddings import generate_embedding
+from langchain_core.output_parsers import StrOutputParser
+from langgraph.graph import END, StateGraph
 from nlp_pipeline import download_and_extract_text
-from agents.resume_parser import ResumeParserAgent
 from prompts.ats_scoring_prompt import ATS_SCORING_PROMPT
 from prompts.candidate_ranking_prompt import CANDIDATE_RANKING_PROMPT
-from schemas.ats_ranking_schema import StandaloneATSScoreSchema, CandidateRankingResultSchema
+from schemas.ats_ranking_schema import (
+    CandidateRankingResultSchema,
+    StandaloneATSScoreSchema,
+)
 from schemas.resume_schema import ResumeParseResponse
 from services.llm.llm_router import LLMRouter
+
 from utils.parser_utils import clean_json_str
-from workflows.interview_workflow import InterviewQuestionGraph
-import asyncio
 
 logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # LangGraph State Definition
@@ -79,47 +81,43 @@ class ResumeWorkflow:
 
         # Define Edges
         graph.set_entry_point("extract_text")
-        
+
         # Conditional edges from extract_text
         graph.add_conditional_edges(
             "extract_text",
-            lambda state: "handle_failure" if state.get("error") else "parse_resume"
+            lambda state: "handle_failure" if state.get("error") else "parse_resume",
         )
-        
+
         # Conditional edges from parse_resume
         graph.add_conditional_edges(
             "parse_resume",
-            lambda state: "handle_failure" if state.get("error") else "generate_embedding"
+            lambda state: (
+                "handle_failure" if state.get("error") else "generate_embedding"
+            ),
         )
-        
+
         # Conditional edges from generate_embedding
         graph.add_conditional_edges(
             "generate_embedding",
-            lambda state: "store_vector" if state.get("vector") else "ats_scoring"
+            lambda state: "store_vector" if state.get("vector") else "ats_scoring",
         )
-        
+
         # Conditional edges from store_vector
         graph.add_conditional_edges(
             "store_vector",
-            lambda state: "handle_failure" if state.get("error") else "ats_scoring"
+            lambda state: "handle_failure" if state.get("error") else "ats_scoring",
         )
-        
+
         # Conditional edges from ats_scoring (non-fatal: skip to ranking on error)
-        graph.add_conditional_edges(
-            "ats_scoring",
-            lambda state: "candidate_ranking"
-        )
-        
+        graph.add_conditional_edges("ats_scoring", lambda state: "candidate_ranking")
+
         # Conditional edges from candidate_ranking
-        graph.add_conditional_edges(
-            "candidate_ranking",
-            lambda state: "update_mongo"
-        )
-        
+        graph.add_conditional_edges("candidate_ranking", lambda state: "update_mongo")
+
         # Conditional edges from update_mongo
         graph.add_conditional_edges(
             "update_mongo",
-            lambda state: "handle_failure" if state.get("error") else END
+            lambda state: "handle_failure" if state.get("error") else END,
         )
 
         graph.add_edge("handle_failure", END)
@@ -133,14 +131,14 @@ class ResumeWorkflow:
     async def _set_status(resume_id: str, status: str, **extra_fields) -> None:
         import httpx
         from core.config import get_settings
-        
+
         collection = get_mongo_collection()
         update_payload = {"status": status, **extra_fields}
         await collection.update_one(
             {"_id": ObjectId(resume_id)},
             {"$set": update_payload},
         )
-        
+
         # Notify Node.js gateway via webhook for real-time Socket.io updates
         try:
             settings = get_settings()
@@ -148,19 +146,27 @@ class ResumeWorkflow:
                 await client.post(
                     f"{settings.node_backend_url.rstrip('/')}/api/resumes/webhook/status",
                     json={"id": resume_id, "status": status},
-                    headers={"x-api-key": settings.internal_api_key or "default-internal-key"},
-                    timeout=2.0
+                    headers={
+                        "x-api-key": settings.internal_api_key or "default-internal-key"
+                    },
+                    timeout=2.0,
                 )
         except Exception as exc:
-            logger.warning(f"[WORKFLOW] Failed to send status webhook to Node gateway: {exc}")
+            logger.warning(
+                f"[WORKFLOW] Failed to send status webhook to Node gateway: {exc}"
+            )
 
     # ---------------------------------------------------------------------------
     # LangGraph Nodes
     # ---------------------------------------------------------------------------
     async def _node_extract_text(self, state: ResumeState) -> ResumeState:
-        logger.info(f"[WORKFLOW] Stage 1 — Text extraction started for {state['resume_id']}")
+        logger.info(
+            f"[WORKFLOW] Stage 1 — Text extraction started for {state['resume_id']}"
+        )
         try:
-            raw_text = download_and_extract_text(state["cloudinary_url"], state["filename"])
+            raw_text = download_and_extract_text(
+                state["cloudinary_url"], state["filename"]
+            )
             if not raw_text or not raw_text.strip():
                 state["error"] = "Extracted text is empty"
                 return state
@@ -172,7 +178,9 @@ class ResumeWorkflow:
         return state
 
     async def _node_parse_resume(self, state: ResumeState) -> ResumeState:
-        logger.info(f"[WORKFLOW] Stage 2 — Agent parsing started for {state['resume_id']}")
+        logger.info(
+            f"[WORKFLOW] Stage 2 — Agent parsing started for {state['resume_id']}"
+        )
         try:
             parsed = await self._parser_agent.aparse(state["raw_text"])
             await self._set_status(state["resume_id"], "ANALYZING")
@@ -183,7 +191,9 @@ class ResumeWorkflow:
         return state
 
     async def _node_generate_embedding(self, state: ResumeState) -> ResumeState:
-        logger.info(f"[WORKFLOW] Stage 3 — Embedding generation for {state['resume_id']}")
+        logger.info(
+            f"[WORKFLOW] Stage 3 — Embedding generation for {state['resume_id']}"
+        )
         try:
             vector = generate_embedding(state["raw_text"])
             state["vector"] = vector
@@ -212,10 +222,12 @@ class ResumeWorkflow:
         logger.info(f"[WORKFLOW] Stage 5 — ATS scoring for {state['resume_id']}")
         try:
             await self._set_status(state["resume_id"], "SCORING")
-            
+
             parsed = state["parsed"]
-            resume_json = json.dumps(parsed.model_dump(exclude_none=True), ensure_ascii=False)
-            
+            resume_json = json.dumps(
+                parsed.model_dump(exclude_none=True), ensure_ascii=False
+            )
+
             llm = LLMRouter.get_llm("ats_scoring")
             chain = ATS_SCORING_PROMPT | llm | StrOutputParser()
             raw_response = await chain.ainvoke({"resume_json": resume_json})
@@ -234,15 +246,19 @@ class ResumeWorkflow:
         logger.info(f"[WORKFLOW] Stage 6 — Candidate ranking for {state['resume_id']}")
         try:
             await self._set_status(state["resume_id"], "RANKING")
-            
+
             parsed = state["parsed"]
-            resume_json = json.dumps(parsed.model_dump(exclude_none=True), ensure_ascii=False)
+            resume_json = json.dumps(
+                parsed.model_dump(exclude_none=True), ensure_ascii=False
+            )
             ats_scores = state.get("ats_scores") or StandaloneATSScoreSchema()
             ats_json = json.dumps(ats_scores.model_dump(), ensure_ascii=False)
-            
+
             llm = LLMRouter.get_llm("ranking")
             chain = CANDIDATE_RANKING_PROMPT | llm | StrOutputParser()
-            raw_response = await chain.ainvoke({"resume_json": resume_json, "ats_scores_json": ats_json})
+            raw_response = await chain.ainvoke(
+                {"resume_json": resume_json, "ats_scores_json": ats_json}
+            )
             cleaned = clean_json_str(raw_response)
             ranking_dict = json.loads(cleaned)
             state["ranking"] = CandidateRankingResultSchema(**ranking_dict)
@@ -251,12 +267,16 @@ class ResumeWorkflow:
                 f"tier={state['ranking'].tier}, priority={state['ranking'].hiring_priority}"
             )
         except Exception as exc:
-            logger.error(f"[WORKFLOW] Stage 6 Candidate ranking FAILED (non-fatal): {exc}")
+            logger.error(
+                f"[WORKFLOW] Stage 6 Candidate ranking FAILED (non-fatal): {exc}"
+            )
             state["ranking"] = CandidateRankingResultSchema()  # safe defaults
         return state
 
     async def _node_update_mongo(self, state: ResumeState) -> ResumeState:
-        logger.info(f"[WORKFLOW] Stage 7 — MongoDB final update for {state['resume_id']}")
+        logger.info(
+            f"[WORKFLOW] Stage 7 — MongoDB final update for {state['resume_id']}"
+        )
         try:
             parsed = state["parsed"]
             parsed_data = parsed.to_parsed_data()
@@ -266,7 +286,7 @@ class ResumeWorkflow:
             ats_data = None
             if state.get("ats_scores"):
                 ats_data = state["ats_scores"].model_dump()
-            
+
             ranking_data = None
             if state.get("ranking"):
                 ranking_data = state["ranking"].model_dump()
@@ -290,7 +310,9 @@ class ResumeWorkflow:
         return state
 
     async def _node_handle_failure(self, state: ResumeState) -> ResumeState:
-        logger.error(f"[WORKFLOW] Handling failure for {state['resume_id']}: {state.get('error')}")
+        logger.error(
+            f"[WORKFLOW] Handling failure for {state['resume_id']}: {state.get('error')}"
+        )
         await self._set_status(state["resume_id"], "FAILED")
         return state
 
@@ -324,11 +346,13 @@ class ResumeWorkflow:
 
         try:
             final_state = await self._graph.ainvoke(initial_state)
-            
+
             total_time = time.time() - pipeline_start
-            
+
             if final_state.get("error"):
-                logger.error(f"[WORKFLOW] LangGraph pipeline FAILED for {resume_id} in {total_time:.2f}s")
+                logger.error(
+                    f"[WORKFLOW] LangGraph pipeline FAILED for {resume_id} in {total_time:.2f}s"
+                )
             else:
                 logger.info(
                     f"[WORKFLOW] LangGraph pipeline COMPLETE for resume_id={resume_id} in {total_time:.2f}s"

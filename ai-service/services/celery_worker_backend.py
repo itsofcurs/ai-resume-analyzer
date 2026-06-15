@@ -19,11 +19,15 @@ class CeleryWorkerBackend(WorkerBackend):
         raise NotImplementedError("Celery backend not enabled in this build.")
 
     def status(self, job_id: str) -> Optional[JobStatus]:
-        return JobStatus(job_id=job_id, job_type="unknown", state=JobState.FAILED, failure_reason="celery_disabled")
+        return JobStatus(
+            job_id=job_id,
+            job_type="unknown",
+            state=JobState.FAILED,
+            failure_reason="celery_disabled",
+        )
 
     def cancel(self, job_id: str) -> bool:
         return False
 
     def health(self) -> dict[str, Any]:
         return {"backend": "celery", "status": "disabled"}
-

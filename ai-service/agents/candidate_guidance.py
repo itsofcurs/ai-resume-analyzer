@@ -11,19 +11,19 @@ and provide interview preparation tips.
 import json
 import logging
 
+from bson import ObjectId
+from database import get_mongo_collection
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-
 from services.llm.llm_router import LLMRouter
-from database import get_mongo_collection
-from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # LangChain Tools
 # ---------------------------------------------------------------------------
+
 
 @tool
 async def analyze_resume_gaps_tool(resume_id: str, target_role: str) -> str:
@@ -36,18 +36,21 @@ async def analyze_resume_gaps_tool(resume_id: str, target_role: str) -> str:
         resume = await collection.find_one({"_id": ObjectId(resume_id)})
         if not resume:
             return "Candidate not found."
-        
+
         parsed_data = resume.get("parsedData", {})
         skills = parsed_data.get("skills", [])
-        
-        return json.dumps({
-            "current_skills": skills,
-            "target_role": target_role,
-            "instruction_to_llm": "Cross-reference the candidate's current skills with standard industry requirements for the target role. Highlight missing keywords and suggest improvements."
-        })
+
+        return json.dumps(
+            {
+                "current_skills": skills,
+                "target_role": target_role,
+                "instruction_to_llm": "Cross-reference the candidate's current skills with standard industry requirements for the target role. Highlight missing keywords and suggest improvements.",
+            }
+        )
     except Exception as e:
         logger.error(f"Error in analyze_resume_gaps_tool: {e}")
         return f"Error analyzing gaps: {e}"
+
 
 # ---------------------------------------------------------------------------
 # Agent Configuration
@@ -61,21 +64,27 @@ Always be encouraging, constructive, and highly specific in your advice.
 Do not hallucinate skills they don't have. Suggest concrete projects, certifications, or keywords they should learn or add to their resume to match their target role.
 """
 
+
 class CandidateGuidanceAgent:
     """
     Conversational Agent Executor for Candidate Guidance.
     """
+
     def __init__(self):
         self._llm = LLMRouter.get_llm("guidance")
         self._tools = [analyze_resume_gaps_tool]
-        self._prompt = ChatPromptTemplate.from_messages([
-            ("system", CANDIDATE_SYSTEM_PROMPT),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ])
+        self._prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", CANDIDATE_SYSTEM_PROMPT),
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ]
+        )
         self._agent = create_tool_calling_agent(self._llm, self._tools, self._prompt)
-        self._agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=True)
+        self._agent_executor = AgentExecutor(
+            agent=self._agent, tools=self._tools, verbose=True
+        )
 
     async def chat(self, user_input: str, chat_history: list = None) -> str:
         """
@@ -83,10 +92,9 @@ class CandidateGuidanceAgent:
         """
         chat_history = chat_history or []
         try:
-            response = await self._agent_executor.ainvoke({
-                "input": user_input,
-                "chat_history": chat_history
-            })
+            response = await self._agent_executor.ainvoke(
+                {"input": user_input, "chat_history": chat_history}
+            )
             return response.get("output", "I'm sorry, I couldn't generate a response.")
         except Exception as e:
             logger.error(f"CandidateGuidanceAgent failed: {e}")

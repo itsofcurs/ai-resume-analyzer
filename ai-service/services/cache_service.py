@@ -252,7 +252,10 @@ class CacheService:
         entry = self._backend.get(key)
         if entry is None:
             return None
-        if weights_signature and entry.metadata.get("weights_signature") != weights_signature:
+        if (
+            weights_signature
+            and entry.metadata.get("weights_signature") != weights_signature
+        ):
             return None
         value = entry.value
         if isinstance(value, FinalATSAnalysisSchema):
@@ -274,7 +277,11 @@ class CacheService:
             CacheEntry(
                 value=analysis.model_copy(deep=True),
                 ttl_seconds=ttl_seconds or self._default_ttl,
-                metadata={"weights_signature": weights_signature} if weights_signature else {},
+                metadata=(
+                    {"weights_signature": weights_signature}
+                    if weights_signature
+                    else {}
+                ),
             ),
         )
 
@@ -289,7 +296,9 @@ def _build_cache_backend() -> BaseCacheBackend:
     backend_type = settings.cache_backend.lower().strip()
     if backend_type == "redis":
         try:
-            from services.redis_cache_backend import RedisCacheBackend as RealRedisCacheBackend
+            from services.redis_cache_backend import (
+                RedisCacheBackend as RealRedisCacheBackend,
+            )
 
             return RealRedisCacheBackend(
                 redis_url=settings.redis_url or "",
@@ -308,4 +317,3 @@ cache_service = CacheService(
     backend=_build_cache_backend(),
     default_ttl=get_settings().cache_default_ttl_s,
 )
-

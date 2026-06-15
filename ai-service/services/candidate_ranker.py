@@ -20,7 +20,11 @@ class RankingThresholds:
     borderline: int = 55
 
     def __post_init__(self) -> None:
-        if not (0 <= self.borderline <= 100 and 0 <= self.good_match <= 100 and 0 <= self.strong_match <= 100):
+        if not (
+            0 <= self.borderline <= 100
+            and 0 <= self.good_match <= 100
+            and 0 <= self.strong_match <= 100
+        ):
             raise ValueError("Ranking thresholds must be within 0-100.")
         if not (self.strong_match >= self.good_match >= self.borderline):
             raise ValueError("Ranking thresholds must be in descending order.")
@@ -74,15 +78,21 @@ class CandidateRanker:
                     final_ats_score=self._clamp_score(analysis.final_ats_score),
                     rule_score=self._clamp_score(analysis.rule_score),
                     embedding_score=self._clamp_score(analysis.embedding_score),
-                    llm_confidence_score=self._clamp_score(analysis.llm_confidence_score),
+                    llm_confidence_score=self._clamp_score(
+                        analysis.llm_confidence_score
+                    ),
                     strengths=list(analysis.reasoning.strengths or []),
                     weaknesses=list(analysis.reasoning.weaknesses or []),
                     recommendation=analysis.reasoning.recommendation,
                     shortlist_label=self.label_for_score(analysis.final_ats_score),
                     rank_position=idx,
                     semantic_alignment=analysis.embedding_breakdown.semantic_alignment,
-                    matched_required_skills=list(analysis.rule_breakdown.matched_required_skills or []),
-                    missing_required_skills=list(analysis.rule_breakdown.missing_required_skills or []),
+                    matched_required_skills=list(
+                        analysis.rule_breakdown.matched_required_skills or []
+                    ),
+                    missing_required_skills=list(
+                        analysis.rule_breakdown.missing_required_skills or []
+                    ),
                 )
             )
 
@@ -129,4 +139,3 @@ class CandidateRanker:
             return max(0, min(100, int(score)))
         except (TypeError, ValueError):
             return 0
-

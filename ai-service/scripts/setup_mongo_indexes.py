@@ -6,17 +6,17 @@ Idempotent script to apply optimized indexes to the MongoDB Resume collection.
 
 import asyncio
 import logging
-import sys
 import os
+import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from pymongo import IndexModel, ASCENDING, DESCENDING
-from core.config import get_settings
 from database import get_mongo_collection
+from pymongo import ASCENDING, DESCENDING, IndexModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 async def setup_indexes():
     """
@@ -34,7 +34,7 @@ async def setup_indexes():
     compound_idx = IndexModel(
         [("organizationId", ASCENDING), ("uploadedBy", ASCENDING)],
         name="idx_org_user",
-        background=True
+        background=True,
     )
 
     # 2. Status Index: Status and CreatedAt
@@ -42,7 +42,7 @@ async def setup_indexes():
     status_idx = IndexModel(
         [("status", ASCENDING), ("createdAt", DESCENDING)],
         name="idx_status_created",
-        background=True
+        background=True,
     )
 
     # 3. TTL Index: Auto-delete FAILED resumes after 30 days
@@ -53,7 +53,7 @@ async def setup_indexes():
         name="idx_ttl_failed_30d",
         expireAfterSeconds=2592000,  # 30 days
         partialFilterExpression={"status": "FAILED"},
-        background=True
+        background=True,
     )
 
     try:
@@ -63,6 +63,7 @@ async def setup_indexes():
         logger.info(f"Indexes established: {results}")
     except Exception as e:
         logger.error(f"Error creating indexes: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(setup_indexes())

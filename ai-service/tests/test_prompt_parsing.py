@@ -18,8 +18,7 @@ def test_safe_json_parser_markdown_fences():
 
 
 def test_safe_json_parser_extracts_first_object():
-    raw = "NOTE: here is JSON:\n{ \"a\": 1, \"b\": 2 }\nThanks!"
+    raw = 'NOTE: here is JSON:\n{ "a": 1, "b": 2 }\nThanks!'
     parsed = safe_json_parser(raw)
     assert parsed.ok is True
     assert parsed.data["b"] == 2
-

@@ -7,13 +7,13 @@ Provider implementation for Alibaba Qwen.
 import logging
 from typing import Optional
 
-from langchain_openai import ChatOpenAI
-from langchain_core.runnables import Runnable
-
 from core.config import get_settings
+from langchain_core.runnables import Runnable
+from langchain_openai import ChatOpenAI
 from services.llm.provider_interface import LLMProvider
 
 logger = logging.getLogger(__name__)
+
 
 class QwenProvider(LLMProvider):
     """
@@ -37,7 +37,9 @@ class QwenProvider(LLMProvider):
 
         api_key = self._settings.qwen_api_key
         if not api_key:
-            raise ValueError(f"QWEN_API_KEY is missing for provider {self.provider_name}.")
+            raise ValueError(
+                f"QWEN_API_KEY is missing for provider {self.provider_name}."
+            )
 
         model_name = self._settings.qwen_model
 
@@ -47,12 +49,16 @@ class QwenProvider(LLMProvider):
                 api_key=api_key,
                 base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
                 temperature=0.0,
-                max_retries=1, # Let the fallback chain handle retries across providers
+                max_retries=1,  # Let the fallback chain handle retries across providers
                 request_timeout=self._settings.gemini_timeout_s,
             )
-            logger.debug(f"{self.provider_name.capitalize()}Provider: LLM client ready ({model_name}).")
+            logger.debug(
+                f"{self.provider_name.capitalize()}Provider: LLM client ready ({model_name})."
+            )
         except Exception as exc:
-            logger.error(f"{self.provider_name.capitalize()}Provider: Failed to init LLM — {exc}")
+            logger.error(
+                f"{self.provider_name.capitalize()}Provider: Failed to init LLM — {exc}"
+            )
             raise
 
         return self._llm

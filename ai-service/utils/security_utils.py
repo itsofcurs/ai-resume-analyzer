@@ -1,5 +1,5 @@
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,9 @@ INJECTION_PATTERNS = [
     r"system prompt",
     r"forget your instructions",
     r"you are now",
-    r"override rules"
+    r"override rules",
 ]
+
 
 def sanitize_user_prompt(text: str, max_length: int = 1000) -> str:
     """
@@ -19,15 +20,15 @@ def sanitize_user_prompt(text: str, max_length: int = 1000) -> str:
     """
     if not text:
         return ""
-        
+
     # Enforce length limit
     sanitized = text[:max_length]
-    
+
     # Check for basic injection patterns
     for pattern in INJECTION_PATTERNS:
         if re.search(pattern, sanitized, re.IGNORECASE):
             logger.warning(f"[SECURITY] Potential prompt injection detected: {pattern}")
             # Neutralize the query if injection is detected
             return "Explain that the input contained restricted instructions and cannot be processed."
-            
+
     return sanitized

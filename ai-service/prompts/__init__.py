@@ -12,7 +12,7 @@ Current templates:
   - RESUME_PARSER_PROMPT  → full structured resume extraction + authenticity audit
 """
 
-from prompts.resume_parser_prompt import RESUME_PARSER_PROMPT
 from prompts.ats_reasoning_prompt import ATS_REASONING_PROMPT
+from prompts.resume_parser_prompt import RESUME_PARSER_PROMPT
 
 __all__ = ["RESUME_PARSER_PROMPT", "ATS_REASONING_PROMPT"]

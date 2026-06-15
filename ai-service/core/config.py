@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     # Environment / service settings
     environment: str = Field(default="development", alias="ENVIRONMENT")
     app_name: str = Field(default="AI Recruitment Intelligence", alias="APP_NAME")
-    node_backend_url: str = Field(default="http://127.0.0.1:5000", alias="NODE_BACKEND_URL")
+    node_backend_url: str = Field(
+        default="http://127.0.0.1:5000", alias="NODE_BACKEND_URL"
+    )
 
     # Gemini / LLM settings
     llm_enabled: bool = Field(default=True, alias="LLM_ENABLED")
@@ -36,7 +38,7 @@ class Settings(BaseSettings):
     # DeepSeek settings
     deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
     deepseek_model: str = Field(default="deepseek-chat", alias="DEEPSEEK_MODEL")
-    
+
     # Qwen settings
     qwen_api_key: Optional[str] = Field(default=None, alias="QWEN_API_KEY")
     qwen_model: str = Field(default="qwen-max", alias="QWEN_MODEL")
@@ -47,11 +49,15 @@ class Settings(BaseSettings):
 
     # OpenRouter settings
     openrouter_api_key: Optional[str] = Field(default=None, alias="OPENROUTER_API_KEY")
-    openrouter_model: str = Field(default="meta-llama/llama-3-8b-instruct", alias="OPENROUTER_MODEL")
+    openrouter_model: str = Field(
+        default="meta-llama/llama-3-8b-instruct", alias="OPENROUTER_MODEL"
+    )
 
     # Cache settings
     cache_backend: str = Field(default="memory", alias="CACHE_BACKEND")
-    cache_default_ttl_s: Optional[int] = Field(default=None, alias="CACHE_DEFAULT_TTL_S")
+    cache_default_ttl_s: Optional[int] = Field(
+        default=None, alias="CACHE_DEFAULT_TTL_S"
+    )
     cache_namespace: str = Field(default="ai-service", alias="CACHE_NAMESPACE")
 
     # Redis cache (optional; only required if CACHE_BACKEND=redis)
@@ -60,7 +66,9 @@ class Settings(BaseSettings):
     redis_connect_timeout_s: float = Field(default=2.0, alias="REDIS_CONNECT_TIMEOUT_S")
 
     # Storage settings
-    mongodb_uri: str = Field(default="mongodb://localhost:27017/talentdb", alias="MONGODB_URI")
+    mongodb_uri: str = Field(
+        default="mongodb://localhost:27017/talentdb", alias="MONGODB_URI"
+    )
 
     # Concurrency / timeouts
     max_batch_concurrency: int = Field(default=5, alias="MAX_BATCH_CONCURRENCY")
@@ -70,22 +78,38 @@ class Settings(BaseSettings):
     max_inflight_search: int = Field(default=20, alias="MAX_INFLIGHT_SEARCH")
     batch_parse_timeout_s: float = Field(default=30.0, alias="BATCH_PARSE_TIMEOUT_S")
     batch_score_timeout_s: float = Field(default=45.0, alias="BATCH_SCORE_TIMEOUT_S")
-    request_timeout_job_match_s: float = Field(default=60.0, alias="REQ_TIMEOUT_JOB_MATCH_S")
+    request_timeout_job_match_s: float = Field(
+        default=60.0, alias="REQ_TIMEOUT_JOB_MATCH_S"
+    )
     request_timeout_batch_s: float = Field(default=120.0, alias="REQ_TIMEOUT_BATCH_S")
-    request_timeout_process_s: float = Field(default=60.0, alias="REQ_TIMEOUT_PROCESS_S")
+    request_timeout_process_s: float = Field(
+        default=60.0, alias="REQ_TIMEOUT_PROCESS_S"
+    )
     request_timeout_search_s: float = Field(default=30.0, alias="REQ_TIMEOUT_SEARCH_S")
 
     # Rate limits (per minute)
-    rate_limit_job_match_per_min: int = Field(default=60, alias="RATE_LIMIT_JOB_MATCH_PER_MIN")
+    rate_limit_job_match_per_min: int = Field(
+        default=60, alias="RATE_LIMIT_JOB_MATCH_PER_MIN"
+    )
     rate_limit_batch_per_min: int = Field(default=20, alias="RATE_LIMIT_BATCH_PER_MIN")
-    rate_limit_process_per_min: int = Field(default=60, alias="RATE_LIMIT_PROCESS_PER_MIN")
-    rate_limit_search_per_min: int = Field(default=120, alias="RATE_LIMIT_SEARCH_PER_MIN")
+    rate_limit_process_per_min: int = Field(
+        default=60, alias="RATE_LIMIT_PROCESS_PER_MIN"
+    )
+    rate_limit_search_per_min: int = Field(
+        default=120, alias="RATE_LIMIT_SEARCH_PER_MIN"
+    )
 
     # Request / payload guards
-    max_request_size_bytes: int = Field(default=2_000_000, alias="MAX_REQUEST_SIZE_BYTES")
+    max_request_size_bytes: int = Field(
+        default=2_000_000, alias="MAX_REQUEST_SIZE_BYTES"
+    )
     max_batch_resumes: int = Field(default=200, alias="MAX_BATCH_RESUMES")
-    invalid_payload_block_threshold: int = Field(default=5, alias="INVALID_PAYLOAD_BLOCK_THRESHOLD")
-    invalid_payload_block_seconds: int = Field(default=60, alias="INVALID_PAYLOAD_BLOCK_SECONDS")
+    invalid_payload_block_threshold: int = Field(
+        default=5, alias="INVALID_PAYLOAD_BLOCK_THRESHOLD"
+    )
+    invalid_payload_block_seconds: int = Field(
+        default=60, alias="INVALID_PAYLOAD_BLOCK_SECONDS"
+    )
 
     # Shortlist thresholds
     shortlist_strong_match: int = Field(default=85, alias="SHORTLIST_STRONG_MATCH")
@@ -96,20 +120,28 @@ class Settings(BaseSettings):
     healthcheck_timeout_s: float = Field(default=3.0, alias="HEALTHCHECK_TIMEOUT_S")
 
     # Observability
-    prometheus_metrics_enabled: bool = Field(default=True, alias="PROMETHEUS_METRICS_ENABLED")
+    prometheus_metrics_enabled: bool = Field(
+        default=True, alias="PROMETHEUS_METRICS_ENABLED"
+    )
     otel_enabled: bool = Field(default=False, alias="OTEL_ENABLED")
     otel_service_name: str = Field(default="ai-service", alias="OTEL_SERVICE_NAME")
-    otel_exporter_otlp_endpoint: Optional[str] = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
+    otel_exporter_otlp_endpoint: Optional[str] = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
 
     # Security / auth (optional; if not set, recruiter endpoints remain open)
-    recruiter_api_keys: str = Field(default="", alias="RECRUITER_API_KEYS")  # comma-separated
+    recruiter_api_keys: str = Field(
+        default="", alias="RECRUITER_API_KEYS"
+    )  # comma-separated
     internal_api_key: Optional[str] = Field(default=None, alias="INTERNAL_API_KEY")
 
     def get_parsed_gemini_keys(self) -> list[str]:
         """Returns a list of all provided Gemini API keys."""
         keys = []
         if self.gemini_api_keys:
-            keys.extend([k.strip() for k in self.gemini_api_keys.split(",") if k.strip()])
+            keys.extend(
+                [k.strip() for k in self.gemini_api_keys.split(",") if k.strip()]
+            )
         elif self.gemini_api_key:
             keys.append(self.gemini_api_key.strip())
         return list(set(keys))  # Deduplicate
@@ -141,9 +173,21 @@ class Settings(BaseSettings):
         return value
 
     def validate_startup(self) -> None:
-        if self.llm_enabled and not any([self.gemini_api_key, self.gemini_api_keys, self.groq_api_key, self.openrouter_api_key]):
-            raise ValueError("At least one LLM API Key (GEMINI_API_KEY, GEMINI_API_KEYS, GROQ_API_KEY, OPENROUTER_API_KEY) is required when LLM_ENABLED is true.")
-        if self.environment == "production" and self.cache_backend.lower().strip() != "redis":
+        if self.llm_enabled and not any(
+            [
+                self.gemini_api_key,
+                self.gemini_api_keys,
+                self.groq_api_key,
+                self.openrouter_api_key,
+            ]
+        ):
+            raise ValueError(
+                "At least one LLM API Key (GEMINI_API_KEY, GEMINI_API_KEYS, GROQ_API_KEY, OPENROUTER_API_KEY) is required when LLM_ENABLED is true."
+            )
+        if (
+            self.environment == "production"
+            and self.cache_backend.lower().strip() != "redis"
+        ):
             raise ValueError("Redis must be used as the CACHE_BACKEND in production.")
         if self.cache_backend.lower().strip() == "redis" and not self.redis_url:
             raise ValueError("REDIS_URL is required when CACHE_BACKEND=redis.")
@@ -158,4 +202,3 @@ def get_settings() -> Settings:
     settings = Settings()
     settings.validate_startup()
     return settings
-

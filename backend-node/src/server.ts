@@ -104,7 +104,12 @@ app.use(cors({ origin: corsOriginCheck, credentials: true }));
 // Stripe webhook MUST be raw
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), webhookHandler);
 
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+
 app.use(express.json());
+app.use(cookieParser());
+app.use(passport.initialize());
 
 // Phase 5A: Telemetry & Observability
 app.use(requestContextMiddleware);
