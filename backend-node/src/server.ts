@@ -131,9 +131,9 @@ const userRateLimiter = rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { ip: false, xForwardedForHeader: false },
+  validate: false, // Disable validation to avoid IPv6 warnings on custom key generators
   keyGenerator: (req: any) => {
-    return req.user?.id || req.ip;
+    return req.user?.id || req.ip || 'unknown';
   }
 });
 

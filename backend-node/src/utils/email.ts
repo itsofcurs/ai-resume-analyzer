@@ -4,16 +4,26 @@ import crypto from "crypto";
 // Mock Ethereal Email Configuration
 // In production, replace with actual SMTP credentials (e.g., SendGrid, AWS SES)
 export const createTransporter = async () => {
+  if (process.env.NODE_ENV === 'production' && !process.env.SMTP_HOST) {
+    // Return a mock transporter if no SMTP config is provided in production
+    return {
+      sendMail: async (opts: any) => {
+        console.log(`[MOCK EMAIL] To: ${opts.to}, Subject: ${opts.subject}`);
+        return { messageId: 'mock-id' };
+      }
+    } as any;
+  }
+
   // Using a test account for development
   const testAccount = await nodemailer.createTestAccount();
 
   return nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false, // true for 465, false for other ports
+    host: process.env.SMTP_HOST || "smtp.ethereal.email",
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
     auth: {
-      user: testAccount.user, // generated ethereal user
-      pass: testAccount.pass, // generated ethereal password
+      user: process.env.SMTP_USER || testAccount.user,
+      pass: process.env.SMTP_PASS || testAccount.pass,
     },
   });
 };
