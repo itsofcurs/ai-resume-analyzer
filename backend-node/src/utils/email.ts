@@ -15,10 +15,13 @@ export const createTransporter = async () => {
   }
 
   let user = process.env.SMTP_USER;
-  let pass = process.env.SMTP_PASS;
+  let pass = process.env.SMTP_PASS?.replace(/\s+/g, ''); // Remove spaces from app password
+
+  console.log('[EMAIL] Using SMTP_USER:', user, 'SMTP_HOST:', process.env.SMTP_HOST);
 
   // Only generate a test account if we do not have real credentials
   if (!user || !pass) {
+    console.log('[EMAIL] No credentials found, generating test account...');
     const testAccount = await nodemailer.createTestAccount();
     user = testAccount.user;
     pass = testAccount.pass;
@@ -33,7 +36,9 @@ export const createTransporter = async () => {
 };
 
 export const sendOtpEmail = async (email: string, otp: string) => {
+  console.log('[EMAIL] Creating transporter...');
   const transporter = await createTransporter();
+  console.log('[EMAIL] Transporter created, sending mail...');
 
   const info = await transporter.sendMail({
     from: '"TalentAI Security" <security@talentai.app>',

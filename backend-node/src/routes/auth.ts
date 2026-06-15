@@ -158,8 +158,10 @@ router.post('/register', registerLimiter, async (req, res) => {
     const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
     
     // Clear old OTPs for this email
+    console.log('[AUTH] Clearing old OTPs for', email);
     await prisma.emailOTP.deleteMany({ where: { email, type: 'REGISTER' } });
     
+    console.log('[AUTH] Creating new OTP record');
     await prisma.emailOTP.create({
       data: {
         email,
@@ -169,14 +171,17 @@ router.post('/register', registerLimiter, async (req, res) => {
       }
     });
 
+    console.log('[AUTH] Sending OTP email to', email);
     await sendOtpEmail(email, otp);
+    console.log('[AUTH] OTP email sent successfully');
     
     await prisma.auditLog.create({
       data: { userId: user.id, organizationId: user.organizationId || 'system', action: 'otp_sent', resource: 'auth' }
     });
 
     res.status(200).json({ message: 'OTP sent to email. Please verify.', email });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[AUTH] Register error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
