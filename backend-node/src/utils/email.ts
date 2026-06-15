@@ -14,17 +14,21 @@ export const createTransporter = async () => {
     } as any;
   }
 
-  // Using a test account for development
-  const testAccount = await nodemailer.createTestAccount();
+  let user = process.env.SMTP_USER;
+  let pass = process.env.SMTP_PASS;
+
+  // Only generate a test account if we do not have real credentials
+  if (!user || !pass) {
+    const testAccount = await nodemailer.createTestAccount();
+    user = testAccount.user;
+    pass = testAccount.pass;
+  }
 
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.ethereal.email",
     port: Number(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER || testAccount.user,
-      pass: process.env.SMTP_PASS || testAccount.pass,
-    },
+    auth: { user, pass },
   });
 };
 
