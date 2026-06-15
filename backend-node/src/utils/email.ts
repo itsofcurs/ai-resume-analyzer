@@ -32,42 +32,57 @@ export const createTransporter = async () => {
   });
 };
 
-export const sendVerificationEmail = async (email: string, token: string) => {
+export const sendOtpEmail = async (email: string, otp: string) => {
   const transporter = await createTransporter();
-  const verifyUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/verify-email?token=${token}`;
 
   const info = await transporter.sendMail({
     from: '"TalentAI Security" <security@talentai.app>',
     to: email,
     subject: "Verify your TalentAI Account",
     html: `
-      <h2>Welcome to TalentAI</h2>
-      <p>Please verify your email address by clicking the link below:</p>
-      <a href="${verifyUrl}" style="padding: 10px 20px; background: #4f46e5; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
-      <p>This link will expire in 24 hours.</p>
+      <div style="font-family: sans-serif; max-w-md; margin: auto;">
+        <h2>Welcome to TalentAI</h2>
+        <p>Please verify your email address by entering the following 6-digit code:</p>
+        <div style="padding: 20px; background: #f8fafc; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; color: #0f172a;">
+          ${otp}
+        </div>
+        <p style="color: #64748b; font-size: 14px; margin-top: 20px;">This code will expire in 10 minutes.</p>
+      </div>
     `,
   });
 
-  console.log("Verification email preview URL: %s", nodemailer.getTestMessageUrl(info));
+  if (info.messageId !== 'mock-id') {
+    console.log("OTP email preview URL: %s", nodemailer.getTestMessageUrl(info));
+  }
 };
 
-export const sendPasswordResetEmail = async (email: string, token: string) => {
+export const sendPasswordResetOtpEmail = async (email: string, otp: string) => {
   const transporter = await createTransporter();
-  const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
   const info = await transporter.sendMail({
     from: '"TalentAI Security" <security@talentai.app>',
     to: email,
     subject: "Reset your TalentAI Password",
     html: `
-      <h2>Password Reset Request</h2>
-      <p>You requested to reset your password. Click the link below to set a new one:</p>
-      <a href="${resetUrl}" style="padding: 10px 20px; background: #e11d48; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
-      <p>This link will expire in 15 minutes. If you did not request this, please ignore this email.</p>
+      <div style="font-family: sans-serif; max-w-md; margin: auto;">
+        <h2>Password Reset Request</h2>
+        <p>You requested to reset your password. Use the following 6-digit code to verify your identity:</p>
+        <div style="padding: 20px; background: #f8fafc; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; color: #0f172a;">
+          ${otp}
+        </div>
+        <p style="color: #64748b; font-size: 14px; margin-top: 20px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+      </div>
     `,
   });
 
-  console.log("Password reset email preview URL: %s", nodemailer.getTestMessageUrl(info));
+  if (info.messageId !== 'mock-id') {
+    console.log("Password reset OTP preview URL: %s", nodemailer.getTestMessageUrl(info));
+  }
+};
+
+// Now generates 6-digit OTP
+export const generateOTP = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 export const generateSecureToken = (): string => {

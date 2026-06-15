@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { KeyRound, ArrowRight, AlertCircle, Shield } from 'lucide-react';
+import { KeyRound, ArrowRight, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 export const ResetPassword = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const email = searchParams.get('email');
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -27,28 +29,28 @@ export const ResetPassword = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!token) return;
+    if (!email) return;
     setIsLoading(true);
     setError(null);
     const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
     try {
-      await axios.post(`${API_URL}/auth/reset-password`, { token, newPassword: password });
+      await axios.post(`${API_URL}/auth/reset-password`, { email, otp, newPassword: password });
       navigate('/login?reset=success');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to reset password. The link may have expired.');
+      setError(err.response?.data?.error || 'Failed to reset password.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!token) {
+  if (!email) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 text-center border border-slate-100">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold">Invalid Link</h2>
-          <p className="text-slate-500 mt-2">The password reset link is missing or invalid.</p>
-          <Link to="/forgot-password" className="mt-6 inline-block font-medium text-blue-600">Request a new link</Link>
+          <h2 className="text-xl font-bold">Invalid Request</h2>
+          <p className="text-slate-500 mt-2">Email address is missing from the request.</p>
+          <Link to="/forgot-password" className="mt-6 inline-block font-medium text-blue-600">Request a new code</Link>
         </div>
       </div>
     );
@@ -62,7 +64,7 @@ export const ResetPassword = () => {
             <KeyRound size={24} />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Set New Password</h2>
-          <p className="text-slate-500 mb-6">Please enter your new strong password below.</p>
+          <p className="text-slate-500 mb-6">Enter the 6-digit code sent to {email} and your new password.</p>
           
           {error && (
             <div className="p-3 mb-6 bg-red-50 text-red-700 text-sm font-medium rounded-xl flex items-center gap-2">
@@ -72,8 +74,39 @@ export const ResetPassword = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">6-Digit Code</label>
+              <input 
+                type="text" 
+                required 
+                maxLength={6} 
+                value={otp} 
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50 focus:bg-white text-center tracking-[0.5em] font-mono text-xl" 
+                placeholder="000000" 
+                disabled={isLoading} 
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50 focus:bg-white" placeholder="••••••••" disabled={isLoading} />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50 focus:bg-white pr-10" 
+                  placeholder="••••••••" 
+                  disabled={isLoading} 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               
               {password && (
                 <div className="mt-2">
@@ -93,7 +126,7 @@ export const ResetPassword = () => {
               )}
             </div>
             
-            <button type="submit" disabled={isLoading || strength < 5} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group disabled:opacity-50 mt-4">
+            <button type="submit" disabled={isLoading || strength < 5 || otp.length !== 6} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group disabled:opacity-50 mt-4">
               {isLoading ? "Resetting..." : "Reset Password"}
               {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
             </button>

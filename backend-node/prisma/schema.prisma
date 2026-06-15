@@ -39,12 +39,14 @@ model User {
   lockedUntil    DateTime?
   mfaEnabled     Boolean       @default(false)
   mfaSecret      String?
+  lastLogin      DateTime?
 
   organization   Organization? @relation(fields: [organizationId], references: [id])
   auditLogs      AuditLog[]
   supportTickets SupportTicket[]
   sessions           Session[]
   oauthAccounts      OAuthAccount[]
+  refreshTokens      RefreshToken[]
 }
 
 model JobDescription {
@@ -188,20 +190,43 @@ model Session {
   @@index([userId])
 }
 
-model VerificationToken {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+model EmailOTP {
+  id        String   @id @default(uuid())
+  email     String
+  otpHash   String
+  type      String   // "REGISTER", "RESET"
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email, type])
 }
 
-model PasswordResetToken {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  device    String?
+  ip        String?
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id          String    @id @default(uuid())
+  email       String
+  ip          String?
+  attempts    Int       @default(1)
+  lockedUntil DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([email, ip])
 }
 
 model OAuthAccount {

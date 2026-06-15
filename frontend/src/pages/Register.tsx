@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { BrainCircuit, ArrowRight, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BrainCircuit, ArrowRight, Shield, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 export const Register = () => {
@@ -9,6 +9,7 @@ export const Register = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export const Register = () => {
         email, password, name, organizationName: orgName 
       });
       setMessage({ type: 'success', text: res.data.message });
-      setTimeout(() => navigate('/login'), 5000);
+      setTimeout(() => navigate(`/verify-email?email=${encodeURIComponent(email)}`), 1500);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.response?.data?.error || 'Registration failed' });
     } finally {
@@ -107,7 +108,24 @@ export const Register = () => {
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50 focus:bg-white" placeholder="••••••••" disabled={isLoading} />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50 focus:bg-white pr-10" 
+                  placeholder="••••••••" 
+                  disabled={isLoading} 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               
               {password && (
                 <div className="mt-2">
