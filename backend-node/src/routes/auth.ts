@@ -17,7 +17,7 @@ import {
 } from '../utils/email';
 import { generateMfaSecret, verifyMfaToken } from '../utils/mfa';
 import crypto from 'crypto';
-import { authenticateToken } from '../middleware/authenticateToken';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
