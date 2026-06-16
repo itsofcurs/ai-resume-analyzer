@@ -1,5 +1,5 @@
 import jwt, { JwtHeader, SigningKeyCallback } from "jsonwebtoken";
-import { logger } from "./logger"; // Assumes a logger exists, or we use console.
+import { logger } from "../lib/telemetry";
 
 // Helper to safely parse keys
 const parseKeys = (jsonStr: string | undefined): Record<string, string> => {

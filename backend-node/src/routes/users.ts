@@ -8,7 +8,7 @@ import { uploadExport, generateSignedUrl } from '../services/exportStorageServic
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import archiver from 'archiver';
+const archiver = require('archiver');
 
 const router = Router();
 

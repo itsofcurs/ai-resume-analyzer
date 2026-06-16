@@ -39,6 +39,13 @@ export const requirePermission = (resource: Resource, action: Action) => {
   };
 };
 
+export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
 // Legacy shim for simple role checks if needed
 export const requireRole = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {

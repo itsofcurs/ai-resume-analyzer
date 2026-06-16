@@ -1,16 +1,8 @@
 import { Router } from 'express';
 import { prisma } from '../server';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 
 const router = Router();
-
-// Middleware to ensure admin
-const requireAdmin = async (req: any, res: any, next: any) => {
-  if (req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  next();
-};
 
 const requireFreshAuth = async (req: any, res: any, next: any) => {
   const tokenIat = req.user?.iat;
@@ -31,7 +23,7 @@ router.use(authenticateToken);
 router.use(requireAdmin);
 
 // Get User
-router.get('/users/:email', async (req, res) => {
+router.get('/users/:email', async (req: any, res: any) => {
   try {
     const user = await prisma.user.findUnique({
       where: { email: req.params.email },
@@ -45,7 +37,7 @@ router.get('/users/:email', async (req, res) => {
 });
 
 // Manually verify
-router.post('/users/:id/verify', requireFreshAuth, async (req, res) => {
+router.post('/users/:id/verify', requireFreshAuth, async (req: any, res: any) => {
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -59,7 +51,7 @@ router.post('/users/:id/verify', requireFreshAuth, async (req, res) => {
 });
 
 // Unlock account
-router.post('/users/:id/unlock', requireFreshAuth, async (req, res) => {
+router.post('/users/:id/unlock', requireFreshAuth, async (req: any, res: any) => {
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -73,7 +65,7 @@ router.post('/users/:id/unlock', requireFreshAuth, async (req, res) => {
 });
 
 // Suspend account
-router.post('/users/:id/suspend', requireFreshAuth, async (req, res) => {
+router.post('/users/:id/suspend', requireFreshAuth, async (req: any, res: any) => {
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -87,7 +79,7 @@ router.post('/users/:id/suspend', requireFreshAuth, async (req, res) => {
 });
 
 // Reactivate account
-router.post('/users/:id/reactivate', requireFreshAuth, async (req, res) => {
+router.post('/users/:id/reactivate', requireFreshAuth, async (req: any, res: any) => {
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -101,7 +93,7 @@ router.post('/users/:id/reactivate', requireFreshAuth, async (req, res) => {
 });
 
 // Delete account (GDPR Soft Delete)
-router.post('/users/:id/delete', requireFreshAuth, async (req, res) => {
+router.post('/users/:id/delete', requireFreshAuth, async (req: any, res: any) => {
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
