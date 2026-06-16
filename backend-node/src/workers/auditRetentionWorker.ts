@@ -2,7 +2,7 @@ import { Worker, Queue } from 'bullmq';
 import { bullMqConnection, prisma } from '../server';
 
 export const auditRetentionQueue = new Queue('audit-retention', {
-  connection: bullMqConnection,
+  connection: bullMqConnection as any,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 },
@@ -58,7 +58,7 @@ export const startAuditRetentionWorker = () => {
       console.error('Audit retention worker failed:', error);
       throw error;
     }
-  }, { connection: bullMqConnection });
+  }, { connection: bullMqConnection as any });
 
   worker.on('failed', (job, err) => {
     console.error(`Audit Retention Job failed:`, err);

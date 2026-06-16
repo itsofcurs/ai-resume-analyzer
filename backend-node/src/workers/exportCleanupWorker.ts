@@ -44,7 +44,7 @@ export const startExportCleanupWorker = () => {
       console.error('Export cleanup worker failed:', error);
       throw error;
     }
-  }, { connection: bullMqConnection });
+  }, { connection: bullMqConnection as any });
 
   worker.on('failed', (job, err) => {
     console.error(`Export Cleanup Job failed:`, err);

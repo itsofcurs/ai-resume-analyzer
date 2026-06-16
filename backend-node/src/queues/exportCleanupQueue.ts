@@ -2,7 +2,7 @@ import { Queue } from 'bullmq';
 import { bullMqConnection } from '../server';
 
 export const exportCleanupQueue = new Queue('export-cleanup', {
-  connection: bullMqConnection,
+  connection: bullMqConnection as any,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 },
