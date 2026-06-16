@@ -32,6 +32,7 @@ import { AdminPortal } from './pages/AdminPortal';
 import { ReportsCenter } from './pages/ReportsCenter';
 import { FinOpsCenter } from './pages/FinOpsCenter';
 import { KnowledgeBase } from './pages/KnowledgeBase';
+import SecurityCenter from './pages/SecurityCenter';
 import { useSelector } from 'react-redux';
 import type { RootState } from './store';
 
@@ -253,6 +254,13 @@ function App() {
           <Route path="/mfa-setup" element={
             <ProtectedRoute>
               <DashboardLayout><MFASettings /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/security-center" element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'executive', 'admin']}>
+                <DashboardLayout><SecurityCenter /></DashboardLayout>
+              </RoleRoute>
             </ProtectedRoute>
           } />
         {/* Fallback */}

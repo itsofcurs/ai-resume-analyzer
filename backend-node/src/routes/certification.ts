@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { resumeQueue } from '../queues/resumeQueue';
 import { copilotQueue } from '../queues/copilotQueue';
+import { emailQueue } from '../queues/emailQueue';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -27,6 +28,7 @@ router.get('/summary', async (req, res) => {
     
     let resumeQueueHealth = { waiting: 0, active: 0, completed: 0, failed: 0 };
     let copilotQueueHealth = { waiting: 0, active: 0, completed: 0, failed: 0 };
+    let emailQueueHealth = { waiting: 0, active: 0, completed: 0, failed: 0 };
 
     if (resumeQueue) {
       resumeQueueHealth = {
@@ -44,9 +46,17 @@ router.get('/summary', async (req, res) => {
         failed: await copilotQueue.getFailedCount()
       };
     }
+    if (emailQueue) {
+      emailQueueHealth = {
+        waiting: await emailQueue.getWaitingCount(),
+        active: await emailQueue.getActiveCount(),
+        completed: await emailQueue.getCompletedCount(),
+        failed: await emailQueue.getFailedCount()
+      };
+    }
 
-    const totalJobs = resumeQueueHealth.completed + resumeQueueHealth.failed + copilotQueueHealth.completed + copilotQueueHealth.failed;
-    const totalFailed = resumeQueueHealth.failed + copilotQueueHealth.failed;
+    const totalJobs = resumeQueueHealth.completed + resumeQueueHealth.failed + copilotQueueHealth.completed + copilotQueueHealth.failed + emailQueueHealth.completed + emailQueueHealth.failed;
+    const totalFailed = resumeQueueHealth.failed + copilotQueueHealth.failed + emailQueueHealth.failed;
     
     let queueSuccessRate = 100.0;
     if (totalJobs > 0) {
@@ -73,9 +83,11 @@ router.get('/summary', async (req, res) => {
       queues: {
         resumeQueue: resumeQueueHealth.waiting,
         copilotQueue: copilotQueueHealth.waiting,
+        emailQueue: emailQueueHealth.waiting,
         failures: {
           resumeQueue: resumeQueueHealth.failed,
-          copilotQueue: copilotQueueHealth.failed
+          copilotQueue: copilotQueueHealth.failed,
+          emailQueue: emailQueueHealth.failed
         }
       }
     });

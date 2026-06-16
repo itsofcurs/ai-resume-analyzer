@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { Resource, Action, hasPermission } from '../lib/rbac';
+import { verifyAccessToken } from '../utils/tokens';
 
 export interface AuthRequest extends Request {
   user?: {
     userId: string;
+    id: string;
     role: string;
     organizationId: string;
+    iat?: number;
   };
 }
 
@@ -16,11 +19,15 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
 
   if (!token) return res.status(401).json({ error: 'Access token missing' });
 
-  jwt.verify(token, process.env.JWT_SECRET || 'secret', (err: any, user: any) => {
-    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
-    req.user = user;
-    next();
-  });
+  verifyAccessToken(token)
+    .then((user) => {
+      req.user = user as any;
+      if (req.user) req.user.id = user.userId;
+      next();
+    })
+    .catch((err) => {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    });
 };
 
 export const requirePermission = (resource: Resource, action: Action) => {

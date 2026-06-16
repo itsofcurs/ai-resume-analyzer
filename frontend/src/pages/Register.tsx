@@ -10,7 +10,10 @@ export const Register = () => {
   const [password, setPassword] = useState('');
   const [orgName, setOrgName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Create Account");
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const navigate = useNavigate();
 
@@ -31,17 +34,19 @@ export const Register = () => {
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoadingText("Creating Account...");
     setMessage(null);
     const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
     try {
       const res = await axios.post(`${API_URL}/auth/register`, { 
-        email, password, name, organizationName: orgName 
+        email, password, name, organizationName: orgName, termsAccepted, privacyAccepted
       });
-      setMessage({ type: 'success', text: res.data.message });
-      setTimeout(() => navigate(`/verify-email?email=${encodeURIComponent(email)}`), 1500);
+      setLoadingText("Account Created!");
+      setMessage({ type: 'success', text: 'Redirecting to verification...' });
+      setTimeout(() => navigate(`/verify-email?email=${encodeURIComponent(email)}`), 500);
     } catch (error: any) {
+      setLoadingText("Create Account");
       setMessage({ type: 'error', text: error.response?.data?.error || 'Registration failed' });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -147,13 +152,16 @@ export const Register = () => {
 
             <div className="pt-2">
               <label className="flex items-start gap-2">
-                <input type="checkbox" required className="mt-1 rounded text-blue-600 focus:ring-blue-500" disabled={isLoading} />
+                <input type="checkbox" required checked={termsAccepted} onChange={(e) => {
+                  setTermsAccepted(e.target.checked);
+                  setPrivacyAccepted(e.target.checked);
+                }} className="mt-1 rounded text-blue-600 focus:ring-blue-500" disabled={isLoading} />
                 <span className="text-xs text-slate-600">I accept the Terms of Service, Privacy Policy, and Data Processing Agreement.</span>
               </label>
             </div>
             
-            <button type="submit" disabled={isLoading || strength < 5} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isLoading ? "Creating Account..." : "Create Account"}
+            <button type="submit" disabled={isLoading || strength < 5 || !termsAccepted} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+              {loadingText}
               {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>

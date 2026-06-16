@@ -51,7 +51,10 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
+import { validateEnv } from './config/env';
+
 dotenv.config();
+validateEnv();
 
 // Phase 5A: Start background workers
 if (process.env.NODE_ENV !== 'test') {
@@ -98,7 +101,13 @@ export const redisClient = createClient({
 
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: true,
+  hsts: true,
+  frameguard: true,
+  referrerPolicy: true,
+  crossOriginOpenerPolicy: true
+}));
 app.use(cors({ origin: corsOriginCheck, credentials: true }));
 
 // Stripe webhook MUST be raw
@@ -139,6 +148,10 @@ const userRateLimiter = rateLimit({
 
 // Routes
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+import usersRoutes from './routes/users';
+import securityRoutes from './routes/security';
+app.use('/api/users', usersRoutes);
+app.use('/api/security', securityRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/copilot', userRateLimiter, copilotRoutes);
@@ -164,10 +177,14 @@ app.use('/api/memory', userRateLimiter, memoryRoutes);
 app.use('/api/operations', operationsRoutes);
 import onboardingRoutes from './routes/onboarding';
 import reportsRoutes from './routes/reports';
+import webhooksRoutes from './routes/webhooks';
+import adminRoutes from './routes/admin';
 
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/certification', certificationRoutes);
+app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Internal endpoint for Python to report timeouts
 app.post('/api/internal/timeout', express.json(), async (req, res) => {
@@ -187,6 +204,8 @@ app.post('/api/internal/timeout', express.json(), async (req, res) => {
     res.status(500).json({ error: 'Failed to log timeout' });
   }
 });
+
+export default app;
 
 app.get('/', (req, res) => {
   res.json({ message: "AI Hiring Intelligence Backend is LIVE", status: "ok" });

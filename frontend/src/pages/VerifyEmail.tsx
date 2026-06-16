@@ -11,8 +11,9 @@ export const VerifyEmail = () => {
   const emailParam = searchParams.get('email') || '';
   const [email, setEmail] = useState(emailParam);
   const [otp, setOtp] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Verify & Sign In");
   const [message, setMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
   
   const dispatch = useDispatch();
@@ -28,6 +29,7 @@ export const VerifyEmail = () => {
   const handleVerify = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoadingText("Verifying...");
     setMessage(null);
     const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
     
@@ -40,11 +42,13 @@ export const VerifyEmail = () => {
         os: navigator.platform
       });
       
+      setLoadingText("Verified!");
+      setMessage({ type: 'success', text: 'Success! Redirecting...' });
       dispatch(login({ token: res.data.accessToken, role: res.data.user.role }));
-      navigate('/');
+      setTimeout(() => navigate('/'), 1000);
     } catch (err: any) {
+      setLoadingText("Verify & Sign In");
       setMessage({ type: 'error', text: err.response?.data?.error || 'Verification failed.' });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -108,7 +112,7 @@ export const VerifyEmail = () => {
             </div>
             
             <button type="submit" disabled={isLoading || otp.length !== 6 || !email} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed">
-              {isLoading ? "Verifying..." : "Verify & Sign In"}
+              {loadingText}
               {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>

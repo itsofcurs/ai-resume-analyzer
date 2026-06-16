@@ -8,11 +8,13 @@ interface SystemMetrics {
     copilotQueue: number;
     autonomousQueue: number;
     learningQueue: number;
+    emailQueue: number;
     failures: {
       resumeQueue: number;
       copilotQueue: number;
       autonomousQueue: number;
       learningQueue: number;
+      emailQueue: number;
     };
   };
   telemetry: {
@@ -29,8 +31,8 @@ interface SystemMetrics {
 export const OperationsCenter: React.FC = () => {
   const [metrics, setMetrics] = useState<SystemMetrics>({
     queues: { 
-      resumeQueue: 0, copilotQueue: 0, autonomousQueue: 0, learningQueue: 0,
-      failures: { resumeQueue: 0, copilotQueue: 0, autonomousQueue: 0, learningQueue: 0 }
+      resumeQueue: 0, copilotQueue: 0, autonomousQueue: 0, learningQueue: 0, emailQueue: 0,
+      failures: { resumeQueue: 0, copilotQueue: 0, autonomousQueue: 0, learningQueue: 0, emailQueue: 0 }
     },
     telemetry: { activeUsers: 0, tokenUsage: 0, totalCost: 0 },
     health: { status: 'Unknown', uptime: 0 }
@@ -54,10 +56,12 @@ export const OperationsCenter: React.FC = () => {
             ...prev.queues,
             resumeQueue: res.data.queues?.resumeQueue || 0,
             copilotQueue: res.data.queues?.copilotQueue || 0,
+            emailQueue: res.data.queues?.emailQueue || 0,
             failures: {
               ...prev.queues.failures,
               resumeQueue: res.data.queues?.failures?.resumeQueue || 0,
               copilotQueue: res.data.queues?.failures?.copilotQueue || 0,
+              emailQueue: res.data.queues?.failures?.emailQueue || 0,
             }
           },
           health: {
@@ -131,9 +135,15 @@ export const OperationsCenter: React.FC = () => {
         </div>
 
         <div className="p-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <h3 className="text-sm font-semibold text-slate-500">Learning Pipelline Queue Depth</h3>
+          <h3 className="text-sm font-semibold text-slate-500">Learning Pipeline Queue Depth</h3>
           <p className="text-4xl font-bold text-orange-600 mt-2">{metrics.queues.learningQueue}</p>
           <p className="text-xs text-red-400 mt-2">Failures: {metrics.queues.failures.learningQueue}</p>
+        </div>
+
+        <div className="p-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-slate-500">Email Delivery Queue Depth</h3>
+          <p className="text-4xl font-bold text-cyan-600 mt-2">{metrics.queues.emailQueue}</p>
+          <p className="text-xs text-red-400 mt-2">Failures: {metrics.queues.failures.emailQueue}</p>
         </div>
       </div>
 

@@ -32,7 +32,8 @@ model User {
   organizationId String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  emailVerified  Boolean       @default(false)
+  accountState   String        @default("PENDING_VERIFICATION") // PENDING_VERIFICATION, ACTIVE, SUSPENDED, LOCKED, DELETED
+  deletedAt      DateTime?
   googleId       String?       @unique
   provider       String        @default("LOCAL")
   failedAttempts Int           @default(0)
@@ -47,6 +48,10 @@ model User {
   sessions           Session[]
   oauthAccounts      OAuthAccount[]
   refreshTokens      RefreshToken[]
+  passwordHistory    PasswordHistory[]
+  consents           UserConsent[]
+  mfaRecoveryCodes   MFARecoveryCode[]
+  exportRequests     ExportRequest[]
 }
 
 model JobDescription {
@@ -69,6 +74,9 @@ model AuditLog {
   ipAddress      String?
   beforeState    Json?
   afterState     Json?
+  severity       String       @default("INFO")
+  riskScore      String       @default("LOW") // Legacy string score
+  numericRiskScore Int        @default(0) // Numeric score 0-100
   timestamp      DateTime     @default(now())
   
   user           User         @relation(fields: [userId], references: [id])
@@ -205,6 +213,8 @@ model EmailOTP {
 model RefreshToken {
   id        String   @id @default(uuid())
   tokenHash String   @unique
+  familyId  String
+  parentId  String?
   userId    String
   device    String?
   ip        String?
@@ -243,4 +253,76 @@ model OAuthAccount {
 
   @@unique([provider, providerAccountId])
   @@index([userId])
+}
+
+model PasswordHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  password  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserConsent {
+  id               String   @id @default(uuid())
+  userId           String
+  termsAccepted    Boolean  @default(false)
+  privacyAccepted  Boolean  @default(false)
+  cookiesAccepted  Boolean  @default(false)
+  ipAddress        String?
+  timestamp        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailDeliveryLog {
+  id          String   @id @default(uuid())
+  email       String
+  jobId       String?
+  messageId   String?  // Resend API Message ID
+  status      String   @default("QUEUED") // QUEUED, PROCESSING, DELIVERED, BOUNCED, FAILED
+  error       String?
+  type        String   // OTP, RESET, INVITATION, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([messageId])
+}
+
+model MFARecoveryCode {
+  id        String   @id @default(uuid())
+  userId    String
+  codeHash  String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ExportRequest {
+  id            String   @id @default(uuid())
+  userId        String
+  storagePath   String?
+  filename      String?
+  status        String   @default("PENDING") // PENDING, PROCESSING, READY, FAILED, EXPIRED, DELETED
+  downloadCount Int      @default(0)
+  expiresAt     DateTime?
+  downloadedAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }
