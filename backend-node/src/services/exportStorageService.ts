@@ -2,10 +2,19 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import fs from 'fs';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+let supabaseInstance: any = null;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const getSupabase = () => {
+  if (!supabaseInstance) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase credentials (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are missing.');
+    }
+    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabaseInstance;
+};
 
 const ENCRYPTION_KEY = process.env.EXPORT_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
 const IV_LENGTH = 16;
@@ -19,6 +28,7 @@ export const uploadExport = async (userId: string, filePath: string, filename: s
 
   const storagePath = `${userId}/${filename}.enc`;
 
+  const supabase = getSupabase();
   const { error } = await supabase.storage
     .from('gdpr-exports')
     .upload(storagePath, encrypted, { contentType: 'application/octet-stream' });
@@ -31,6 +41,7 @@ export const uploadExport = async (userId: string, filePath: string, filename: s
 };
 
 export const generateSignedUrl = async (storagePath: string): Promise<string> => {
+  const supabase = getSupabase();
   const { data, error } = await supabase.storage
     .from('gdpr-exports')
     .createSignedUrl(storagePath, 24 * 60 * 60); // 24 hours
@@ -43,6 +54,7 @@ export const generateSignedUrl = async (storagePath: string): Promise<string> =>
 };
 
 export const deleteExport = async (storagePath: string): Promise<void> => {
+  const supabase = getSupabase();
   const { error } = await supabase.storage
     .from('gdpr-exports')
     .remove([storagePath]);
