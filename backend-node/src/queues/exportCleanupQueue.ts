@@ -1,8 +1,8 @@
 import { Queue } from 'bullmq';
-import { redisClient } from '../server';
+import { bullMqConnection } from '../server';
 
 export const exportCleanupQueue = new Queue('export-cleanup', {
-  connection: redisClient as any,
+  connection: bullMqConnection,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 },

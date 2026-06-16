@@ -1,8 +1,8 @@
 import { Worker, Queue } from 'bullmq';
-import { redisClient, prisma } from '../server';
+import { bullMqConnection, prisma } from '../server';
 
 export const auditRetentionQueue = new Queue('audit-retention', {
-  connection: redisClient as any,
+  connection: bullMqConnection,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 },
@@ -58,7 +58,7 @@ export const startAuditRetentionWorker = () => {
       console.error('Audit retention worker failed:', error);
       throw error;
     }
-  }, { connection: redisClient as any });
+  }, { connection: bullMqConnection });
 
   worker.on('failed', (job, err) => {
     console.error(`Audit Retention Job failed:`, err);

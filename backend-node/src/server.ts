@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from 'redis';
+import IORedis from 'ioredis';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth';
 import resumeRoutes from './routes/resumes';
@@ -100,6 +101,10 @@ export const redisClient = createClient({
 });
 
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
+
+export const bullMqConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null
+});
 
 app.use(helmet({
   contentSecurityPolicy: true,

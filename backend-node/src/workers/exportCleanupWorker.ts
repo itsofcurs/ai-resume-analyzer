@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import { redisClient, prisma } from '../server';
+import { bullMqConnection, prisma } from '../server';
 import { deleteExport } from '../services/exportStorageService';
 import { gdprExportsDeletedTotal, gdprExportFailuresTotal } from '../lib/telemetry';
 
@@ -44,7 +44,7 @@ export const startExportCleanupWorker = () => {
       console.error('Export cleanup worker failed:', error);
       throw error;
     }
-  }, { connection: redisClient as any });
+  }, { connection: bullMqConnection });
 
   worker.on('failed', (job, err) => {
     console.error(`Export Cleanup Job failed:`, err);
