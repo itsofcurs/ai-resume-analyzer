@@ -32,6 +32,9 @@ export const createTransporter = async () => {
     port: Number(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
     auth: { user, pass },
+    connectionTimeout: 10000, // 10 seconds to fail fast
+    greetingTimeout: 10000,
+    family: 4, // Force IPv4 to prevent hanging on Render's IPv6 network with Gmail
   });
 };
 
