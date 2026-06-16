@@ -57,6 +57,24 @@ import { validateEnv } from './config/env';
 dotenv.config();
 validateEnv();
 
+export const prisma = new PrismaClient();
+
+// Initialize Redis Client
+if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+  console.error("FATAL: REDIS_URL is strictly required in production.");
+  process.exit(1);
+}
+
+export const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.error('Redis Client Error', err));
+
+export const bullMqConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null
+});
+
 // Phase 5A: Start background workers
 if (process.env.NODE_ENV !== 'test') {
   startWorkers();
@@ -88,23 +106,6 @@ export const io = new Server(httpServer, {
   cors: { origin: corsOriginCheck }
 });
 
-export const prisma = new PrismaClient();
-
-// Initialize Redis Client
-if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
-  console.error("FATAL: REDIS_URL is strictly required in production.");
-  process.exit(1);
-}
-
-export const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
-
-redisClient.on('error', (err) => console.error('Redis Client Error', err));
-
-export const bullMqConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null
-});
 
 app.use(helmet({
   contentSecurityPolicy: true,
