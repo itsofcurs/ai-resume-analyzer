@@ -14,6 +14,8 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@testcontainers/postgresql": "^12.0.2",
+    "@testcontainers/redis": "^12.0.2",
     "@types/archiver": "^8.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
@@ -30,6 +32,7 @@
     "jest": "^30.4.2",
     "prisma": "^6.19.3",
     "supertest": "^7.2.2",
+    "testcontainers": "^12.0.2",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2"
   },
